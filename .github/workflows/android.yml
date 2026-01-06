@@ -85,6 +85,12 @@ jobs:
         run: flutter build apk --debug --android-skip-build-dependency-validation
         working-directory: ./
 
+      - name: List build outputs (APK)
+        run: |
+          ls -R build/app/outputs || true
+          ls -R android/app/build/outputs || true
+        working-directory: ./
+
       - name: Build App Bundle (release)
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -103,10 +109,18 @@ jobs:
           flutter build appbundle --release --android-skip-build-dependency-validation
         working-directory: ./
 
+      - name: List build outputs (AAB)
+        run: |
+          ls -R build/app/outputs || true
+          ls -R android/app/build/outputs || true
+        working-directory: ./
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: android-builds
           path: |
             build/app/outputs/flutter-apk/*.apk
+            android/app/build/outputs/apk/**/*.apk
             build/app/outputs/bundle/release/*.aab
+            android/app/build/outputs/bundle/**/*.aab
