@@ -9,16 +9,15 @@ if (flutterSdkPath == null) {
 }
 
 buildscript {
+    def sdkPath = flutterSdkPath
     repositories {
-        if (flutterSdkPath != null) {
+        if (sdkPath != null) {
             maven {
-                url = uri("${flutterSdkPath}/bin/cache/artifacts/engine/android")
-                content { includeGroup("io.flutter") }
+                url = uri("${sdkPath}/bin/cache/artifacts/engine/android")
             }
         }
         maven {
             url "https://storage.googleapis.com/download.flutter.io"
-            content { includeGroup("io.flutter") }
         }
         google()
         mavenCentral()
