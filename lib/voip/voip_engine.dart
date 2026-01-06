@@ -8,7 +8,18 @@ class VoipEngine {
 
   Future<void> init() => _invoke('init');
 
-  Future<void> register() => _invoke('register');
+  Future<void> register(
+    String username,
+    String password,
+    String domain,
+    String proxy,
+  ) =>
+      _invoke('register', <String, dynamic>{
+        'username': username,
+        'password': password,
+        'domain': domain,
+        'proxy': proxy,
+      });
 
   Future<void> unregister() => _invoke('unregister');
 

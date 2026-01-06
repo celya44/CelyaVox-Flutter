@@ -26,7 +26,11 @@ class VoipMethodChannel(
                     result.success(null)
                 }
                 "register" -> {
-                    engine.register()
+                    val username = requireArgument<String>(call, "username")
+                    val password = requireArgument<String>(call, "password")
+                    val domain = requireArgument<String>(call, "domain")
+                    val proxy = call.argument<String>("proxy") ?: ""
+                    engine.register(username, password, domain, proxy)
                     result.success(null)
                 }
                 "unregister" -> {
@@ -69,18 +73,3 @@ private fun <T> requireArgument(call: MethodCall, key: String): T {
 }
 
 // Lightweight engine extensions to keep MethodChannel handling compilable without SIP logic yet.
-private fun VoipEngine.register() {}
-
-private fun VoipEngine.unregister() {}
-
-private fun VoipEngine.makeCall(callee: String) {
-    startCall(callee)
-}
-
-private fun VoipEngine.acceptCall(callId: String) {
-    // Hook into native accept call flow when implemented
-}
-
-private fun VoipEngine.hangupCall(callId: String) {
-    endCall(callId)
-}

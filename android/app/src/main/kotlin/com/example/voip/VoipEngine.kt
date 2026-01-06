@@ -49,8 +49,15 @@ class VoipEngine(
         sipEngine.setCallback(null)
     }
 
+    fun register(username: String, password: String, domain: String, proxy: String) {
+        sipEngine.register(username, password, domain, proxy)
+    }
+
+    fun unregister() {
+        sipEngine.unregister()
+    }
+
     fun startCall(callee: String) {
-        // Outgoing call flow can be integrated later; for now call native and rely on callbacks.
         sipEngine.makeCall(callee)
     }
 
