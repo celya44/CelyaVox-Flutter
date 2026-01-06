@@ -44,12 +44,10 @@ dependencyResolutionManagement {
         if (flutterSdkPath != null) {
             maven {
                 url = uri("${flutterSdkPath}/bin/cache/artifacts/engine/android")
-                content { includeGroup("io.flutter") }
             }
         }
         maven {
             url "https://storage.googleapis.com/download.flutter.io"
-            content { includeGroup("io.flutter") }
         }
         maven {
             url "https://maven-central.storage-download.googleapis.com/maven2"
