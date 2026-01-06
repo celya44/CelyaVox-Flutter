@@ -82,7 +82,7 @@ jobs:
         working-directory: ./
 
       - name: Build APK (debug)
-        run: flutter build apk --debug --android-skip-build-dependency-validation
+        run: flutter build apk --debug --android-skip-build-dependency-validation -v
         working-directory: ./
 
       - name: List build outputs (APK)
