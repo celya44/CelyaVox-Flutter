@@ -1,15 +1,14 @@
-ext.flutterSdkPath = System.getenv("FLUTTER_ROOT")
-if (ext.flutterSdkPath == null) {
+def flutterSdkPath = System.getenv("FLUTTER_ROOT")
+if (flutterSdkPath == null) {
     def localPropertiesFile = new File(rootDir, "local.properties")
     if (localPropertiesFile.exists()) {
         def properties = new Properties()
         localPropertiesFile.withReader("UTF-8") { reader -> properties.load(reader) }
-        ext.flutterSdkPath = properties.getProperty("flutter.sdk")
+        flutterSdkPath = properties.getProperty("flutter.sdk")
     }
 }
 
 buildscript {
-    def flutterSdkPath = ext.flutterSdkPath
     repositories {
         if (flutterSdkPath != null) {
             maven {
