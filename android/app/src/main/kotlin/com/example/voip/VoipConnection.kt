@@ -3,8 +3,9 @@ package com.example.voip
 import android.os.Build
 import android.telecom.Connection
 import android.telecom.DisconnectCause
+import android.telecom.TelecomManager
 
-class VoipConnection(
+open class VoipConnection(
     private val callId: String? = null,
     private val callerId: String? = null
 ) : Connection() {
@@ -16,7 +17,7 @@ class VoipConnection(
             setAudioModeIsVoip(true)
         }
         if (!callerId.isNullOrEmpty()) {
-            setCallerDisplayName(callerId, PRESENTATION_ALLOWED)
+            setCallerDisplayName(callerId, TelecomManager.PRESENTATION_ALLOWED)
         }
         setInitializing()
     }

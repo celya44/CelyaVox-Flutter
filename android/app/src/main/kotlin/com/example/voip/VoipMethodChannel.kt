@@ -39,7 +39,7 @@ class VoipMethodChannel(
                 }
                 "makeCall" -> {
                     val callee = requireArgument<String>(call, "callee")
-                    engine.makeCall(callee)
+                    engine.startCall(callee)
                     result.success(null)
                 }
                 "acceptCall" -> {
@@ -49,7 +49,7 @@ class VoipMethodChannel(
                 }
                 "hangupCall" -> {
                     val callId = requireArgument<String>(call, "callId")
-                    engine.hangupCall(callId)
+                    engine.endCall(callId)
                     result.success(null)
                 }
                 else -> result.notImplemented()

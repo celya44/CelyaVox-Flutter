@@ -74,7 +74,7 @@ class VoipEngine(
         mainHandler.post { sink.success(event) }
     }
 
-    override fun handleNativeEvent(type: String, message: String) {
+    override fun onEvent(type: String, message: String) {
         Log.d(TAG, "Native event $type | $message")
         when (type) {
             "incoming_call" -> {
