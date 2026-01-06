@@ -91,11 +91,10 @@ dependencies {
 // Ensure Flutter can find the generated debug APK by copying it to the expected flutter-apk folder.
 tasks.register("copyDebugApkForFlutter", Copy) {
     dependsOn("packageDebug")
-    from(layout.buildDirectory.file("outputs/apk/debug/app-debug.apk"))
+    from(fileTree("${buildDir}/outputs/apk/debug") { include("*.apk") })
     into("${rootDir}/../build/app/outputs/flutter-apk")
-    rename { "app-debug.apk" }
 }
 
-tasks.named("assembleDebug").configure {
+tasks.named("assembleDebug") {
     finalizedBy("copyDebugApkForFlutter")
 }
