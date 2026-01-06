@@ -89,6 +89,7 @@ jobs:
         run: |
           ls -R build/app/outputs || true
           ls -R android/app/build/outputs || true
+          find build android -maxdepth 6 \( -name "*.apk" -o -name "*.aab" \) -print || true
         working-directory: ./
 
       - name: Build App Bundle (release)
