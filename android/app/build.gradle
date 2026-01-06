@@ -1,6 +1,7 @@
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android'
+    id 'dev.flutter.flutter-gradle-plugin'
 }
 
 def hasReleaseSigning = false
@@ -19,7 +20,7 @@ android {
 
     signingConfigs {
         release {
-            def ksPath = System.getenv("ANDROID_KEYSTORE_PATH") ?: "upload-keystore.jks"
+            def ksPath = System.getenv("ANDROID_KEYSTORE_PATH") ?: "${project.rootDir}/app/upload-keystore.jks"
             def ksFile = file(ksPath)
             def ksPass = System.getenv("ANDROID_KEYSTORE_PASSWORD")
             def keyAliasEnv = System.getenv("ANDROID_KEY_ALIAS")
@@ -71,6 +72,10 @@ android {
     kotlinOptions {
         jvmTarget = '17'
     }
+}
+
+flutter {
+    source '../..'
 }
 
 dependencies {
