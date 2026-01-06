@@ -13,11 +13,14 @@ pluginManagement {
     }
     includeBuild("${flutterSdkPath}/packages/flutter_tools/gradle")
     repositories {
+        maven {
+            url "https://maven-central.storage-download.googleapis.com/maven2"
+            content { includeGroupByRegex "org\\.jetbrains\\.kotlin.*" }
+        }
         google()
         mavenCentral()
         gradlePluginPortal()
         maven { url "https://plugins.gradle.org/m2/" }
-        maven { url "https://maven-central.storage-download.googleapis.com/maven2" }
     }
 }
 plugins {
@@ -29,9 +32,12 @@ plugins {
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     repositories {
+        maven {
+            url "https://maven-central.storage-download.googleapis.com/maven2"
+            content { includeGroupByRegex "org\\.jetbrains\\.kotlin.*" }
+        }
         google()
         mavenCentral()
-        maven { url "https://maven-central.storage-download.googleapis.com/maven2" }
     }
 }
 

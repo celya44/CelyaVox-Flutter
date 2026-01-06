@@ -12,8 +12,11 @@ buildscript {
 
 allprojects {
     repositories {
+        maven {
+            url "https://maven-central.storage-download.googleapis.com/maven2"
+            content { includeGroupByRegex "org\\.jetbrains\\.kotlin.*" }
+        }
         google()
         mavenCentral()
-        maven { url "https://maven-central.storage-download.googleapis.com/maven2" }
     }
 }
