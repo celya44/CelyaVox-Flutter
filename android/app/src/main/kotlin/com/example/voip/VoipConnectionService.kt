@@ -129,7 +129,7 @@ class VoipConnectionService : ConnectionService() {
                 .setSupportedUriSchemes(listOf(PhoneAccount.SCHEME_SIP, PhoneAccount.SCHEME_TEL))
                 .build()
             telecomManager.registerPhoneAccount(account)
-            Log.i(TAG, "Registered self-managed PhoneAccount: ${account.id}")
+            Log.i(TAG, "Registered self-managed PhoneAccount: ${account.accountHandle.id}")
         }
 
         fun unregisterSelfManaged(context: Context) {
