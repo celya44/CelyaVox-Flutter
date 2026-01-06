@@ -1,4 +1,7 @@
-def flutterSdkPath = System.getenv("FLUTTER_ROOT")
+def flutterSdkPath = (gradle.ext.has("flutterSdkPath") ? gradle.ext.flutterSdkPath : null)
+if (flutterSdkPath == null) {
+    flutterSdkPath = System.getenv("FLUTTER_ROOT")
+}
 if (flutterSdkPath == null) {
     def localPropertiesFile = new File(rootDir, "local.properties")
     if (localPropertiesFile.exists()) {
@@ -7,9 +10,12 @@ if (flutterSdkPath == null) {
         flutterSdkPath = properties.getProperty("flutter.sdk")
     }
 }
+if (flutterSdkPath != null && !gradle.ext.has("flutterSdkPath")) {
+    gradle.ext.flutterSdkPath = flutterSdkPath
+}
 
 buildscript {
-    def sdkPath = flutterSdkPath
+    def sdkPath = (gradle.ext.has("flutterSdkPath") ? gradle.ext.flutterSdkPath : flutterSdkPath)
     repositories {
         if (sdkPath != null) {
             maven {
