@@ -1,16 +1,17 @@
+def flutterSdkPath = System.getenv("FLUTTER_ROOT")
+if (flutterSdkPath == null) {
+    def localPropertiesFile = new File(rootDir, "local.properties")
+    if (localPropertiesFile.exists()) {
+        def properties = new Properties()
+        localPropertiesFile.withReader("UTF-8") { reader -> properties.load(reader) }
+        flutterSdkPath = properties.getProperty("flutter.sdk")
+    }
+}
+if (flutterSdkPath == null) {
+    throw new GradleException("Flutter SDK not found. Set FLUTTER_ROOT or define flutter.sdk in local.properties")
+}
+
 pluginManagement {
-    def flutterSdkPath = System.getenv("FLUTTER_ROOT")
-    if (flutterSdkPath == null) {
-        def localPropertiesFile = new File(rootDir, "local.properties")
-        if (localPropertiesFile.exists()) {
-            def properties = new Properties()
-            localPropertiesFile.withReader("UTF-8") { reader -> properties.load(reader) }
-            flutterSdkPath = properties.getProperty("flutter.sdk")
-        }
-    }
-    if (flutterSdkPath == null) {
-        throw new GradleException("Flutter SDK not found. Set FLUTTER_ROOT or define flutter.sdk in local.properties")
-    }
     includeBuild("${flutterSdkPath}/packages/flutter_tools/gradle")
     repositories {
         google()
@@ -37,6 +38,10 @@ plugins {
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     repositories {
+        maven {
+            url = uri("${flutterSdkPath}/bin/cache/artifacts/engine/android")
+            content { includeGroup("io.flutter") }
+        }
         maven {
             url "https://maven-central.storage-download.googleapis.com/maven2"
             content { includeGroupByRegex "org\\.jetbrains\\.kotlin.*" }

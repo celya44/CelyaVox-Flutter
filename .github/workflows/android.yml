@@ -82,7 +82,7 @@ jobs:
         working-directory: ./
 
       - name: Build APK (debug)
-        run: flutter build apk --debug
+        run: flutter build apk --debug --android-skip-build-dependency-validation
         working-directory: ./
 
       - name: Build App Bundle (release)
@@ -100,7 +100,7 @@ jobs:
               }
           }" > android/app/signing.generated.gradle
           echo "apply from: 'signing.generated.gradle'" >> android/app/build.gradle
-          flutter build appbundle --release
+          flutter build appbundle --release --android-skip-build-dependency-validation
         working-directory: ./
 
       - name: Upload artifacts
