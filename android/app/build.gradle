@@ -9,13 +9,14 @@ def hasReleaseSigning = false
 android {
     namespace "com.example.voip"
     compileSdk 35
+    ndkVersion flutter.ndkVersion
 
     defaultConfig {
         applicationId "com.example.voip"
         minSdk 21
         targetSdk 35
-        versionCode 1
-        versionName "1.0"
+        versionCode flutter.versionCode
+        versionName flutter.versionName
     }
 
     signingConfigs {
@@ -41,6 +42,7 @@ android {
 
     buildTypes {
         release {
+            shrinkResources false
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             if (hasReleaseSigning) {
@@ -49,6 +51,7 @@ android {
         }
         debug {
             debuggable true
+            shrinkResources false
         }
     }
 
