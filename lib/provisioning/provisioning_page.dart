@@ -1,0 +1,138 @@
+import 'package:flutter/material.dart';
+import 'provisioning_channel.dart';
+import 'provisioning_state.dart';
+
+class ProvisioningPage extends StatefulWidget {
+  const ProvisioningPage({super.key});
+
+  @override
+  State<ProvisioningPage> createState() => _ProvisioningPageState();
+}
+
+class _ProvisioningPageState extends State<ProvisioningPage> {
+  final TextEditingController _urlController = TextEditingController();
+  bool _isProvisioned = false;
+  bool _submitting = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadState();
+  }
+
+  Future<void> _loadState() async {
+    final provisioned = await ProvisioningState.isProvisioned();
+    if (mounted) {
+      setState(() {
+        _isProvisioned = provisioned;
+      });
+    }
+  }
+
+  Future<void> _submit() async {
+    final url = _urlController.text.trim();
+    if (url.isEmpty) {
+      setState(() => _error = 'Provisioning URL is required');
+      return;
+    }
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+    try {
+      await ProvisioningChannel.startProvisioning(url);
+      await ProvisioningState.setProvisioned(true);
+      if (mounted) {
+        setState(() {
+          _isProvisioned = true;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _submitting = false;
+        });
+      }
+    }
+  }
+
+  void _scanQr() {
+    setState(() {
+      _error = 'QR scan not implemented';
+    });
+  }
+
+  @override
+  void dispose() {
+    _urlController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isProvisioned) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Provisioning')),
+        body: const Center(child: Text('Device is provisioned.')),
+      );
+    }
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Provisioning')),
+      body: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: _urlController,
+              decoration: const InputDecoration(
+                labelText: 'Provisioning URL',
+                hintText: 'https://example.com/provisioning.xml',
+              ),
+              keyboardType: TextInputType.url,
+              autofillHints: const [AutofillHints.url],
+            ),
+            const SizedBox(height: 12),
+            if (_error != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  _error!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _submitting ? null : _submit,
+                    child: _submitting
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text('Submit'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton(
+                  onPressed: _submitting ? null : _scanQr,
+                  child: const Text('Scan QR'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
