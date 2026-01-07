@@ -66,6 +66,9 @@ jobs:
           api-level: 35
           cmake: '3.22.1'
 
+      - name: Ensure Gradle wrapper executable
+        run: chmod +x android/gradlew
+
       - name: Cache Gradle
         uses: actions/cache@v4
         with:
@@ -115,26 +118,27 @@ jobs:
             echo "No keystore provided; skipping bundle build.";
             exit 0;
           fi
-          SIGNING_FILE=android/app/signing.generated.gradle
-          cat > "$SIGNING_FILE" <<'EOF'
-          android {
-              signingConfigs {
-                  release {
-                      storeFile file('upload-keystore.jks')
-                      storePassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
-                      keyAlias System.getenv('ANDROID_KEY_ALIAS')
-                      keyPassword System.getenv('ANDROID_KEY_PASSWORD')
-                  }
-              }
-              buildTypes {
-                  release {
-                      signingConfig signingConfigs.release
-                  }
-              }
+            SIGNING_FILE=android/app/signing.generated.gradle
+            cat > "$SIGNING_FILE" <<'EOF'
+      android {
+        signingConfigs {
+          release {
+            storeFile file('upload-keystore.jks')
+            storePassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
+            keyAlias System.getenv('ANDROID_KEY_ALIAS')
+            keyPassword System.getenv('ANDROID_KEY_PASSWORD')
           }
-          EOF
-          ./gradlew -p android app:bundleRelease --no-daemon --stacktrace --warning-mode all
-        working-directory: ./
+        }
+        buildTypes {
+          release {
+            signingConfig signingConfigs.release
+          }
+        }
+      }
+      EOF
+            cd android
+            ./gradlew app:bundleRelease --no-daemon --stacktrace --warning-mode all
+          working-directory: ./
 
       - name: List build outputs (AAB)
         run: |
