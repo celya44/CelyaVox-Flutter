@@ -90,7 +90,7 @@ dependencies {
 }
 
 // Ensure Flutter can find the generated APKs at project-level build/app/outputs/flutter-apk
-def flutterApkDir = "${rootDir}/../../build/app/outputs/flutter-apk"
+def flutterApkDir = "${rootDir}/../build/app/outputs/flutter-apk"
 
 tasks.register("copyDebugApkForFlutter", Copy) {
     dependsOn("packageDebug")
