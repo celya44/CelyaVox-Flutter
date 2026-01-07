@@ -106,6 +106,13 @@ tasks.register("copyReleaseApkForFlutter", Copy) {
     dependsOn("packageRelease")
     from(fileTree("${buildDir}/outputs/apk/release") { include("*.apk") })
     into(flutterApkDir)
+    rename { fileName ->
+        if (fileName.contains("-unsigned")) {
+            "app-release.apk"
+        } else {
+            fileName
+        }
+    }
 }
 
 tasks.matching { it.name == "assembleRelease" }.all {
