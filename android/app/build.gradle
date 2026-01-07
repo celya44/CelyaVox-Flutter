@@ -99,3 +99,14 @@ tasks.register("copyDebugApkForFlutter", Copy) {
 tasks.matching { it.name == "assembleDebug" }.all {
     finalizedBy("copyDebugApkForFlutter")
 }
+
+// Ensure Flutter can find the generated release APK by copying it to the expected flutter-apk folder.
+tasks.register("copyReleaseApkForFlutter", Copy) {
+    dependsOn("packageRelease")
+    from(fileTree("${buildDir}/outputs/apk/release") { include("*.apk") })
+    into("${rootDir}/../build/app/outputs/flutter-apk")
+}
+
+tasks.matching { it.name == "assembleRelease" }.all {
+    finalizedBy("copyReleaseApkForFlutter")
+}
