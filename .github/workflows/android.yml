@@ -11,7 +11,8 @@ on:
     branches:
       - main
       - master
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs: {}
 
 jobs:
   build:
@@ -107,23 +108,23 @@ jobs:
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           SIGNING_FILE=android/app/signing.generated.gradle
-            cat > "$SIGNING_FILE" <<'EOF'
-            android {
-              signingConfigs {
-                release {
-                  storeFile file('upload-keystore.jks')
-                  storePassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
-                  keyAlias System.getenv('ANDROID_KEY_ALIAS')
-                  keyPassword System.getenv('ANDROID_KEY_PASSWORD')
-                }
-              }
-              buildTypes {
-                release {
-                  signingConfig signingConfigs.release
-                }
+          cat > "$SIGNING_FILE" <<'EOF'
+          android {
+            signingConfigs {
+              release {
+                storeFile file('upload-keystore.jks')
+                storePassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
+                keyAlias System.getenv('ANDROID_KEY_ALIAS')
+                keyPassword System.getenv('ANDROID_KEY_PASSWORD')
               }
             }
-            EOF
+            buildTypes {
+              release {
+                signingConfig signingConfigs.release
+              }
+            }
+          }
+          EOF
           ./gradlew -p android app:bundleRelease --no-daemon --stacktrace --warning-mode all
         working-directory: ./
 
