@@ -1,11 +1,17 @@
+# yamllint disable rule:line-length rule:truthy
+---
 name: Android Build
 
 on:
   push:
-    branches: [ main, master ]
+    branches:
+      - main
+      - master
   pull_request:
-    branches: [ main, master ]
-  workflow_dispatch:
+    branches:
+      - main
+      - master
+  workflow_dispatch: {}
 
 jobs:
   build:
@@ -35,7 +41,6 @@ jobs:
         with:
           path: |
             ~/.flutter
-            ~/.cache/flutter
           key: flutter-sdk-${{ runner.os }}-${{ steps.flutter-version.outputs.version }}
           restore-keys: |
             flutter-sdk-${{ runner.os }}-
@@ -71,11 +76,10 @@ jobs:
             gradle-${{ runner.os }}-
 
       - name: Decode Android keystore
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
         env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 || '' }}
-        if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' }}
-        run: |
-          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/upload-keystore.jks
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/upload-keystore.jks
 
       - name: Flutter pub get
         run: flutter pub get
@@ -89,37 +93,42 @@ jobs:
         run: |
           ls -R build/app/outputs || true
           ls -R android/app/build/outputs || true
-          find build android -maxdepth 6 -name "*.apk" -o -name "*.aab" -print || true
+          find build -maxdepth 6 -name "*.apk" -print || true
+          find build -maxdepth 6 -name "*.aab" -print || true
+          find android -maxdepth 6 -name "*.apk" -print || true
+          find android -maxdepth 6 -name "*.aab" -print || true
         working-directory: ./
 
       - name: Build App Bundle (release)
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           SIGNING_FILE=android/app/signing.generated.gradle
-          cat > "$SIGNING_FILE" <<'EOF'
-android {
-    signingConfigs {
-        release {
-            storeFile file('upload-keystore.jks')
-            storePassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
-            keyAlias System.getenv('ANDROID_KEY_ALIAS')
-            keyPassword System.getenv('ANDROID_KEY_PASSWORD')
-        }
-    }
-    buildTypes {
-        release {
-            signingConfig signingConfigs.release
-        }
-    }
-}
-EOF
+            cat > "$SIGNING_FILE" <<'EOF'
+            android {
+              signingConfigs {
+                release {
+                  storeFile file('upload-keystore.jks')
+                  storePassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
+                  keyAlias System.getenv('ANDROID_KEY_ALIAS')
+                  keyPassword System.getenv('ANDROID_KEY_PASSWORD')
+                }
+              }
+              buildTypes {
+                release {
+                  signingConfig signingConfigs.release
+                }
+              }
+            }
+            EOF
           ./gradlew -p android app:bundleRelease --no-daemon --stacktrace --warning-mode all
         working-directory: ./
 
       - name: List build outputs (AAB)
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
         run: |
           ls -R build/app/outputs || true
           ls -R android/app/build/outputs || true
