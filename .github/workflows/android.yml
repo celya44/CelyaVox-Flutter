@@ -77,10 +77,14 @@ jobs:
             gradle-${{ runner.os }}-
 
       - name: Decode Android keystore
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-        run: echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/upload-keystore.jks
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "No keystore provided; skipping decode.";
+            exit 0;
+          fi
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/upload-keystore.jks
 
       - name: Flutter pub get
         run: flutter pub get
@@ -101,35 +105,38 @@ jobs:
         working-directory: ./
 
       - name: Build App Bundle (release)
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "No keystore provided; skipping bundle build.";
+            exit 0;
+          fi
           SIGNING_FILE=android/app/signing.generated.gradle
           cat > "$SIGNING_FILE" <<'EOF'
           android {
-            signingConfigs {
-              release {
-                storeFile file('upload-keystore.jks')
-                storePassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
-                keyAlias System.getenv('ANDROID_KEY_ALIAS')
-                keyPassword System.getenv('ANDROID_KEY_PASSWORD')
+              signingConfigs {
+                  release {
+                      storeFile file('upload-keystore.jks')
+                      storePassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
+                      keyAlias System.getenv('ANDROID_KEY_ALIAS')
+                      keyPassword System.getenv('ANDROID_KEY_PASSWORD')
+                  }
               }
-            }
-            buildTypes {
-              release {
-                signingConfig signingConfigs.release
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                  }
               }
-            }
           }
           EOF
           ./gradlew -p android app:bundleRelease --no-daemon --stacktrace --warning-mode all
         working-directory: ./
 
       - name: List build outputs (AAB)
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
         run: |
           ls -R build/app/outputs || true
           ls -R android/app/build/outputs || true
