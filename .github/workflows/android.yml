@@ -98,16 +98,25 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          echo "signingConfigs {
-              release {
-                  storeFile file('upload-keystore.jks')
-                  storePassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
-                  keyAlias System.getenv('ANDROID_KEY_ALIAS')
-                  keyPassword System.getenv('ANDROID_KEY_PASSWORD')
-              }
-          }" > android/app/signing.generated.gradle
-          echo "apply from: 'signing.generated.gradle'" >> android/app/build.gradle
-          flutter build appbundle --release --android-skip-build-dependency-validation
+          SIGNING_FILE=android/app/signing.generated.gradle
+          cat > "$SIGNING_FILE" <<'EOF'
+    android {
+      signingConfigs {
+        release {
+          storeFile file('upload-keystore.jks')
+          storePassword System.getenv('ANDROID_KEYSTORE_PASSWORD')
+          keyAlias System.getenv('ANDROID_KEY_ALIAS')
+          keyPassword System.getenv('ANDROID_KEY_PASSWORD')
+        }
+      }
+      buildTypes {
+        release {
+          signingConfig signingConfigs.release
+        }
+      }
+    }
+    EOF
+          ./gradlew -p android app:bundleRelease --no-daemon --stacktrace --warning-mode all
         working-directory: ./
 
       - name: List build outputs (AAB)
