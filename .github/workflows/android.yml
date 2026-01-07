@@ -133,6 +133,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: android-builds
+          if-no-files-found: warn
           path: |
             build/app/outputs/flutter-apk/*.apk
             android/app/build/outputs/apk/**/*.apk
