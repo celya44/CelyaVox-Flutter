@@ -93,8 +93,8 @@ jobs:
         run: flutter pub get
         working-directory: ./
 
-      - name: Build APK (debug)
-        run: flutter build apk --debug --android-skip-build-dependency-validation -v
+      - name: Build APK (release)
+        run: flutter build apk --release --android-skip-build-dependency-validation -v
         working-directory: ./
 
       - name: List build outputs (APK)
