@@ -95,6 +95,6 @@ tasks.register("copyDebugApkForFlutter", Copy) {
     into("${rootDir}/../build/app/outputs/flutter-apk")
 }
 
-tasks.named("assembleDebug") {
+tasks.matching { it.name == "assembleDebug" }.all {
     finalizedBy("copyDebugApkForFlutter")
 }
