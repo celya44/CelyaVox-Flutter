@@ -84,6 +84,7 @@ flutter {
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib:1.9.20"
     implementation "androidx.appcompat:appcompat:1.7.0"
+    implementation "androidx.security:security-crypto:1.1.0-alpha06"
     implementation platform("com.google.firebase:firebase-bom:33.2.0")
     implementation "com.google.firebase:firebase-messaging"
 }

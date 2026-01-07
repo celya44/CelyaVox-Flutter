@@ -13,7 +13,7 @@ import android.os.IBinder
 import android.os.PowerManager
 import android.telecom.TelecomManager
 import android.net.wifi.WifiManager
-import com.celya.voip.MainActivity
+import com.example.voip.MainActivity
 
 class IncomingCallService : Service() {
     private var wakeLock: PowerManager.WakeLock? = null

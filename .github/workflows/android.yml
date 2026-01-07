@@ -94,7 +94,7 @@ jobs:
         working-directory: ./
 
       - name: Build APK (release)
-        run: flutter build apk --release --android-skip-build-dependency-validation -v
+        run: flutter build apk --release --android-skip-build-dependency-validation
         working-directory: ./
 
       - name: List build outputs (APK)
@@ -136,7 +136,7 @@ jobs:
             }
           }
           EOF
-          ./gradlew app:bundleRelease --no-daemon --stacktrace --warning-mode all
+          ./gradlew app:bundleRelease --no-daemon --quiet
         working-directory: ./android
 
       - name: List build outputs (AAB)
