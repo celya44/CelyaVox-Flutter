@@ -130,15 +130,6 @@ jobs:
 
       - name: Build App Bundle (release)
         if: env.ANDROID_KEYSTORE_BASE64 != ''
-        id: bundle_flutter
-        continue-on-error: true
-        run: |
-          set -o pipefail
-          flutter build appbundle --release --android-skip-build-dependency-validation -v | tee build_appbundle.log
-        working-directory: ./
-
-      - name: Fallback Gradle bundle (release)
-        if: env.ANDROID_KEYSTORE_BASE64 != '' && steps.bundle_flutter.outcome == 'failure'
         working-directory: android
         run: |
           set -o pipefail
@@ -192,5 +183,4 @@ jobs:
             android/app/build/outputs/apk/**/*.apk
             build/app/outputs/bundle/release/*.aab
             android/app/build/outputs/bundle/**/*.aab
-            build_appbundle.log
             build/gradle_bundle.log
