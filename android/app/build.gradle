@@ -74,6 +74,7 @@ android {
         language {
             enableSplit = false
         }
+        storeArchive true
     }
 
     compileOptions {
