@@ -22,14 +22,16 @@ jobs:
       ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
       ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
       ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-      ANDROID_KEYSTORE_PATH: android/app/upload-keystore.jks
+      ANDROID_KEYSTORE_PATH: ${{ github.workspace }}/android/app/upload-keystore.jks
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       # Normalize gradlew line endings in case the file was committed with CRLF (prevents sed errors)
       - name: Ensure unix line endings for gradlew
-        run: sed -i 's/\r$//' android/gradlew
+        run: |
+          perl -0777 -pe 's/\r//g' android/gradlew > android/gradlew.unix
+          mv android/gradlew.unix android/gradlew
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
@@ -79,6 +81,10 @@ jobs:
       - name: Ensure Gradle wrapper executable
         run: chmod +x android/gradlew
 
+      - name: Patch Gradle wrapper (avoid sed quoting issue)
+        run: |
+          perl -0777 -i -pe 's/save \(\) \{.*?^\}/save () { for i; do printf "%s\\n" "$i"; done; }/ms' android/gradlew
+
       - name: Cache Gradle
         uses: actions/cache@v4
         with:
@@ -97,7 +103,8 @@ jobs:
             echo "No keystore provided; skipping decode.";
             exit 0;
           fi
-          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/upload-keystore.jks
+          mkdir -p "$(dirname "$ANDROID_KEYSTORE_PATH")"
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$ANDROID_KEYSTORE_PATH"
 
       - name: Flutter pub get
         run: flutter pub get
