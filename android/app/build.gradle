@@ -68,6 +68,9 @@ android {
     }
 
     bundle {
+        abi {
+            enableSplit = true
+        }
         language {
             enableSplit = false
         }
