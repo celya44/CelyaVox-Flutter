@@ -1,4 +1,4 @@
-package com.example.voip
+package fr.celya.celyavox
 
 import android.os.Bundle
 import io.flutter.embedding.android.FlutterActivity

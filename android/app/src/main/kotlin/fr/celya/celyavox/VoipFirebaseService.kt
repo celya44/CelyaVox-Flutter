@@ -1,4 +1,4 @@
-package com.example.voip
+package fr.celya.celyavox
 
 import android.util.Log
 import com.google.firebase.messaging.FirebaseMessagingService

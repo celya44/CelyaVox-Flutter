@@ -1,4 +1,4 @@
-package com.example.voip
+package fr.celya.celyavox
 
 import android.content.ComponentName
 import android.content.Context
@@ -128,8 +128,13 @@ class VoipConnectionService : ConnectionService() {
                 .setCapabilities(PhoneAccount.CAPABILITY_SELF_MANAGED)
                 .setSupportedUriSchemes(listOf(PhoneAccount.SCHEME_SIP, PhoneAccount.SCHEME_TEL))
                 .build()
-            telecomManager.registerPhoneAccount(account)
-            Log.i(TAG, "Registered self-managed PhoneAccount: ${account.accountHandle.id}")
+            try {
+                telecomManager.registerPhoneAccount(account)
+                Log.i(TAG, "Registered self-managed PhoneAccount: ${account.accountHandle.id}")
+            } catch (sec: SecurityException) {
+                // Devices will throw if MANAGE_OWN_CALLS/role not granted; avoid crashing app.
+                Log.e(TAG, "Failed to register self-managed PhoneAccount (missing permission/role)", sec)
+            }
         }
 
         fun unregisterSelfManaged(context: Context) {

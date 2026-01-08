@@ -1,4 +1,4 @@
-package com.example.voip
+package fr.celya.celyavox
 
 import android.app.Notification
 import android.app.NotificationChannel

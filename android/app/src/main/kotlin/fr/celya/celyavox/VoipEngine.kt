@@ -1,4 +1,4 @@
-package com.example.voip
+package fr.celya.celyavox
 
 import android.content.Context
 import android.os.Handler
@@ -39,6 +39,7 @@ class VoipEngine(
 
     fun initialize(context: Context) {
         appContext = context.applicationContext
+        // Registration can fail if MANAGE_OWN_CALLS role/permission is not granted; keep app alive.
         VoipConnectionService.registerSelfManaged(appContext!!)
         sipEngine.init()
     }

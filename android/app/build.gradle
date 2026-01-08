@@ -7,16 +7,20 @@ plugins {
 def hasReleaseSigning = false
 
 android {
-    namespace "com.example.voip"
+    namespace "fr.celya.celyavox"
     compileSdk 35
     ndkVersion flutter.ndkVersion
 
     defaultConfig {
-        applicationId "com.example.voip"
+        applicationId "fr.celya.celyavox"
         minSdk 21
         targetSdk 35
         versionCode flutter.versionCode
         versionName flutter.versionName
+        // Limit native ABIs to those we ship libs for (arm only); avoids x86/x86_64 crashes.
+        ndk {
+            abiFilters "arm64-v8a", "armeabi-v7a"
+        }
     }
 
     signingConfigs {

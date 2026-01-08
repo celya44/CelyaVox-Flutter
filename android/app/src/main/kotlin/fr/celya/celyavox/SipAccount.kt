@@ -1,4 +1,4 @@
-package com.example.voip
+package fr.celya.celyavox
 
 /**
  * Immutable SIP account descriptor. Password is supplied at runtime from Flutter

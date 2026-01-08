@@ -1,4 +1,4 @@
-package com.example.voip
+package fr.celya.celyavox
 
 import android.content.Context
 import android.net.wifi.WifiManager
