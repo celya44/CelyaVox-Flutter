@@ -86,7 +86,6 @@ jobs:
           fi
           echo "NDK trouvé dans ${ANDROID_SDK_ROOT}/ndk/26.1.10909125"
 
-      - name: Build native PJSIP libs
         env:
           ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
         run: |
@@ -102,6 +101,15 @@ jobs:
           android/pjsip/build_pjsip.sh
           echo "Listing generated native libs:"
           find android/app/src/main/jniLibs -maxdepth 2 -type f \( -name "*.so" -o -name "*.a" \) -print
+
+      - name: Debug PJSIP sources and headers
+        run: |
+          echo "=== Contenu de android/pjsip ==="
+          ls -l android/pjsip || true
+          echo "=== Contenu de android/pjsip/pjproject-2.14.1 ==="
+          ls -l android/pjsip/pjproject-2.14.1 || true
+          echo "=== Contenu de android/pjsip/pjproject-2.14.1/pjlib/include ==="
+          ls -l android/pjsip/pjproject-2.14.1/pjlib/include || true
 
       - name: Ensure Gradle wrapper executable
         run: chmod +x android/gradlew
