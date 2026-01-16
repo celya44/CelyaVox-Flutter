@@ -22,11 +22,12 @@ fetch_sources() {
   if [[ -d "${SRC_DIR}" ]]; then
     return
   fi
-  echo "Downloading PJSIP ${PJSIP_VERSION}..."
-  tmp_tar="${ROOT_DIR}/pjproject-${PJSIP_VERSION}.tar.gz"
-  curl -L "${PJSIP_URL}" -o "${tmp_tar}"
-  tar -xzf "${tmp_tar}" -C "${ROOT_DIR}"
-  rm -f "${tmp_tar}"
+  echo "Cloning PJSIP ${PJSIP_VERSION}..."
+  git clone https://github.com/pjsip/pjproject.git "${SRC_DIR}"
+  cd "${SRC_DIR}"
+  git checkout "tags/${PJSIP_VERSION}"
+  echo "Sources cloned and checked out. Checking headers..."
+  ls -la pjlib/include/pjlib.h || echo "pjlib.h not found in sources"
 }
 
 prepare_config() {
