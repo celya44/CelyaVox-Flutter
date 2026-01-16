@@ -57,39 +57,56 @@ build_for_abi() {
   local out_dir="${ROOT_DIR}/../app/src/main/jniLibs/${abi}"
   mkdir -p "${out_dir}"
 
-    # Copy core libs (shared)
-    cp -a pjlib/lib/libpj*.so \
-      pjnath/lib/libpjnath*.so \
-      pjsip/lib/libpjsip*.so \
-      pjsip/lib/libpjsua*.so \
-      pjmedia/lib/libpjmedia*.so \
-      "${out_dir}" 2>/dev/null || true
+    # Helper: copy first match of a pattern to a normalized name if present
+    copy_norm() {
+      local pattern="$1"; shift
+      local dest="$1"; shift
+      local found
+      found=$(find . -name "$pattern" -print -quit || true)
+      if [[ -n "$found" ]]; then
+        cp -a "$found" "${out_dir}/${dest}" 2>/dev/null || true
+      fi
+    }
 
-    # Copy core libs (static) to cover builds that skip shared outputs
-    cp -a pjlib/lib/libpj*.a \
-      pjnath/lib/libpjnath*.a \
-      pjsip/lib/libpjsip*.a \
-      pjsip/lib/libpjsua*.a \
-      pjmedia/lib/libpjmedia*.a \
-      "${out_dir}" 2>/dev/null || true
+    # Core libs (shared/static), normalized names expected by CMake
+    copy_norm "libpj*.so" "libpj.so"
+    copy_norm "libpj*.a"  "libpj.a"
+    copy_norm "libpjnath*.so" "libpjnath.so"
+    copy_norm "libpjnath*.a"  "libpjnath.a"
+    copy_norm "libpjsip-ua*.so" "libpjsip-ua.so"
+    copy_norm "libpjsip-ua*.a"  "libpjsip-ua.a"
+    copy_norm "libpjsip-simple*.so" "libpjsip-simple.so"
+    copy_norm "libpjsip-simple*.a"  "libpjsip-simple.a"
+    copy_norm "libpjsip*.so" "libpjsip.so"
+    copy_norm "libpjsip*.a"  "libpjsip.a"
+    copy_norm "libpjsua*.so" "libpjsua.so"
+    copy_norm "libpjsua*.a"  "libpjsua.a"
+    copy_norm "libpjmedia-codec*.so" "libpjmedia-codec.so"
+    copy_norm "libpjmedia-codec*.a"  "libpjmedia-codec.a"
+    copy_norm "libpjmedia-audiodev*.so" "libpjmedia-audiodev.so"
+    copy_norm "libpjmedia-audiodev*.a"  "libpjmedia-audiodev.a"
+    copy_norm "libpjmedia*.so" "libpjmedia.so"
+    copy_norm "libpjmedia*.a"  "libpjmedia.a"
+    copy_norm "libpjlib-util*.so" "libpjlib-util.so"
+    copy_norm "libpjlib-util*.a"  "libpjlib-util.a"
 
-  # Locate and copy pjsua2 (shared or static) since path varies per toolchain
-  local pjsua2_lib
-  # Try ABI-specific match first; otherwise grab any available libpjsua2.
-  pjsua2_lib=$(find . \( -name "libpjsua2*${abi}*.so" -o -name "libpjsua2*${abi}*.a" \) -print -quit || true)
-  if [[ -z "$pjsua2_lib" ]]; then
-    pjsua2_lib=$(find . -name "libpjsua2*.so" -o -name "libpjsua2*.a" | head -n1 || true)
-  fi
-  if [[ -n "$pjsua2_lib" ]]; then
-    # Normalize name so CMake expects libpjsua2.(so|a) without extra suffixes.
-    if [[ "$pjsua2_lib" == *.so ]]; then
-      cp -a "$pjsua2_lib" "${out_dir}/libpjsua2.so"
-    else
-      cp -a "$pjsua2_lib" "${out_dir}/libpjsua2.a"
+    # Locate and copy pjsua2 (shared or static) since path varies per toolchain
+    local pjsua2_lib
+    # Try ABI-specific match first; otherwise grab any available libpjsua2.
+    pjsua2_lib=$(find . \( -name "libpjsua2*${abi}*.so" -o -name "libpjsua2*${abi}*.a" \) -print -quit || true)
+    if [[ -z "$pjsua2_lib" ]]; then
+      pjsua2_lib=$(find . -name "libpjsua2*.so" -o -name "libpjsua2*.a" | head -n1 || true)
     fi
-  else
-    echo "WARN: libpjsua2 (so/a) not found for ${abi}; SIP JNI may fail" >&2
-  fi
+    if [[ -n "$pjsua2_lib" ]]; then
+      # Normalize name so CMake expects libpjsua2.(so|a) without extra suffixes.
+      if [[ "$pjsua2_lib" == *.so ]]; then
+        cp -a "$pjsua2_lib" "${out_dir}/libpjsua2.so"
+      else
+        cp -a "$pjsua2_lib" "${out_dir}/libpjsua2.a"
+      fi
+    else
+      echo "WARN: libpjsua2 (so/a) not found for ${abi}; SIP JNI may fail" >&2
+    fi
   popd >/dev/null
 }
 
