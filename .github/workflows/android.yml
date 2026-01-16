@@ -60,7 +60,7 @@ jobs:
             flutter-sdk-${{ runner.os }}-
 
       - name: Flutter doctor
-        run: flutter doctor -v
+        run: flutter doctor
         working-directory: ./
 
       - name: Cache pub
@@ -152,19 +152,6 @@ jobs:
           mkdir -p "$(dirname "$ANDROID_KEYSTORE_PATH")"
           echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$ANDROID_KEYSTORE_PATH"
 
-      - name: Debug jniLibs/arm64-v8a après build_pjsip.sh
-        run: |
-          echo "=== Contenu de android/app/src/main/jniLibs/arm64-v8a après build_pjsip.sh ==="
-          ls -l android/app/src/main/jniLibs/arm64-v8a || true
-          find android/app/src/main/jniLibs/arm64-v8a -type f \( -name "*.so" -o -name "*.a" \) -print || true
-          echo "=== Vérification des headers PJSIP ==="
-          if [ -f android/pjsip/pjproject-2.14.1/pjlib/include/pjlib.h ]; then
-            echo "pjlib.h trouvé"
-          else
-            echo "pjlib.h manquant !" >&2
-            exit 1
-          fi
-
       - name: Flutter clean
         run: flutter clean
 
@@ -174,7 +161,7 @@ jobs:
 
 
       - name: Build APK (release)
-        run: flutter build apk --release --android-skip-build-dependency-validation --verbose
+        run: flutter build apk --release --android-skip-build-dependency-validation
         working-directory: ./
 
       - name: Debug CMake logs if build fails
@@ -202,7 +189,7 @@ jobs:
         working-directory: android
         run: |
           set -o pipefail
-          ./gradlew --no-daemon app:bundleRelease --stacktrace --info | tee ../build/gradle_bundle.log
+          ./gradlew --no-daemon app:bundleRelease --stacktrace | tee ../build/gradle_bundle.log
 
       - name: Normalize AAB location
         if: env.ANDROID_KEYSTORE_BASE64 != ''
