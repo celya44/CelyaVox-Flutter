@@ -61,6 +61,7 @@ build_for_abi() {
   cp -a pjlib/lib/libpj*.so \
         pjnath/lib/libpjnath*.so \
         pjsip/lib/libpjsip*.so \
+      pjsip/lib/libpjsua*.so \
         pjmedia/lib/libpjmedia*.so \
         "${out_dir}" 2>/dev/null || true
 
