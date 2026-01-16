@@ -11,6 +11,14 @@ android {
     compileSdk 35
     ndkVersion flutter.ndkVersion
 
+    // Build the native PJSIP bridge and package its .so alongside the prebuilt PJSIP libs.
+    externalNativeBuild {
+        cmake {
+            path "src/main/cpp/CMakeLists.txt"
+            version "3.22.1"
+        }
+    }
+
     defaultConfig {
         applicationId "fr.celya.celyavox"
         minSdk 21
@@ -20,6 +28,11 @@ android {
         // Limit native ABIs to those we ship libs for (arm only); avoids x86/x86_64 crashes.
         ndk {
             abiFilters "arm64-v8a", "armeabi-v7a"
+        }
+        externalNativeBuild {
+            cmake {
+                abiFilters "arm64-v8a", "armeabi-v7a"
+            }
         }
     }
 

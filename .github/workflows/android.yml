@@ -78,6 +78,17 @@ jobs:
           cmdline-tools-version: 11076708
           packages: platform-tools platforms;android-35 build-tools;35.0.0 ndk;26.1.10909125 cmake;3.22.1
 
+      - name: Build native PJSIP libs
+        env:
+          ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
+        run: |
+          set -euo pipefail
+          export ANDROID_NDK_ROOT="${ANDROID_NDK_ROOT:-${ANDROID_SDK_ROOT}/ndk/26.1.10909125}"
+          export NDK_HOME="$ANDROID_NDK_ROOT"
+          echo "Using ANDROID_NDK_ROOT=$ANDROID_NDK_ROOT"
+          chmod +x android/pjsip/build_pjsip.sh
+          android/pjsip/build_pjsip.sh
+
       - name: Ensure Gradle wrapper executable
         run: chmod +x android/gradlew
 

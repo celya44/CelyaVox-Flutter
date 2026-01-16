@@ -13,11 +13,17 @@ class PjsipEngine private constructor() {
         private const val TAG = "PjsipEngine"
         val instance: PjsipEngine by lazy { PjsipEngine() }
 
+        @Volatile
+        private var libraryLoaded = false
+
         init {
             try {
                 System.loadLibrary("voip_engine")
+                libraryLoaded = true
             } catch (t: Throwable) {
+                // On emulators/ABIs without the native lib, avoid crashing; callers will see init=false.
                 Log.e(TAG, "Failed to load native library", t)
+                libraryLoaded = false
             }
         }
 
@@ -39,8 +45,17 @@ class PjsipEngine private constructor() {
 
     @Synchronized
     fun init(): Boolean {
+        if (!libraryLoaded) {
+            Log.e(TAG, "Skipping init: native lib not loaded (check ABI / jniLibs)")
+            return false
+        }
         if (initialized.get()) return true
-        val ok = nativeInit()
+        val ok = try {
+            nativeInit()
+        } catch (t: Throwable) {
+            Log.e(TAG, "nativeInit failed", t)
+            false
+        }
         initialized.set(ok)
         return ok
     }

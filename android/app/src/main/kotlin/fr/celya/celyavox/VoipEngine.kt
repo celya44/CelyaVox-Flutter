@@ -41,7 +41,10 @@ class VoipEngine(
         appContext = context.applicationContext
         // Registration can fail if MANAGE_OWN_CALLS role/permission is not granted; keep app alive.
         VoipConnectionService.registerSelfManaged(appContext!!)
-        sipEngine.init()
+        val ok = sipEngine.init()
+        if (!ok) {
+            Log.e(TAG, "PJSIP init failed (native lib missing or init error); continuing without SIP")
+        }
     }
 
     fun dispose() {
