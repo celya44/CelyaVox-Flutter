@@ -9,7 +9,8 @@
 
 /* Enable required audio codecs */
 #define PJMEDIA_HAS_G711_CODEC            1
-#define PJMEDIA_HAS_OPUS_CODEC            1
+/* Disable Opus to avoid missing opus headers in CI; add back when libopus is provisioned. */
+#define PJMEDIA_HAS_OPUS_CODEC            0
 
 /* Disable unused codecs for a lean mobile build */
 #define PJMEDIA_HAS_G722_CODEC            0
