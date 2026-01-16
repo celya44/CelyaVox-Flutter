@@ -53,6 +53,8 @@ build_for_abi() {
 
   make dep
   make clean && make -j"$(nproc)"
+  # Explicitly build pjsua2 shared lib; some configs skip it by default.
+  make pjsua2 -j"$(nproc)" || make pjsua2
 
   local out_dir="${ROOT_DIR}/../app/src/main/jniLibs/${abi}"
   mkdir -p "${out_dir}"
