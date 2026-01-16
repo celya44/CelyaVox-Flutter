@@ -66,8 +66,11 @@ build_for_abi() {
 
   # Locate and copy pjsua2 (shared or static) since path varies per toolchain
   local pjsua2_lib
-  # Match the current ABI in the filename to avoid mixing architectures (e.g., armv7 vs arm64).
+  # Try ABI-specific match first; otherwise grab any available libpjsua2.
   pjsua2_lib=$(find . \( -name "libpjsua2*${abi}*.so" -o -name "libpjsua2*${abi}*.a" \) -print -quit || true)
+  if [[ -z "$pjsua2_lib" ]]; then
+    pjsua2_lib=$(find . -name "libpjsua2*.so" -o -name "libpjsua2*.a" | head -n1 || true)
+  fi
   if [[ -n "$pjsua2_lib" ]]; then
     # Normalize name so CMake expects libpjsua2.(so|a) without extra suffixes.
     if [[ "$pjsua2_lib" == *.so ]]; then
