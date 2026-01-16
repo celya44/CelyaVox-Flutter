@@ -127,7 +127,7 @@ jobs:
         working-directory: ./
 
       - name: Build APK (release)
-        run: flutter build apk --release --android-skip-build-dependency-validation
+        run: flutter build apk --release --android-skip-build-dependency-validation --verbose
         working-directory: ./
 
       - name: Debug CMake logs if build fails
