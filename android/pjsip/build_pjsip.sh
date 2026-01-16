@@ -66,7 +66,8 @@ build_for_abi() {
 
   # Locate and copy pjsua2 (shared or static) since path varies per toolchain
   local pjsua2_lib
-  pjsua2_lib=$(find . -name "libpjsua2*.so" -o -name "libpjsua2*.a" | head -n1 || true)
+  # Match the current ABI in the filename to avoid mixing architectures (e.g., armv7 vs arm64).
+  pjsua2_lib=$(find . \( -name "libpjsua2*${abi}*.so" -o -name "libpjsua2*${abi}*.a" \) -print -quit || true)
   if [[ -n "$pjsua2_lib" ]]; then
     cp -a "$pjsua2_lib" "${out_dir}/"
   else
