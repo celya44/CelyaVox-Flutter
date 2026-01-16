@@ -88,13 +88,12 @@ jobs:
 
         env:
           ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
-          # ...clé 'run' supprimée ici car déjà définie ci-dessus...
 
-        - name: Debug jniLibs/arm64-v8a après build_pjsip.sh
-          run: |
-            echo "=== Contenu de android/app/src/main/jniLibs/arm64-v8a après build_pjsip.sh ==="
-            ls -l android/app/src/main/jniLibs/arm64-v8a || true
-            find android/app/src/main/jniLibs/arm64-v8a -type f \( -name "*.so" -o -name "*.a" \) -print || true
+      - name: Debug jniLibs/arm64-v8a après build_pjsip.sh
+        run: |
+          echo "=== Contenu de android/app/src/main/jniLibs/arm64-v8a après build_pjsip.sh ==="
+          ls -l android/app/src/main/jniLibs/arm64-v8a || true
+          find android/app/src/main/jniLibs/arm64-v8a -type f \( -name "*.so" -o -name "*.a" \) -print || true
 
       - name: Debug PJSIP sources and headers
         run: |
