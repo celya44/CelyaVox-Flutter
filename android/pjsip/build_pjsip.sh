@@ -57,13 +57,21 @@ build_for_abi() {
   local out_dir="${ROOT_DIR}/../app/src/main/jniLibs/${abi}"
   mkdir -p "${out_dir}"
 
-  # Copy core libs
-  cp -a pjlib/lib/libpj*.so \
-        pjnath/lib/libpjnath*.so \
-        pjsip/lib/libpjsip*.so \
+    # Copy core libs (shared)
+    cp -a pjlib/lib/libpj*.so \
+      pjnath/lib/libpjnath*.so \
+      pjsip/lib/libpjsip*.so \
       pjsip/lib/libpjsua*.so \
-        pjmedia/lib/libpjmedia*.so \
-        "${out_dir}" 2>/dev/null || true
+      pjmedia/lib/libpjmedia*.so \
+      "${out_dir}" 2>/dev/null || true
+
+    # Copy core libs (static) to cover builds that skip shared outputs
+    cp -a pjlib/lib/libpj*.a \
+      pjnath/lib/libpjnath*.a \
+      pjsip/lib/libpjsip*.a \
+      pjsip/lib/libpjsua*.a \
+      pjmedia/lib/libpjmedia*.a \
+      "${out_dir}" 2>/dev/null || true
 
   # Locate and copy pjsua2 (shared or static) since path varies per toolchain
   local pjsua2_lib
