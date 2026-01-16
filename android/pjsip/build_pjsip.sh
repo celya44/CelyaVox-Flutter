@@ -56,12 +56,22 @@ build_for_abi() {
 
   local out_dir="${ROOT_DIR}/../app/src/main/jniLibs/${abi}"
   mkdir -p "${out_dir}"
-    cp -a pjlib/lib/libpj*.so \
-      pjnath/lib/libpjnath*.so \
-      pjsip/lib/libpjsip*.so \
-      pjmedia/lib/libpjmedia*.so \
-      pjsip-apps/src/pjsua2/lib/libpjsua2*.so \
-      "${out_dir}" 2>/dev/null || true
+
+  # Copy core libs
+  cp -a pjlib/lib/libpj*.so \
+        pjnath/lib/libpjnath*.so \
+        pjsip/lib/libpjsip*.so \
+        pjmedia/lib/libpjmedia*.so \
+        "${out_dir}" 2>/dev/null || true
+
+  # Locate and copy pjsua2 (location differs by version/toolchain)
+  local pjsua2_so
+  pjsua2_so=$(find . -name "libpjsua2*.so" -print -quit || true)
+  if [[ -n "$pjsua2_so" ]]; then
+    cp -a "$pjsua2_so" "${out_dir}/"
+  else
+    echo "WARN: libpjsua2.so not found for ${abi}; SIP JNI may fail" >&2
+  fi
   popd >/dev/null
 }
 
