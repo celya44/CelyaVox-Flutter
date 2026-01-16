@@ -10,8 +10,18 @@ add_library(voip_engine SHARED voip_engine.cpp)
 # PJSIP prebuilt libraries expected in app/src/main/jniLibs/<abi>/
 set(PJSIP_LIB_DIR ${CMAKE_SOURCE_DIR}/../jniLibs/${ANDROID_ABI})
 
-add_library(pjsua2 SHARED IMPORTED)
-set_target_properties(pjsua2 PROPERTIES IMPORTED_LOCATION ${PJSIP_LIB_DIR}/libpjsua2.so)
+# Prefer shared libpjsua2 if present; fall back to static archive.
+set(PJSUA2_SO ${PJSIP_LIB_DIR}/libpjsua2.so)
+set(PJSUA2_A ${PJSIP_LIB_DIR}/libpjsua2.a)
+if(EXISTS ${PJSUA2_SO})
+    add_library(pjsua2 SHARED IMPORTED)
+    set_target_properties(pjsua2 PROPERTIES IMPORTED_LOCATION ${PJSUA2_SO})
+elseif(EXISTS ${PJSUA2_A})
+    add_library(pjsua2 STATIC IMPORTED)
+    set_target_properties(pjsua2 PROPERTIES IMPORTED_LOCATION ${PJSUA2_A})
+else()
+    message(FATAL_ERROR "libpjsua2 not found in ${PJSIP_LIB_DIR} (expected .so or .a)")
+endif()
 
 add_library(pjsua SHARED IMPORTED)
 set_target_properties(pjsua PROPERTIES IMPORTED_LOCATION ${PJSIP_LIB_DIR}/libpjsua.so)
