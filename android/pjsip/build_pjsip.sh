@@ -56,7 +56,12 @@ build_for_abi() {
 
   local out_dir="${ROOT_DIR}/../app/src/main/jniLibs/${abi}"
   mkdir -p "${out_dir}"
-  cp -a pjlib/lib/libpj*.so pjnath/lib/libpjnath*.so pjsip/lib/libpjsip*.so pjmedia/lib/libpjmedia*.so "${out_dir}" 2>/dev/null || true
+    cp -a pjlib/lib/libpj*.so \
+      pjnath/lib/libpjnath*.so \
+      pjsip/lib/libpjsip*.so \
+      pjmedia/lib/libpjmedia*.so \
+      pjsip-apps/src/pjsua2/lib/libpjsua2*.so \
+      "${out_dir}" 2>/dev/null || true
   popd >/dev/null
 }
 
