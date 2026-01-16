@@ -9,7 +9,8 @@ def hasReleaseSigning = false
 android {
     namespace "fr.celya.celyavox"
     compileSdk 35
-    ndkVersion flutter.ndkVersion
+    // Pin NDK to match CI setup and native PJSIP build script.
+    ndkVersion "26.1.10909125"
 
     // Build the native PJSIP bridge and package its .so alongside the prebuilt PJSIP libs.
     externalNativeBuild {
