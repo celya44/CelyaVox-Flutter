@@ -69,7 +69,12 @@ build_for_abi() {
   # Match the current ABI in the filename to avoid mixing architectures (e.g., armv7 vs arm64).
   pjsua2_lib=$(find . \( -name "libpjsua2*${abi}*.so" -o -name "libpjsua2*${abi}*.a" \) -print -quit || true)
   if [[ -n "$pjsua2_lib" ]]; then
-    cp -a "$pjsua2_lib" "${out_dir}/"
+    # Normalize name so CMake expects libpjsua2.(so|a) without extra suffixes.
+    if [[ "$pjsua2_lib" == *.so ]]; then
+      cp -a "$pjsua2_lib" "${out_dir}/libpjsua2.so"
+    else
+      cp -a "$pjsua2_lib" "${out_dir}/libpjsua2.a"
+    fi
   else
     echo "WARN: libpjsua2 (so/a) not found for ${abi}; SIP JNI may fail" >&2
   fi

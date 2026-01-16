@@ -89,7 +89,7 @@ jobs:
           chmod +x android/pjsip/build_pjsip.sh
           android/pjsip/build_pjsip.sh
           echo "Listing generated native libs:"
-          find android/app/src/main/jniLibs -maxdepth 2 -type f -name "*.so" -print
+          find android/app/src/main/jniLibs -maxdepth 2 -type f \( -name "*.so" -o -name "*.a" \) -print
 
       - name: Ensure Gradle wrapper executable
         run: chmod +x android/gradlew
