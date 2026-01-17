@@ -47,6 +47,7 @@ build_for_abi() {
   ./configure-android \
     --use-ndk-cflags \
     --enable-static \
+    --disable-shared \
     --with-ssl=no \
     --with-sdl=no \
     --with-openh264=no \
@@ -73,7 +74,7 @@ build_for_abi() {
       local pattern="$1"; shift
       local dest="$1"; shift
       local found
-      found=$(find lib -name "$pattern" -print -quit || true)
+      found=$(find . -name "$pattern" -type f -print -quit || true)
       if [[ -n "$found" ]]; then
         cp -a "$found" "${out_dir}/${dest}" 2>/dev/null || true
       fi
