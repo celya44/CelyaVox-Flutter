@@ -176,8 +176,8 @@ Java_fr_celya_celyavox_PjsipEngine_nativeRegister(JNIEnv *env, jclass, jstring j
     acc_cfg.id = pj_str_t{const_cast<char *>(id.c_str()), static_cast<pj_ssize_t>(strlen(id.c_str()))};
     acc_cfg.reg_uri = pj_str_t{const_cast<char *>(reg_uri.c_str()), static_cast<pj_ssize_t>(strlen(reg_uri.c_str()))};
     acc_cfg.cred_count = 1;
-    acc_cfg.cred_info[0].realm = pj_str_t{"*", 1};
-    acc_cfg.cred_info[0].scheme = pj_str_t{"digest", 6};
+    acc_cfg.cred_info[0].realm = pj_str_t{const_cast<char *>("*"), 1};
+    acc_cfg.cred_info[0].scheme = pj_str_t{const_cast<char *>("digest"), 6};
     acc_cfg.cred_info[0].username = pj_str_t{const_cast<char *>(user), static_cast<pj_ssize_t>(strlen(user))};
     acc_cfg.cred_info[0].data_type = PJSIP_CRED_DATA_PLAIN_PASSWD;
     acc_cfg.cred_info[0].data = pj_str_t{const_cast<char *>(pass), static_cast<pj_ssize_t>(strlen(pass))};

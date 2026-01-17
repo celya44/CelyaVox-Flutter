@@ -34,17 +34,17 @@ find_library(android-lib android)
 target_link_libraries(
     voip_engine
     -Wl,--start-group
-    ${PJSIP_LIB_DIR}/libpjsua2.a
-    ${PJSIP_LIB_DIR}/libpjsua.a
-    ${PJSIP_LIB_DIR}/libpjsip-ua.a
-    ${PJSIP_LIB_DIR}/libpjsip-simple.a
-    ${PJSIP_LIB_DIR}/libpjsip.a
-    ${PJSIP_LIB_DIR}/libpjmedia.a
-    ${PJSIP_LIB_DIR}/libpjmedia-codec.a
-    ${PJSIP_LIB_DIR}/libpjmedia-audiodev.a
-    ${PJSIP_LIB_DIR}/libpjnath.a
-    ${PJSIP_LIB_DIR}/libpjlib-util.a
-    ${PJSIP_LIB_DIR}/libpj.a
+    -lpjsua2
+    -lpjsua
+    -lpjsip-ua
+    -lpjsip-simple
+    -lpjsip
+    -lpjmedia
+    -lpjmedia-codec
+    -lpjmedia-audiodev
+    -lpjnath
+    -lpjlib-util
+    -lpj
     -Wl,--end-group
     ${android-lib}
     ${log-lib}
