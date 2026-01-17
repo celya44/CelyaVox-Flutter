@@ -61,6 +61,7 @@ build_for_abi() {
 
   # Skip building third_party to avoid codec issues
   sed -i 's/ third_party//' Makefile
+  sed -i 's/ pjnath\/build\/build//' Makefile
 
   make dep
   make clean
