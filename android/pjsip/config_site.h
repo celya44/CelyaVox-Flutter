@@ -1,6 +1,10 @@
 #ifndef PJ_CONFIG_SITE_H
 #define PJ_CONFIG_SITE_H
 
+/* Define endianness for Android */
+#define PJ_IS_LITTLE_ENDIAN 1
+#define PJ_IS_BIG_ENDIAN 0
+
 /* Disable video stack entirely */
 #define PJMEDIA_HAS_VIDEO                 0
 #define PJMEDIA_VIDEO_DEV_HAS_OPENGL      0

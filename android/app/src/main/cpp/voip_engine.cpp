@@ -114,7 +114,6 @@ static bool ensure_endpoint() {
     media_cfg.has_ioqueue = PJ_TRUE;
     media_cfg.clock_rate = 16000;
     media_cfg.snd_clock_rate = 16000;
-    media_cfg.vid_preview_enable = PJ_FALSE;
     media_cfg.enable_ice = PJ_FALSE;
 
     status = pjsua_init(&ua_cfg, &log_cfg, &media_cfg);
@@ -184,10 +183,8 @@ Java_fr_celya_celyavox_PjsipEngine_nativeRegister(JNIEnv *env, jclass, jstring j
     acc_cfg.cred_info[0].data = pj_str(const_cast<char *>(pass));
 
     if (proxy && std::string(proxy).length() > 0) {
-        static pj_str_t proxies[1];
-        proxies[0] = pj_str(const_cast<char *>(proxy));
+        acc_cfg.proxy[0] = pj_str(const_cast<char *>(proxy));
         acc_cfg.proxy_cnt = 1;
-        acc_cfg.proxy = proxies;
     }
 
     pj_status_t status = pjsua_acc_add(&acc_cfg, PJ_TRUE, &g_acc_id);
@@ -221,7 +218,8 @@ Java_fr_celya_celyavox_PjsipEngine_nativeMakeCall(JNIEnv *env, jclass, jstring j
     const char *number = env->GetStringUTFChars(jnumber, nullptr);
     std::string dest = "sip:" + std::string(number);
     pjsua_call_id call_id = PJSUA_INVALID_ID;
-    pj_status_t status = pjsua_call_make_call(g_acc_id, pj_str(const_cast<char *>(dest.c_str())), 0, nullptr, nullptr, &call_id);
+    pj_str_t dst = pj_str(const_cast<char *>(dest.c_str()));
+    pj_status_t status = pjsua_call_make_call(g_acc_id, &dst, 0, nullptr, nullptr, &call_id);
     env->ReleaseStringUTFChars(jnumber, number);
     if (status != PJ_SUCCESS) {
         LOGE("make_call failed: %d", status);
