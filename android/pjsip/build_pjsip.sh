@@ -9,7 +9,7 @@ SRC_DIR="${ROOT_DIR}/pjproject-${PJSIP_VERSION}"
 CONFIG_SITE="${ROOT_DIR}/config_site.h"
 
 # ABIs we build for
-ABIS=("armeabi-v7a" "arm64-v8a")
+ABIS=("arm64-v8a")
 API_LEVEL=35
 
 if [[ -z "${ANDROID_NDK_ROOT:-}" && -z "${NDK_HOME:-}" ]]; then

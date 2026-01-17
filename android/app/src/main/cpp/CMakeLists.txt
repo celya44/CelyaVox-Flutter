@@ -36,17 +36,17 @@ find_library(android-lib android)
 
 target_link_libraries(
     voip_engine
-    -lpjsua2
-    -lpjsua
-    -lpjsip-ua
-    -lpjsip-simple
-    -lpjsip
-    -lpjmedia
-    -lpjmedia-codec
-    -lpjmedia-audiodev
-    -lpjnath
-    -lpjlib-util
     -lpj
+    -lpjlib-util
+    -lpjnath
+    -lpjmedia-audiodev
+    -lpjmedia-codec
+    -lpjmedia
+    -lpjsip
+    -lpjsip-simple
+    -lpjsip-ua
+    -lpjsua
+    -lpjsua2
     -Wl,--end-group
     ${android-lib}
     ${log-lib}
