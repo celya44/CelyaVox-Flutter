@@ -53,7 +53,7 @@ build_for_abi() {
     --disable-video
 
   make dep
-  make clean && make -j"$(nproc)"
+  make clean && make all
 
   local out_dir="${ROOT_DIR}/../app/src/main/jniLibs/${abi}"
   mkdir -p "${out_dir}"
