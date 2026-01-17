@@ -53,7 +53,11 @@ build_for_abi() {
     --with-openh264=no \
     --with-v4l2=no \
     --disable-video \
-    --disable-gsm
+    --disable-gsm \
+    --disable-l16 \
+    --disable-speex \
+    --disable-ilbc \
+    --disable-opus
 
   make dep
   make clean
