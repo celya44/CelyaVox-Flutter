@@ -32,7 +32,6 @@ link_directories(${PJSIP_LIB_DIR})
 set_target_properties(voip_engine PROPERTIES LINK_FLAGS "-L${PJSIP_LIB_DIR} -Wl,--start-group")
 
 find_library(log-lib log)
-find_library(android-lib android)
 
 target_link_libraries(
     voip_engine
@@ -48,7 +47,5 @@ target_link_libraries(
     -lpjsua
     -lpjsua2
     -Wl,--end-group
-)
-    ${android-lib}
     ${log-lib}
 )
