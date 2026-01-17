@@ -44,7 +44,13 @@ build_for_abi() {
   export TARGET_ABI="${abi}"
   export APP_PLATFORM="android-${API_LEVEL}"
 
-  ./configure-android \
+  export CC="${NDK_PATH}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang"
+  export CXX="${NDK_PATH}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang++"
+  export CFLAGS="--sysroot=${NDK_PATH}/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+  export CXXFLAGS="--sysroot=${NDK_PATH}/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+  export LDFLAGS="--sysroot=${NDK_PATH}/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+
+  ./configure --host=aarch64-linux-android \
     --use-ndk-cflags \
     --with-ssl=no \
     --with-sdl=no \
