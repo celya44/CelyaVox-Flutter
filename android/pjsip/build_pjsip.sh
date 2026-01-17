@@ -59,6 +59,9 @@ build_for_abi() {
     --disable-ilbc \
     --disable-opus
 
+  # Skip building third_party to avoid codec issues
+  sed -i '/third_party/d' Makefile
+
   make dep
   make clean
   make
