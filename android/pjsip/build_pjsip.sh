@@ -60,7 +60,7 @@ build_for_abi() {
     --disable-opus
 
   # Skip building third_party to avoid codec issues
-  sed -i '/third_party/d' Makefile
+  sed -i 's/ third_party//' Makefile
 
   make dep
   make clean
