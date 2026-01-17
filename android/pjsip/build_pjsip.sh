@@ -44,14 +44,20 @@ build_for_abi() {
   export TARGET_ABI="${abi}"
   export APP_PLATFORM="android-${API_LEVEL}"
 
-  export CC="${NDK_PATH}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang"
-  export CXX="${NDK_PATH}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang++"
+  if [[ "${abi}" == "arm64-v8a" ]]; then
+    export CC="${NDK_PATH}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang"
+    export CXX="${NDK_PATH}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang++"
+    local host="aarch64-linux-android"
+  else
+    export CC="${NDK_PATH}/toolchains/llvm/prebuilt/linux-x86_64/bin/arm-linux-androideabi24-clang"
+    export CXX="${NDK_PATH}/toolchains/llvm/prebuilt/linux-x86_64/bin/arm-linux-androideabi24-clang++"
+    local host="arm-linux-androideabi"
+  fi
   export CFLAGS="--sysroot=${NDK_PATH}/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
   export CXXFLAGS="--sysroot=${NDK_PATH}/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
   export LDFLAGS="--sysroot=${NDK_PATH}/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
 
-  ./configure --host=aarch64-linux-android \
-    --use-ndk-cflags \
+  ./configure --host=${host} \
     --with-ssl=no \
     --with-sdl=no \
     --with-openh264=no \
