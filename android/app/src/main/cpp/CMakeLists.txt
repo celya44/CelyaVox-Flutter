@@ -29,7 +29,7 @@ set(PJSIP_LIB_DIR ${CMAKE_SOURCE_DIR}/../jniLibs/${ANDROID_ABI})
 link_directories(${PJSIP_LIB_DIR})
 
 # Set linker flags to include the library path
-set_target_properties(voip_engine PROPERTIES LINK_FLAGS "-L${PJSIP_LIB_DIR}")
+set_target_properties(voip_engine PROPERTIES LINK_FLAGS "-L${PJSIP_LIB_DIR} -Wl,--start-group")
 
 find_library(log-lib log)
 find_library(android-lib android)
@@ -47,6 +47,7 @@ target_link_libraries(
     -lpjsip-ua
     -lpjsua
     -lpjsua2
+    -Wl,--end-group
 )
     ${android-lib}
     ${log-lib}
