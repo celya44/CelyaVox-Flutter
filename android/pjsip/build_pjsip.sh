@@ -52,7 +52,8 @@ build_for_abi() {
     --with-sdl=no \
     --with-openh264=no \
     --with-v4l2=no \
-    --disable-video
+    --disable-video \
+    --disable-gsm
 
   make dep
   make clean
