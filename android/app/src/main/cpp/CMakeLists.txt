@@ -33,6 +33,7 @@ find_library(android-lib android)
 
 target_link_libraries(
     voip_engine
+    -Wl,--start-group
     ${PJSIP_LIB_DIR}/libpjsua2.a
     ${PJSIP_LIB_DIR}/libpjsua.a
     ${PJSIP_LIB_DIR}/libpjsip-ua.a
@@ -44,6 +45,7 @@ target_link_libraries(
     ${PJSIP_LIB_DIR}/libpjnath.a
     ${PJSIP_LIB_DIR}/libpjlib-util.a
     ${PJSIP_LIB_DIR}/libpj.a
+    -Wl,--end-group
     ${android-lib}
     ${log-lib}
 )

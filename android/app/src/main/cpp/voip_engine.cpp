@@ -173,17 +173,17 @@ Java_fr_celya_celyavox_PjsipEngine_nativeRegister(JNIEnv *env, jclass, jstring j
     std::string id = "sip:" + std::string(user) + "@" + std::string(domain);
     std::string reg_uri = "sip:" + std::string(domain);
 
-    acc_cfg.id = pj_str(const_cast<char *>(id.c_str()));
-    acc_cfg.reg_uri = pj_str(const_cast<char *>(reg_uri.c_str()));
+    acc_cfg.id = pj_str_t{const_cast<char *>(id.c_str()), static_cast<pj_ssize_t>(strlen(id.c_str()))};
+    acc_cfg.reg_uri = pj_str_t{const_cast<char *>(reg_uri.c_str()), static_cast<pj_ssize_t>(strlen(reg_uri.c_str()))};
     acc_cfg.cred_count = 1;
-    acc_cfg.cred_info[0].realm = pj_str(const_cast<char *>("*"));
-    acc_cfg.cred_info[0].scheme = pj_str(const_cast<char *>("digest"));
-    acc_cfg.cred_info[0].username = pj_str(const_cast<char *>(user));
+    acc_cfg.cred_info[0].realm = pj_str_t{"*", 1};
+    acc_cfg.cred_info[0].scheme = pj_str_t{"digest", 6};
+    acc_cfg.cred_info[0].username = pj_str_t{const_cast<char *>(user), static_cast<pj_ssize_t>(strlen(user))};
     acc_cfg.cred_info[0].data_type = PJSIP_CRED_DATA_PLAIN_PASSWD;
-    acc_cfg.cred_info[0].data = pj_str(const_cast<char *>(pass));
+    acc_cfg.cred_info[0].data = pj_str_t{const_cast<char *>(pass), static_cast<pj_ssize_t>(strlen(pass))};
 
     if (proxy && std::string(proxy).length() > 0) {
-        acc_cfg.proxy[0] = pj_str(const_cast<char *>(proxy));
+        acc_cfg.proxy[0] = pj_str_t{const_cast<char *>(proxy), static_cast<pj_ssize_t>(strlen(proxy))};
         acc_cfg.proxy_cnt = 1;
     }
 
@@ -218,7 +218,7 @@ Java_fr_celya_celyavox_PjsipEngine_nativeMakeCall(JNIEnv *env, jclass, jstring j
     const char *number = env->GetStringUTFChars(jnumber, nullptr);
     std::string dest = "sip:" + std::string(number);
     pjsua_call_id call_id = PJSUA_INVALID_ID;
-    pj_str_t dst = pj_str(const_cast<char *>(dest.c_str()));
+    pj_str_t dst = {const_cast<char *>(dest.c_str()), static_cast<pj_ssize_t>(strlen(dest.c_str()))};
     pj_status_t status = pjsua_call_make_call(g_acc_id, &dst, 0, nullptr, nullptr, &call_id);
     env->ReleaseStringUTFChars(jnumber, number);
     if (status != PJ_SUCCESS) {
