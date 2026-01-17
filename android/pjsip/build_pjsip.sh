@@ -10,7 +10,7 @@ CONFIG_SITE="${ROOT_DIR}/config_site.h"
 
 # ABIs we build for
 ABIS=("armeabi-v7a" "arm64-v8a")
-API_LEVEL=24
+API_LEVEL=35
 
 if [[ -z "${ANDROID_NDK_ROOT:-}" && -z "${NDK_HOME:-}" ]]; then
   echo "ERROR: ANDROID_NDK_ROOT (or NDK_HOME) must be set" >&2
@@ -44,20 +44,8 @@ build_for_abi() {
   export TARGET_ABI="${abi}"
   export APP_PLATFORM="android-${API_LEVEL}"
 
-  if [[ "${abi}" == "arm64-v8a" ]]; then
-    export CC="${NDK_PATH}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang"
-    export CXX="${NDK_PATH}/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android24-clang++"
-    local host="aarch64-linux-android"
-  else
-    export CC="${NDK_PATH}/toolchains/llvm/prebuilt/linux-x86_64/bin/arm-linux-androideabi24-clang"
-    export CXX="${NDK_PATH}/toolchains/llvm/prebuilt/linux-x86_64/bin/arm-linux-androideabi24-clang++"
-    local host="arm-linux-androideabi"
-  fi
-  export CFLAGS="--sysroot=${NDK_PATH}/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
-  export CXXFLAGS="--sysroot=${NDK_PATH}/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
-  export LDFLAGS="--sysroot=${NDK_PATH}/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
-
-  ./configure --host=${host} \
+  ./configure-android \
+    --use-ndk-cflags \
     --with-ssl=no \
     --with-sdl=no \
     --with-openh264=no \
