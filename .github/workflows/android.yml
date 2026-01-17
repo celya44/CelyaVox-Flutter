@@ -152,6 +152,19 @@ jobs:
           mkdir -p "$(dirname "$ANDROID_KEYSTORE_PATH")"
           echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$ANDROID_KEYSTORE_PATH"
 
+      - name: Vérifier les headers PJSIP avant build Flutter
+        run: |
+          echo "=== Vérification finale des headers PJSIP ==="
+          if [ ! -f android/pjsip/pjproject-2.14.1/pjlib/include/pjlib.h ]; then
+            echo "::error title=Header manquant::pjlib.h non trouvé avant build Flutter"
+            exit 1
+          fi
+          if [ ! -f android/pjsip/pjproject-2.14.1/pjsip/include/pjsip.h ]; then
+            echo "::error title=Header manquant::pjsip.h non trouvé avant build Flutter"
+            exit 1
+          fi
+          echo "Headers PJSIP présents."
+
       - name: Flutter clean
         run: flutter clean
 

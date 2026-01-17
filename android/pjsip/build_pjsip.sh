@@ -2,7 +2,7 @@
 set -euo pipefail
 
 PJSIP_VERSION="2.14.1"
-PJSIP_TARBALL="pjproject-${PJSIP_VERSION}.tar.bz2"
+PJSIP_TARBALL="pjproject-${PJSIP_VERSION}.tar.gz"
 PJSIP_URL="https://github.com/pjsip/pjproject/archive/refs/tags/${PJSIP_VERSION}.tar.gz"
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SRC_DIR="${ROOT_DIR}/pjproject-${PJSIP_VERSION}"
@@ -22,12 +22,12 @@ fetch_sources() {
   if [[ -d "${SRC_DIR}" ]]; then
     return
   fi
-  echo "Cloning PJSIP ${PJSIP_VERSION}..."
-  git clone https://github.com/pjsip/pjproject.git "${SRC_DIR}"
-  cd "${SRC_DIR}"
-  git checkout "tags/${PJSIP_VERSION}"
-  echo "Sources cloned and checked out. Checking headers..."
-  ls -la pjlib/include/pjlib.h || echo "pjlib.h not found in sources"
+  echo "Downloading PJSIP ${PJSIP_VERSION}..."
+  wget -O "${PJSIP_TARBALL}" "${PJSIP_URL}"
+  tar -xzf "${PJSIP_TARBALL}"
+  mv "pjproject-${PJSIP_VERSION}" "${SRC_DIR}"
+  echo "Sources downloaded and extracted. Checking headers..."
+  ls -la "${SRC_DIR}/pjlib/include/pjlib.h" || echo "pjlib.h not found in sources"
 }
 
 prepare_config() {
