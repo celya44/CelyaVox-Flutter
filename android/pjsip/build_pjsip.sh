@@ -53,7 +53,7 @@ build_for_abi() {
     --disable-video
 
   make dep
-  make clean && make pjlib pjlib-util pjnath pjmedia pjsip pjsua
+  make clean && make pjlib pjlib-util pjnath pjmedia pjsip pjsip-ua pjsua pjsua2
 
   local out_dir="${ROOT_DIR}/../app/src/main/jniLibs/${abi}"
   mkdir -p "${out_dir}"
