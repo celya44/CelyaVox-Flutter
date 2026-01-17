@@ -46,6 +46,7 @@ build_for_abi() {
 
   ./configure-android \
     --use-ndk-cflags \
+    --enable-static \
     --with-ssl=no \
     --with-sdl=no \
     --with-openh264=no \
