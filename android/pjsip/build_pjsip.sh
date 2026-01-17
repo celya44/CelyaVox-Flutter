@@ -74,7 +74,7 @@ build_for_abi() {
       local pattern="$1"; shift
       local dest="$1"; shift
       local found
-      found=$(find . -name "$pattern" -print -quit || true)
+      found=$(find lib -name "$pattern" -print -quit || true)
       if [[ -n "$found" ]]; then
         cp -a "$found" "${out_dir}/${dest}" 2>/dev/null || true
       fi
