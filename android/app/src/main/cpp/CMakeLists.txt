@@ -10,11 +10,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Headers expected under android/pjsip/pjproject-<version>/
 include_directories(
-    ${CMAKE_SOURCE_DIR}/../../pjsip/pjproject-2.14.1/pjsip/include
-    ${CMAKE_SOURCE_DIR}/../../pjsip/pjproject-2.14.1/pjlib/include
-    ${CMAKE_SOURCE_DIR}/../../pjsip/pjproject-2.14.1/pjlib-util/include
-    ${CMAKE_SOURCE_DIR}/../../pjsip/pjproject-2.14.1/pjmedia/include
-    ${CMAKE_SOURCE_DIR}/../../pjsip/pjproject-2.14.1/pjnath/include
+    ${CMAKE_SOURCE_DIR}/../../../../pjsip/pjproject-2.14.1/pjsip/include
+    ${CMAKE_SOURCE_DIR}/../../../../pjsip/pjproject-2.14.1/pjlib/include
+    ${CMAKE_SOURCE_DIR}/../../../../pjsip/pjproject-2.14.1/pjlib-util/include
+    ${CMAKE_SOURCE_DIR}/../../../../pjsip/pjproject-2.14.1/pjmedia/include
+    ${CMAKE_SOURCE_DIR}/../../../../pjsip/pjproject-2.14.1/pjnath/include
 )
 
 add_library(voip_engine SHARED voip_engine.cpp)
