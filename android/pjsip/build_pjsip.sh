@@ -10,7 +10,7 @@ CONFIG_SITE="${ROOT_DIR}/config_site.h"
 
 # ABIs we build for
 ABIS=("armeabi-v7a" "arm64-v8a")
-API_LEVEL=21
+API_LEVEL=24
 
 if [[ -z "${ANDROID_NDK_ROOT:-}" && -z "${NDK_HOME:-}" ]]; then
   echo "ERROR: ANDROID_NDK_ROOT (or NDK_HOME) must be set" >&2
