@@ -28,6 +28,19 @@ set(PJSIP_LIB_DIR ${CMAKE_SOURCE_DIR}/../jniLibs/${ANDROID_ABI})
 # Add library search path
 link_directories(${PJSIP_LIB_DIR})
 
+# Find PJSIP libraries
+find_library(PJ_LIB pj PATHS ${PJSIP_LIB_DIR} REQUIRED)
+find_library(PJLIB_UTIL_LIB pjlib-util PATHS ${PJSIP_LIB_DIR} REQUIRED)
+find_library(PJNATH_LIB pjnath PATHS ${PJSIP_LIB_DIR} REQUIRED)
+find_library(PJMEDIA_AUDIODEV_LIB pjmedia-audiodev PATHS ${PJSIP_LIB_DIR} REQUIRED)
+find_library(PJMEDIA_CODEC_LIB pjmedia-codec PATHS ${PJSIP_LIB_DIR} REQUIRED)
+find_library(PJMEDIA_LIB pjmedia PATHS ${PJSIP_LIB_DIR} REQUIRED)
+find_library(PJSIP_LIB pjsip PATHS ${PJSIP_LIB_DIR} REQUIRED)
+find_library(PJSIP_SIMPLE_LIB pjsip-simple PATHS ${PJSIP_LIB_DIR} REQUIRED)
+find_library(PJSIP_UA_LIB pjsip-ua PATHS ${PJSIP_LIB_DIR} REQUIRED)
+find_library(PJSUA_LIB pjsua PATHS ${PJSIP_LIB_DIR} REQUIRED)
+find_library(PJSUA2_LIB pjsua2 PATHS ${PJSIP_LIB_DIR} REQUIRED)
+
 # Set linker flags to include the library path
 set_target_properties(voip_engine PROPERTIES LINK_FLAGS "-L${PJSIP_LIB_DIR} -Wl,--start-group")
 
@@ -35,17 +48,17 @@ find_library(log-lib log)
 
 target_link_libraries(
     voip_engine
-    -lpj
-    -lpjlib-util
-    -lpjnath
-    -lpjmedia-audiodev
-    -lpjmedia-codec
-    -lpjmedia
-    -lpjsip
-    -lpjsip-simple
-    -lpjsip-ua
-    -lpjsua
-    -lpjsua2
+    ${PJ_LIB}
+    ${PJLIB_UTIL_LIB}
+    ${PJNATH_LIB}
+    ${PJMEDIA_AUDIODEV_LIB}
+    ${PJMEDIA_CODEC_LIB}
+    ${PJMEDIA_LIB}
+    ${PJSIP_LIB}
+    ${PJSIP_SIMPLE_LIB}
+    ${PJSIP_UA_LIB}
+    ${PJSUA_LIB}
+    ${PJSUA2_LIB}
     -Wl,--end-group
     ${log-lib}
 )
