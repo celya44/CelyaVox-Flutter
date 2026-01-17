@@ -25,6 +25,9 @@ add_library(voip_engine SHARED voip_engine.cpp)
 # PJSIP prebuilt libraries expected in app/src/main/jniLibs/<abi>/
 set(PJSIP_LIB_DIR ${CMAKE_SOURCE_DIR}/../jniLibs/${ANDROID_ABI})
 
+# Add library search path
+link_directories(${PJSIP_LIB_DIR})
+
 # Prefer shared libpjsua2 if present; fall back to static archive.
 set(PJSUA2_SO ${PJSIP_LIB_DIR}/libpjsua2.so)
 set(PJSUA2_A ${PJSIP_LIB_DIR}/libpjsua2.a)
