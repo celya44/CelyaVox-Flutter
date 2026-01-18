@@ -34,8 +34,13 @@
 /* Optimize for mobile VoIP */
 #define PJ_ENABLE_EXTRA_CHECK             0
 #define PJ_LOG_MAX_LEVEL                  3
-#define PJMEDIA_ECHO_SUPPRESSOR           1
-#define PJMEDIA_ECHO_USE_SIMPLE_FILTER    1
+#define PJMEDIA_ECHO_SUPPRESSOR           0
+#define PJMEDIA_ECHO_USE_SIMPLE_FILTER    0
+
+/* Disable Speex AEC explicitly */
+#define PJMEDIA_HAS_SPEEX_AEC             0
+#define PJMEDIA_HAS_SPEEX_AEC_PREPROCESS  0
+#define PJMEDIA_HAS_SPEEX_AEC3            0
 #define PJMEDIA_SOUND_BUFFER_COUNT        4
 
 /* Avoid duplicate JNI_OnLoad (PJSIP provides its own when enabled) */
