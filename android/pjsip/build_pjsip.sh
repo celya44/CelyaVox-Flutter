@@ -46,8 +46,6 @@ build_for_abi() {
 
   ./configure-android \
     --use-ndk-cflags \
-    --enable-static \
-    --disable-shared \
     --with-ssl=no \
     --with-sdl=no \
     --with-openh264=no \
@@ -82,17 +80,17 @@ build_for_abi() {
     }
 
     # Core libs (shared/static), normalized names expected by CMake
-    copy_norm "libpj-aarch64-unknown-linux-android.a" "libpj.a"
-    copy_norm "libpjlib-util-aarch64-unknown-linux-android.a" "libpjlib-util.a"
-    copy_norm "libpjnath-aarch64-unknown-linux-android.a" "libpjnath.a"
-    copy_norm "libpjmedia-aarch64-unknown-linux-android.a" "libpjmedia.a"
-    copy_norm "libpjmedia-codec-aarch64-unknown-linux-android.a" "libpjmedia-codec.a"
-    copy_norm "libpjmedia-audiodev-aarch64-unknown-linux-android.a" "libpjmedia-audiodev.a"
-    copy_norm "libpjsip-aarch64-unknown-linux-android.a" "libpjsip.a"
-    copy_norm "libpjsip-simple-aarch64-unknown-linux-android.a" "libpjsip-simple.a"
-    copy_norm "libpjsip-ua-aarch64-unknown-linux-android.a" "libpjsip-ua.a"
-    copy_norm "libpjsua-aarch64-unknown-linux-android.a" "libpjsua.a"
-    copy_norm "libpjsua2-aarch64-unknown-linux-android.a" "libpjsua2.a"
+    copy_norm "libpj-aarch64-unknown-linux-android.so" "libpj.so"
+    copy_norm "libpjlib-util-aarch64-unknown-linux-android.so" "libpjlib-util.so"
+    copy_norm "libpjnath-aarch64-unknown-linux-android.so" "libpjnath.so"
+    copy_norm "libpjmedia-aarch64-unknown-linux-android.so" "libpjmedia.so"
+    copy_norm "libpjmedia-codec-aarch64-unknown-linux-android.so" "libpjmedia-codec.so"
+    copy_norm "libpjmedia-audiodev-aarch64-unknown-linux-android.so" "libpjmedia-audiodev.so"
+    copy_norm "libpjsip-aarch64-unknown-linux-android.so" "libpjsip.so"
+    copy_norm "libpjsip-simple-aarch64-unknown-linux-android.so" "libpjsip-simple.so"
+    copy_norm "libpjsip-ua-aarch64-unknown-linux-android.so" "libpjsip-ua.so"
+    copy_norm "libpjsua-aarch64-unknown-linux-android.so" "libpjsua.so"
+    copy_norm "libpjsua2-aarch64-unknown-linux-android.so" "libpjsua2.so"
 
     # Locate and copy pjsua2 (shared or static) since path varies per toolchain
     local pjsua2_lib
