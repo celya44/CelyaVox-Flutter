@@ -82,17 +82,17 @@ build_for_abi() {
     }
 
     # Core libs (shared/static), normalized names expected by CMake
-    copy_norm "libpj.a" "libpj.a"
-    copy_norm "libpjlib-util.a" "libpjlib-util.a"
-    copy_norm "libpjnath.a" "libpjnath.a"
-    copy_norm "libpjmedia.a" "libpjmedia.a"
-    copy_norm "libpjmedia-codec.a" "libpjmedia-codec.a"
-    copy_norm "libpjmedia-audiodev.a" "libpjmedia-audiodev.a"
-    copy_norm "libpjsip.a" "libpjsip.a"
-    copy_norm "libpjsip-simple.a" "libpjsip-simple.a"
-    copy_norm "libpjsip-ua.a" "libpjsip-ua.a"
-    copy_norm "libpjsua.a" "libpjsua.a"
-    copy_norm "libpjsua2.a" "libpjsua2.a"
+    copy_norm "libpj-aarch64-unknown-linux-android.a" "libpj.a"
+    copy_norm "libpjlib-util-aarch64-unknown-linux-android.a" "libpjlib-util.a"
+    copy_norm "libpjnath-aarch64-unknown-linux-android.a" "libpjnath.a"
+    copy_norm "libpjmedia-aarch64-unknown-linux-android.a" "libpjmedia.a"
+    copy_norm "libpjmedia-codec-aarch64-unknown-linux-android.a" "libpjmedia-codec.a"
+    copy_norm "libpjmedia-audiodev-aarch64-unknown-linux-android.a" "libpjmedia-audiodev.a"
+    copy_norm "libpjsip-aarch64-unknown-linux-android.a" "libpjsip.a"
+    copy_norm "libpjsip-simple-aarch64-unknown-linux-android.a" "libpjsip-simple.a"
+    copy_norm "libpjsip-ua-aarch64-unknown-linux-android.a" "libpjsip-ua.a"
+    copy_norm "libpjsua-aarch64-unknown-linux-android.a" "libpjsua.a"
+    copy_norm "libpjsua2-aarch64-unknown-linux-android.a" "libpjsua2.a"
 
     # Locate and copy pjsua2 (shared or static) since path varies per toolchain
     local pjsua2_lib
