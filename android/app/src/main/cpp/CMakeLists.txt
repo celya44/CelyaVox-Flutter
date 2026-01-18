@@ -44,22 +44,21 @@ function(find_pjsip_lib out_var name)
         message(FATAL_ERROR "PJSIP library not found: lib${name}.so|.a in ${PJSIP_LIB_DIR}")
     endif()
 
-    add_library(${out_var} UNKNOWN IMPORTED)
-    set_target_properties(${out_var} PROPERTIES IMPORTED_LOCATION "${found}")
+    set(${out_var} "${found}" PARENT_SCOPE)
 endfunction()
 
 # Import PJSIP libraries (shared or static)
-find_pjsip_lib(PJ_LIB pj)
-find_pjsip_lib(PJLIB_UTIL_LIB pjlib-util)
-find_pjsip_lib(PJNATH_LIB pjnath)
-find_pjsip_lib(PJMEDIA_AUDIODEV_LIB pjmedia-audiodev)
-find_pjsip_lib(PJMEDIA_CODEC_LIB pjmedia-codec)
-find_pjsip_lib(PJMEDIA_LIB pjmedia)
-find_pjsip_lib(PJSIP_LIB pjsip)
-find_pjsip_lib(PJSIP_SIMPLE_LIB pjsip-simple)
-find_pjsip_lib(PJSIP_UA_LIB pjsip-ua)
-find_pjsip_lib(PJSUA_LIB pjsua)
-find_pjsip_lib(PJSUA2_LIB pjsua2)
+find_pjsip_lib(PJ_LIB_PATH pj)
+find_pjsip_lib(PJLIB_UTIL_PATH pjlib-util)
+find_pjsip_lib(PJNATH_PATH pjnath)
+find_pjsip_lib(PJMEDIA_AUDIODEV_PATH pjmedia-audiodev)
+find_pjsip_lib(PJMEDIA_CODEC_PATH pjmedia-codec)
+find_pjsip_lib(PJMEDIA_PATH pjmedia)
+find_pjsip_lib(PJSIP_PATH pjsip)
+find_pjsip_lib(PJSIP_SIMPLE_PATH pjsip-simple)
+find_pjsip_lib(PJSIP_UA_PATH pjsip-ua)
+find_pjsip_lib(PJSUA_PATH pjsua)
+find_pjsip_lib(PJSUA2_PATH pjsua2)
 
 # Set linker flags to include the library path
 set_target_properties(voip_engine PROPERTIES LINK_FLAGS "-L${PJSIP_LIB_DIR}")
@@ -69,17 +68,17 @@ find_library(log-lib log)
 target_link_libraries(
     voip_engine
     -Wl,--start-group
-    PJ_LIB
-    PJLIB_UTIL_LIB
-    PJNATH_LIB
-    PJMEDIA_AUDIODEV_LIB
-    PJMEDIA_CODEC_LIB
-    PJMEDIA_LIB
-    PJSIP_LIB
-    PJSIP_SIMPLE_LIB
-    PJSIP_UA_LIB
-    PJSUA_LIB
-    PJSUA2_LIB
+    ${PJSUA2_PATH}
+    ${PJSUA_PATH}
+    ${PJSIP_UA_PATH}
+    ${PJSIP_SIMPLE_PATH}
+    ${PJSIP_PATH}
+    ${PJMEDIA_AUDIODEV_PATH}
+    ${PJMEDIA_CODEC_PATH}
+    ${PJMEDIA_PATH}
+    ${PJNATH_PATH}
+    ${PJLIB_UTIL_PATH}
+    ${PJ_LIB_PATH}
     -Wl,--end-group
     ${log-lib}
 )
