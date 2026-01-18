@@ -115,6 +115,11 @@ jobs:
             exit 1
           fi
 
+      - name: Debug libs PJSIP (pjsip/lib)
+        run: |
+          echo "=== Contenu de android/pjsip/pjproject-2.14.1/pjsip/lib ==="
+          ls -l android/pjsip/pjproject-2.14.1/pjsip/lib || true
+
       - name: Debug symboles PJSIP (libpj.a)
         run: |
           set -euo pipefail
