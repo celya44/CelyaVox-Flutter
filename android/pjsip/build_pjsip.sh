@@ -89,17 +89,17 @@ build_for_abi() {
     }
 
     # Core libs (shared or static), normalized names expected by CMake
-    copy_norm "libpj.so" "libpj.a" "libpj.so" "libpj.a"
-    copy_norm "libpjlib-util.so" "libpjlib-util.a" "libpjlib-util.so" "libpjlib-util.a"
-    copy_norm "libpjnath.so" "libpjnath.a" "libpjnath.so" "libpjnath.a"
-    copy_norm "libpjmedia.so" "libpjmedia.a" "libpjmedia.so" "libpjmedia.a"
-    copy_norm "libpjmedia-codec.so" "libpjmedia-codec.a" "libpjmedia-codec.so" "libpjmedia-codec.a"
-    copy_norm "libpjmedia-audiodev.so" "libpjmedia-audiodev.a" "libpjmedia-audiodev.so" "libpjmedia-audiodev.a"
-    copy_norm "libpjsip.so" "libpjsip.a" "libpjsip.so" "libpjsip.a"
-    copy_norm "libpjsip-simple.so" "libpjsip-simple.a" "libpjsip-simple.so" "libpjsip-simple.a"
-    copy_norm "libpjsip-ua.so" "libpjsip-ua.a" "libpjsip-ua.so" "libpjsip-ua.a"
-    copy_norm "libpjsua.so" "libpjsua.a" "libpjsua.so" "libpjsua.a"
-    copy_norm "libpjsua2.so" "libpjsua2.a" "libpjsua2.so" "libpjsua2.a"
+    copy_norm "libpj*.so" "libpj*.a" "libpj.so" "libpj.a"
+    copy_norm "libpjlib-util*.so" "libpjlib-util*.a" "libpjlib-util.so" "libpjlib-util.a"
+    copy_norm "libpjnath*.so" "libpjnath*.a" "libpjnath.so" "libpjnath.a"
+    copy_norm "libpjmedia*.so" "libpjmedia*.a" "libpjmedia.so" "libpjmedia.a"
+    copy_norm "libpjmedia-codec*.so" "libpjmedia-codec*.a" "libpjmedia-codec.so" "libpjmedia-codec.a"
+    copy_norm "libpjmedia-audiodev*.so" "libpjmedia-audiodev*.a" "libpjmedia-audiodev.so" "libpjmedia-audiodev.a"
+    copy_norm "libpjsip*.so" "libpjsip*.a" "libpjsip.so" "libpjsip.a"
+    copy_norm "libpjsip-simple*.so" "libpjsip-simple*.a" "libpjsip-simple.so" "libpjsip-simple.a"
+    copy_norm "libpjsip-ua*.so" "libpjsip-ua*.a" "libpjsip-ua.so" "libpjsip-ua.a"
+    copy_norm "libpjsua*.so" "libpjsua*.a" "libpjsua.so" "libpjsua.a"
+    copy_norm "libpjsua2*.so" "libpjsua2*.a" "libpjsua2.so" "libpjsua2.a"
 
     # Locate and copy pjsua2 (shared or static) since path varies per toolchain
     local pjsua2_lib
