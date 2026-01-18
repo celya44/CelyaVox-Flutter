@@ -25,21 +25,41 @@ add_library(voip_engine SHARED voip_engine.cpp)
 # PJSIP prebuilt libraries expected in app/src/main/jniLibs/<abi>/
 set(PJSIP_LIB_DIR ${CMAKE_SOURCE_DIR}/../jniLibs/${ANDROID_ABI})
 
-# Add library search path
-link_directories(${PJSIP_LIB_DIR})
+if(NOT EXISTS ${PJSIP_LIB_DIR})
+    message(FATAL_ERROR "PJSIP libs directory not found: ${PJSIP_LIB_DIR}")
+endif()
 
-# Find PJSIP libraries
-find_library(PJ_LIB pj PATHS ${PJSIP_LIB_DIR} REQUIRED)
-find_library(PJLIB_UTIL_LIB pjlib-util PATHS ${PJSIP_LIB_DIR} REQUIRED)
-find_library(PJNATH_LIB pjnath PATHS ${PJSIP_LIB_DIR} REQUIRED)
-find_library(PJMEDIA_AUDIODEV_LIB pjmedia-audiodev PATHS ${PJSIP_LIB_DIR} REQUIRED)
-find_library(PJMEDIA_CODEC_LIB pjmedia-codec PATHS ${PJSIP_LIB_DIR} REQUIRED)
-find_library(PJMEDIA_LIB pjmedia PATHS ${PJSIP_LIB_DIR} REQUIRED)
-find_library(PJSIP_LIB pjsip PATHS ${PJSIP_LIB_DIR} REQUIRED)
-find_library(PJSIP_SIMPLE_LIB pjsip-simple PATHS ${PJSIP_LIB_DIR} REQUIRED)
-find_library(PJSIP_UA_LIB pjsip-ua PATHS ${PJSIP_LIB_DIR} REQUIRED)
-find_library(PJSUA_LIB pjsua PATHS ${PJSIP_LIB_DIR} REQUIRED)
-find_library(PJSUA2_LIB pjsua2 PATHS ${PJSIP_LIB_DIR} REQUIRED)
+set(PJSIP_LIB_SUFFIXES ".so" ".a")
+
+function(find_pjsip_lib out_var name)
+    set(found "")
+    foreach(suffix IN LISTS PJSIP_LIB_SUFFIXES)
+        if(EXISTS "${PJSIP_LIB_DIR}/lib${name}${suffix}")
+            set(found "${PJSIP_LIB_DIR}/lib${name}${suffix}")
+            break()
+        endif()
+    endforeach()
+
+    if(NOT found)
+        message(FATAL_ERROR "PJSIP library not found: lib${name}.so|.a in ${PJSIP_LIB_DIR}")
+    endif()
+
+    add_library(${out_var} UNKNOWN IMPORTED)
+    set_target_properties(${out_var} PROPERTIES IMPORTED_LOCATION "${found}")
+endfunction()
+
+# Import PJSIP libraries (shared or static)
+find_pjsip_lib(PJ_LIB pj)
+find_pjsip_lib(PJLIB_UTIL_LIB pjlib-util)
+find_pjsip_lib(PJNATH_LIB pjnath)
+find_pjsip_lib(PJMEDIA_AUDIODEV_LIB pjmedia-audiodev)
+find_pjsip_lib(PJMEDIA_CODEC_LIB pjmedia-codec)
+find_pjsip_lib(PJMEDIA_LIB pjmedia)
+find_pjsip_lib(PJSIP_LIB pjsip)
+find_pjsip_lib(PJSIP_SIMPLE_LIB pjsip-simple)
+find_pjsip_lib(PJSIP_UA_LIB pjsip-ua)
+find_pjsip_lib(PJSUA_LIB pjsua)
+find_pjsip_lib(PJSUA2_LIB pjsua2)
 
 # Set linker flags to include the library path
 set_target_properties(voip_engine PROPERTIES LINK_FLAGS "-L${PJSIP_LIB_DIR} -Wl,--start-group")
