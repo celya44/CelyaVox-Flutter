@@ -86,7 +86,7 @@ jobs:
           fi
           echo "NDK trouvé dans ${ANDROID_SDK_ROOT}/ndk/26.1.10909125"
           set -euo pipefail
-          export ANDROID_NDK_ROOT="${ANDROID_NDK_ROOT:-${ANDROID_SDK_ROOT}/ndk/26.1.10909125}"
+          export ANDROID_NDK_ROOT="${ANDROID_SDK_ROOT}/ndk/26.1.10909125"
           export NDK_HOME="$ANDROID_NDK_ROOT"
           if [ ! -d "$ANDROID_NDK_ROOT" ]; then
             echo "::error title=NDK introuvable::Le dossier ANDROID_NDK_ROOT='$ANDROID_NDK_ROOT' n'existe pas. Vérifiez l'installation du NDK et la variable d'environnement."

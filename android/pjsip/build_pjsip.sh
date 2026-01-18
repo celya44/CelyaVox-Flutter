@@ -68,13 +68,27 @@ build_for_abi() {
   local out_dir="${ROOT_DIR}/../app/src/main/jniLibs/${abi}"
   mkdir -p "${out_dir}"
 
-    # Helper: copy first match of .so or .a to a normalized name if present
+    # Helper: copy first match from a preferred directory, with fallback find
     copy_norm() {
+      local preferred_dir="$1"; shift
       local so_pattern="$1"; shift
       local a_pattern="$1"; shift
       local so_dest="$1"; shift
       local a_dest="$1"; shift
       local found
+
+      if [[ -d "$preferred_dir" ]]; then
+        found=$(find "$preferred_dir" -name "$so_pattern" -type f -print -quit)
+        if [[ -n "$found" ]]; then
+          cp -a "$found" "${out_dir}/${so_dest}"
+          return
+        fi
+        found=$(find "$preferred_dir" -name "$a_pattern" -type f -print -quit)
+        if [[ -n "$found" ]]; then
+          cp -a "$found" "${out_dir}/${a_dest}"
+          return
+        fi
+      fi
 
       found=$(find . -name "$so_pattern" -type f -print -quit)
       if [[ -n "$found" ]]; then
@@ -89,17 +103,17 @@ build_for_abi() {
     }
 
     # Core libs (shared or static), normalized names expected by CMake
-    copy_norm "libpj*.so" "libpj*.a" "libpj.so" "libpj.a"
-    copy_norm "libpjlib-util*.so" "libpjlib-util*.a" "libpjlib-util.so" "libpjlib-util.a"
-    copy_norm "libpjnath*.so" "libpjnath*.a" "libpjnath.so" "libpjnath.a"
-    copy_norm "libpjmedia*.so" "libpjmedia*.a" "libpjmedia.so" "libpjmedia.a"
-    copy_norm "libpjmedia-codec*.so" "libpjmedia-codec*.a" "libpjmedia-codec.so" "libpjmedia-codec.a"
-    copy_norm "libpjmedia-audiodev*.so" "libpjmedia-audiodev*.a" "libpjmedia-audiodev.so" "libpjmedia-audiodev.a"
-    copy_norm "libpjsip*.so" "libpjsip*.a" "libpjsip.so" "libpjsip.a"
-    copy_norm "libpjsip-simple*.so" "libpjsip-simple*.a" "libpjsip-simple.so" "libpjsip-simple.a"
-    copy_norm "libpjsip-ua*.so" "libpjsip-ua*.a" "libpjsip-ua.so" "libpjsip-ua.a"
-    copy_norm "libpjsua*.so" "libpjsua*.a" "libpjsua.so" "libpjsua.a"
-    copy_norm "libpjsua2*.so" "libpjsua2*.a" "libpjsua2.so" "libpjsua2.a"
+    copy_norm "pjlib/lib" "libpj*.so" "libpj*.a" "libpj.so" "libpj.a"
+    copy_norm "pjlib-util/lib" "libpjlib-util*.so" "libpjlib-util*.a" "libpjlib-util.so" "libpjlib-util.a"
+    copy_norm "pjnath/lib" "libpjnath*.so" "libpjnath*.a" "libpjnath.so" "libpjnath.a"
+    copy_norm "pjmedia/lib" "libpjmedia*.so" "libpjmedia*.a" "libpjmedia.so" "libpjmedia.a"
+    copy_norm "pjmedia/lib" "libpjmedia-codec*.so" "libpjmedia-codec*.a" "libpjmedia-codec.so" "libpjmedia-codec.a"
+    copy_norm "pjmedia/lib" "libpjmedia-audiodev*.so" "libpjmedia-audiodev*.a" "libpjmedia-audiodev.so" "libpjmedia-audiodev.a"
+    copy_norm "pjsip/lib" "libpjsip*.so" "libpjsip*.a" "libpjsip.so" "libpjsip.a"
+    copy_norm "pjsip/lib" "libpjsip-simple*.so" "libpjsip-simple*.a" "libpjsip-simple.so" "libpjsip-simple.a"
+    copy_norm "pjsip/lib" "libpjsip-ua*.so" "libpjsip-ua*.a" "libpjsip-ua.so" "libpjsip-ua.a"
+    copy_norm "pjsip/lib" "libpjsua*.so" "libpjsua*.a" "libpjsua.so" "libpjsua.a"
+    copy_norm "pjsip/lib" "libpjsua2*.so" "libpjsua2*.a" "libpjsua2.so" "libpjsua2.a"
 
     # Locate and copy pjsua2 (shared or static) since path varies per toolchain
     local pjsua2_lib
