@@ -62,23 +62,24 @@ find_pjsip_lib(PJSUA_LIB pjsua)
 find_pjsip_lib(PJSUA2_LIB pjsua2)
 
 # Set linker flags to include the library path
-set_target_properties(voip_engine PROPERTIES LINK_FLAGS "-L${PJSIP_LIB_DIR} -Wl,--start-group")
+set_target_properties(voip_engine PROPERTIES LINK_FLAGS "-L${PJSIP_LIB_DIR}")
 
 find_library(log-lib log)
 
 target_link_libraries(
     voip_engine
-    ${PJ_LIB}
-    ${PJLIB_UTIL_LIB}
-    ${PJNATH_LIB}
-    ${PJMEDIA_AUDIODEV_LIB}
-    ${PJMEDIA_CODEC_LIB}
-    ${PJMEDIA_LIB}
-    ${PJSIP_LIB}
-    ${PJSIP_SIMPLE_LIB}
-    ${PJSIP_UA_LIB}
-    ${PJSUA_LIB}
-    ${PJSUA2_LIB}
+    -Wl,--start-group
+    PJ_LIB
+    PJLIB_UTIL_LIB
+    PJNATH_LIB
+    PJMEDIA_AUDIODEV_LIB
+    PJMEDIA_CODEC_LIB
+    PJMEDIA_LIB
+    PJSIP_LIB
+    PJSIP_SIMPLE_LIB
+    PJSIP_UA_LIB
+    PJSUA_LIB
+    PJSUA2_LIB
     -Wl,--end-group
     ${log-lib}
 )
