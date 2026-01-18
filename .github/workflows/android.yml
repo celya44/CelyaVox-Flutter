@@ -115,6 +115,26 @@ jobs:
             exit 1
           fi
 
+      - name: Debug symboles PJSIP (libpj.a)
+        run: |
+          set -euo pipefail
+          export ANDROID_NDK_ROOT="${ANDROID_NDK_ROOT:-${ANDROID_SDK_ROOT}/ndk/26.1.10909125}"
+          NM_BIN="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-nm"
+          if [ ! -x "$NM_BIN" ]; then
+            NM_BIN="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/nm"
+          fi
+          if [ ! -x "$NM_BIN" ]; then
+            echo "nm introuvable dans le NDK" >&2
+            exit 1
+          fi
+          LIBPJ="android/app/src/main/jniLibs/arm64-v8a/libpj.a"
+          if [ ! -f "$LIBPJ" ]; then
+            echo "libpj.a introuvable: $LIBPJ" >&2
+            exit 1
+          fi
+          echo "=== Symboles libpj.a (extraits) ==="
+          "$NM_BIN" -g --defined-only "$LIBPJ" | grep -E "pj_strdup$|pj_strdup_with_null$|pj_pool_alloc$|pj_strcpy$" || true
+
       - name: Debug PJSIP sources and headers
         run: |
           echo "=== Contenu de android/pjsip ==="
