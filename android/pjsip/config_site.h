@@ -28,11 +28,6 @@
 #define PJMEDIA_AUDIO_DEV_HAS_ANDROID_JNI 0
 #define PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO   0
 
-/* Networking: UDP only */
-#define PJSIP_HAS_TCP                     0
-#define PJSIP_HAS_TLS_TRANSPORT           0
-#define PJSIP_HAS_UDP                     1
-
 /* Security / SRTP left out intentionally for minimal footprint */
 #define PJMEDIA_HAS_SRTP                  0
 
