@@ -28,11 +28,11 @@ android {
         versionName flutter.versionName
         // Limit native ABIs to those we ship libs for (arm only); avoids x86/x86_64 crashes.
         ndk {
-            abiFilters "arm64-v8a", "armeabi-v7a"
+            abiFilters "arm64-v8a"
         }
         externalNativeBuild {
             cmake {
-                abiFilters "arm64-v8a", "armeabi-v7a"
+                abiFilters "arm64-v8a"
             }
         }
     }
