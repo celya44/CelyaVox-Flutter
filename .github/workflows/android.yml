@@ -76,17 +76,17 @@ jobs:
         uses: android-actions/setup-android@v3
         with:
           cmdline-tools-version: 11076708
-          packages: platform-tools platforms;android-35 build-tools;35.0.0 ndk;26.1.10909125 cmake;3.22.1
+          packages: platform-tools platforms;android-35 build-tools;35.0.0 ndk;27.3.13750724 cmake;3.22.1
 
       - name: Vérifier la présence du NDK
         run: |
-          if [ ! -d "${ANDROID_SDK_ROOT}/ndk/26.1.10909125" ]; then
-            echo "::error title=NDK manquant::Le NDK n'est pas installé à l'emplacement attendu (${ANDROID_SDK_ROOT}/ndk/26.1.10909125)"
+          if [ ! -d "${ANDROID_SDK_ROOT}/ndk/27.3.13750724" ]; then
+            echo "::error title=NDK manquant::Le NDK n'est pas installé à l'emplacement attendu (${ANDROID_SDK_ROOT}/ndk/27.3.13750724)"
             exit 1
           fi
-          echo "NDK trouvé dans ${ANDROID_SDK_ROOT}/ndk/26.1.10909125"
+          echo "NDK trouvé dans ${ANDROID_SDK_ROOT}/ndk/27.3.13750724"
           set -euo pipefail
-          export ANDROID_NDK_ROOT="${ANDROID_SDK_ROOT}/ndk/26.1.10909125"
+          export ANDROID_NDK_ROOT="${ANDROID_SDK_ROOT}/ndk/27.3.13750724"
           export NDK_HOME="$ANDROID_NDK_ROOT"
           if [ ! -d "$ANDROID_NDK_ROOT" ]; then
             echo "::error title=NDK introuvable::Le dossier ANDROID_NDK_ROOT='$ANDROID_NDK_ROOT' n'existe pas. Vérifiez l'installation du NDK et la variable d'environnement."
@@ -118,7 +118,7 @@ jobs:
       - name: Debug symboles PJSIP (libpj.a)
         run: |
           set -euo pipefail
-          export ANDROID_NDK_ROOT="${ANDROID_NDK_ROOT:-${ANDROID_SDK_ROOT}/ndk/26.1.10909125}"
+          export ANDROID_NDK_ROOT="${ANDROID_NDK_ROOT:-${ANDROID_SDK_ROOT}/ndk/27.3.13750724}"
           NM_BIN="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-nm"
           if [ ! -x "$NM_BIN" ]; then
             NM_BIN="$ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/nm"

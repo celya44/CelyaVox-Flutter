@@ -10,7 +10,7 @@ android {
     namespace "fr.celya.celyavox"
     compileSdk 35
     // Pin NDK to match CI setup and native PJSIP build script.
-    ndkVersion "26.1.10909125"
+    ndkVersion "27.3.13750724"
 
     // Build the native PJSIP bridge and package its .so alongside the prebuilt PJSIP libs.
     externalNativeBuild {
