@@ -65,9 +65,7 @@ set_target_properties(voip_engine PROPERTIES LINK_FLAGS "-L${PJSIP_LIB_DIR}")
 
 find_library(log-lib log)
 
-target_link_libraries(
-    voip_engine
-    -Wl,--start-group
+set(PJSIP_LIBS
     ${PJSUA2_PATH}
     ${PJSUA_PATH}
     ${PJSIP_UA_PATH}
@@ -79,6 +77,17 @@ target_link_libraries(
     ${PJNATH_PATH}
     ${PJLIB_UTIL_PATH}
     ${PJ_LIB_PATH}
-    -Wl,--end-group
+)
+
+string(JOIN " " PJSIP_LIBS_JOINED ${PJSIP_LIBS})
+set_property(
+    TARGET voip_engine
+    APPEND_STRING
+    PROPERTY LINK_FLAGS
+    " -Wl,--start-group ${PJSIP_LIBS_JOINED} -Wl,--end-group"
+)
+
+target_link_libraries(
+    voip_engine
     ${log-lib}
 )
