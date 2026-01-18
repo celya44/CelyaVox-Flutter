@@ -48,6 +48,12 @@ function(find_pjsip_lib out_var name)
 endfunction()
 
 # Import PJSIP libraries (shared or static)
+set(PJSIP_CORE_PATH "")
+if(EXISTS "${PJSIP_LIB_DIR}/libpjsip-core.a")
+    set(PJSIP_CORE_PATH "${PJSIP_LIB_DIR}/libpjsip-core.a")
+elseif(EXISTS "${PJSIP_LIB_DIR}/libpjsip-core.so")
+    set(PJSIP_CORE_PATH "${PJSIP_LIB_DIR}/libpjsip-core.so")
+endif()
 find_pjsip_lib(PJ_LIB_PATH pj)
 find_pjsip_lib(PJLIB_UTIL_PATH pjlib-util)
 find_pjsip_lib(PJNATH_PATH pjnath)
@@ -68,6 +74,7 @@ find_library(log-lib log)
 target_link_libraries(
     voip_engine
     -Wl,--start-group
+    ${PJSIP_CORE_PATH}
     ${PJSUA2_PATH}
     ${PJSUA_PATH}
     ${PJSIP_UA_PATH}

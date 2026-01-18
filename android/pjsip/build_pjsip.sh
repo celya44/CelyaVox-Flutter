@@ -109,6 +109,7 @@ build_for_abi() {
     copy_norm "pjmedia/lib" "libpjmedia*.so" "libpjmedia*.a" "libpjmedia.so" "libpjmedia.a"
     copy_norm "pjmedia/lib" "libpjmedia-codec*.so" "libpjmedia-codec*.a" "libpjmedia-codec.so" "libpjmedia-codec.a"
     copy_norm "pjmedia/lib" "libpjmedia-audiodev*.so" "libpjmedia-audiodev*.a" "libpjmedia-audiodev.so" "libpjmedia-audiodev.a"
+    copy_norm "pjsip/lib" "libpjsip-core*.so" "libpjsip-core*.a" "libpjsip-core.so" "libpjsip-core.a"
     copy_norm "pjsip/lib" "libpjsip*.so" "libpjsip*.a" "libpjsip.so" "libpjsip.a"
     copy_norm "pjsip/lib" "libpjsip-simple*.so" "libpjsip-simple*.a" "libpjsip-simple.so" "libpjsip-simple.a"
     copy_norm "pjsip/lib" "libpjsip-ua*.so" "libpjsip-ua*.a" "libpjsip-ua.so" "libpjsip-ua.a"
