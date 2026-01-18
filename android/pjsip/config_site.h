@@ -41,6 +41,14 @@
 #define PJMEDIA_HAS_SPEEX_AEC             0
 #define PJMEDIA_HAS_SPEEX_AEC_PREPROCESS  0
 #define PJMEDIA_HAS_SPEEX_AEC3            0
+
+/* Disable WebRTC AEC/NS and resample to avoid external deps */
+#define PJMEDIA_HAS_WEBRTC_AEC            0
+#define PJMEDIA_HAS_WEBRTC_NS             0
+#define PJMEDIA_RESAMPLE_IMP              PJMEDIA_RESAMPLE_NONE
+
+/* Disable Android MediaCodec audio */
+#define PJMEDIA_HAS_ANDROID_MEDIACODEC    0
 #define PJMEDIA_SOUND_BUFFER_COUNT        4
 
 /* Avoid duplicate JNI_OnLoad (PJSIP provides its own when enabled) */
