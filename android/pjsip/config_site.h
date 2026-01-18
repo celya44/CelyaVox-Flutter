@@ -43,4 +43,7 @@
 #define PJMEDIA_ECHO_USE_SIMPLE_FILTER    1
 #define PJMEDIA_SOUND_BUFFER_COUNT        4
 
+/* Avoid duplicate JNI_OnLoad (PJSIP provides its own when enabled) */
+#define PJ_ANDROID_JNI                     0
+
 #endif /* PJ_CONFIG_SITE_H */
