@@ -147,6 +147,9 @@ static bool ensure_endpoint() {
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_fr_celya_celyavox_PjsipEngine_nativeInit(JNIEnv *env, jclass clazz) {
+    if (!g_vm) {
+        env->GetJavaVM(&g_vm);
+    }
     g_engineClass = static_cast<jclass>(env->NewGlobalRef(clazz));
     return ensure_endpoint() ? JNI_TRUE : JNI_FALSE;
 }
@@ -255,7 +258,3 @@ Java_fr_celya_celyavox_PjsipEngine_nativeHangupCall(JNIEnv *env, jclass, jstring
     return JNI_TRUE;
 }
 
-jint JNI_OnLoad(JavaVM *vm, void *) {
-    g_vm = vm;
-    return JNI_VERSION_1_6;
-}
