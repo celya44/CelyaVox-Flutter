@@ -75,9 +75,9 @@ build_for_abi() {
       local pattern="$1"; shift
       local dest="$1"; shift
       local found
-      found=$(find . -name "$pattern" -type f -print -quit || true)
+      found=$(find . -name "$pattern" -type f -print -quit)
       if [[ -n "$found" ]]; then
-        cp -a "$found" "${out_dir}/${dest}" 2>/dev/null || true
+        cp -a "$found" "${out_dir}/${dest}"
       fi
     }
 
