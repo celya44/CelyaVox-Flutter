@@ -13,6 +13,7 @@
 
 /* Enable required audio codecs */
 #define PJMEDIA_HAS_G711_CODEC            1
+#define PJMEDIA_HAS_GSM_CODEC             0
 /* Disable Opus to avoid missing opus headers in CI; add back when libopus is provisioned. */
 #define PJMEDIA_HAS_OPUS_CODEC            0
 
@@ -24,7 +25,7 @@
 #define PJMEDIA_HAS_SILK_CODEC            0
 
 /* Audio backend: prefer OpenSL ES on Android */
-#define PJMEDIA_AUDIO_DEV_HAS_OPENSL      1
+#define PJMEDIA_AUDIO_DEV_HAS_OPENSL      0
 #define PJMEDIA_AUDIO_DEV_HAS_ANDROID_JNI 0
 #define PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO   0
 
