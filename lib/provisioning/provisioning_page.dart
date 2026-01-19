@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
+import '../voip/sip_config_state.dart';
 import 'provisioning_channel.dart';
 import 'provisioning_state.dart';
 
@@ -43,6 +45,7 @@ class _ProvisioningPageState extends State<ProvisioningPage> {
     try {
       await ProvisioningChannel.startProvisioning(url);
       await ProvisioningState.setProvisioned(true);
+      await SipConfigState.setConfigured(true);
       if (mounted) {
         setState(() {
           _isProvisioned = true;
@@ -63,10 +66,53 @@ class _ProvisioningPageState extends State<ProvisioningPage> {
     }
   }
 
-  void _scanQr() {
-    setState(() {
-      _error = 'QR scan not implemented';
-    });
+  Future<void> _scanQr() async {
+    if (_submitting) return;
+    bool didScan = false;
+    final scannedValue = await showDialog<String>(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) {
+        return AlertDialog(
+          contentPadding: EdgeInsets.zero,
+          content: SizedBox(
+            width: 320,
+            height: 420,
+            child: Stack(
+              children: [
+                MobileScanner(
+                  onDetect: (capture) {
+                    if (didScan) return;
+                    final barcode = capture.barcodes.firstOrNull;
+                    final value = barcode?.rawValue?.trim();
+                    if (value == null || value.isEmpty) {
+                      return;
+                    }
+                    didScan = true;
+                    Navigator.of(dialogContext).pop(value);
+                  },
+                ),
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    final value = scannedValue?.trim();
+    if (value == null || value.isEmpty) {
+      return;
+    }
+    _urlController.text = value;
+    await _submit();
   }
 
   @override

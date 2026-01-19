@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'provisioning/provisioning_page.dart';
 import 'ui/dialpad_page.dart';
+import 'voip/sip_config_state.dart';
 import 'voip/voip_engine.dart';
 
 final VoipEngine voipEngine = const VoipEngine();
@@ -21,7 +23,20 @@ class VoipApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      home: DialpadPage(engine: voipEngine),
+      home: FutureBuilder<bool>(
+        future: SipConfigState.hasConfig(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+          final hasConfig = snapshot.data ?? false;
+          return hasConfig
+              ? DialpadPage(engine: voipEngine)
+              : const ProvisioningPage();
+        },
+      ),
     );
   }
 }

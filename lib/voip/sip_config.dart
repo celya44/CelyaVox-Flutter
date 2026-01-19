@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'sip_config_state.dart';
 import 'voip_engine.dart';
 
 class SipConfigForm extends StatefulWidget {
@@ -39,6 +40,11 @@ class _SipConfigFormState extends State<SipConfigForm> {
         _passwordCtrl.text.trim(),
         _domainCtrl.text.trim(),
         _proxyCtrl.text.trim(),
+      );
+      await SipConfigState.saveConfig(
+        username: _usernameCtrl.text.trim(),
+        domain: _domainCtrl.text.trim(),
+        proxy: _proxyCtrl.text.trim(),
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

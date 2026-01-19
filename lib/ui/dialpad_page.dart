@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../main.dart';
-import '../voip/sip_config.dart';
 import '../voip/voip_engine.dart';
 import 'in_call_page.dart';
 import 'incoming_call_page.dart';
@@ -98,13 +97,6 @@ class _DialpadPageState extends State<DialpadPage> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            Card(
-              margin: const EdgeInsets.only(bottom: 16),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: SipConfigForm(engine: widget.engine),
-              ),
-            ),
             TextField(
               controller: _controller,
               decoration: const InputDecoration(
