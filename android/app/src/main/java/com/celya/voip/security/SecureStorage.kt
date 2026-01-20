@@ -35,6 +35,14 @@ class SecureStorage(context: Context) {
 
     fun getLdapPassword(): String? = prefs.getString(KEY_LDAP_PASSWORD, null)
 
+    fun clearAll() {
+        prefs.edit()
+            .remove(KEY_SIP_PASSWORD)
+            .remove(KEY_API_KEY)
+            .remove(KEY_LDAP_PASSWORD)
+            .apply()
+    }
+
     companion object {
         private const val KEY_SIP_PASSWORD = "sip_password"
         private const val KEY_API_KEY = "api_key"

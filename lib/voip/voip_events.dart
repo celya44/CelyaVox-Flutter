@@ -16,6 +16,10 @@ sealed class VoipEvent {
           callId: map['callId'] as String? ?? '',
           callerId: map['callerId'] as String? ?? '',
         );
+      case 'registration':
+        return RegistrationEvent(
+          statusText: map['message'] as String? ?? '',
+        );
       case 'call_connected':
         return CallConnectedEvent(
           callId: map['callId'] as String? ?? '',
@@ -52,6 +56,12 @@ class CallEndedEvent extends VoipEvent {
   final String? reason;
 
   const CallEndedEvent({required this.callId, this.reason});
+}
+
+class RegistrationEvent extends VoipEvent {
+  final String statusText;
+
+  const RegistrationEvent({required this.statusText});
 }
 
 /// Exposes a broadcast stream of platform VoIP events.

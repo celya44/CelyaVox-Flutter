@@ -41,6 +41,16 @@ class ProvisioningMethodChannel(
                     }
                 }.start()
             }
+            "getSipUsername" -> {
+                result.success(manager.getSipUsername())
+            }
+            "getProvisioningDump" -> {
+                result.success(manager.getProvisioningDump())
+            }
+            "resetProvisioning" -> {
+                manager.resetProvisioning()
+                result.success(null)
+            }
             else -> result.notImplemented()
         }
     }

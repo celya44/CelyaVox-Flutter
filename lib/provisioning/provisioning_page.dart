@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import '../voip/sip_config_state.dart';
 import 'provisioning_channel.dart';
 import 'provisioning_state.dart';
 
@@ -45,7 +44,6 @@ class _ProvisioningPageState extends State<ProvisioningPage> {
     try {
       await ProvisioningChannel.startProvisioning(url);
       await ProvisioningState.setProvisioned(true);
-      await SipConfigState.setConfigured(true);
       if (mounted) {
         setState(() {
           _isProvisioned = true;

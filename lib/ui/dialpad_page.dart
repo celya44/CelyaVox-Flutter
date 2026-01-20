@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 
-import '../main.dart';
+import 'dart:async';
+
+import '../provisioning/provisioning_channel.dart';
+import '../voip/voip_events.dart';
 import '../voip/voip_engine.dart';
 import 'in_call_page.dart';
-import 'incoming_call_page.dart';
+import 'settings_page.dart';
 
 class DialpadPage extends StatefulWidget {
   const DialpadPage({super.key, required this.engine});
@@ -17,11 +20,44 @@ class DialpadPage extends StatefulWidget {
 class _DialpadPageState extends State<DialpadPage> {
   final TextEditingController _controller = TextEditingController();
   bool _isCalling = false;
+  bool _isRegistered = false;
+  String? _username;
+  StreamSubscription<VoipEvent>? _eventsSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUsername();
+    _listenRegistration();
+  }
 
   @override
   void dispose() {
+    _eventsSub?.cancel();
     _controller.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadUsername() async {
+    try {
+      final value = await ProvisioningChannel.getSipUsername();
+      if (!mounted) return;
+      setState(() => _username = value?.trim().isNotEmpty == true ? value : null);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _username = null);
+    }
+  }
+
+  void _listenRegistration() {
+    _eventsSub = VoipEvents.stream.listen((event) {
+      if (event is RegistrationEvent) {
+        final ok = event.statusText.contains('200');
+        if (mounted) setState(() => _isRegistered = ok);
+      }
+    }, onError: (_) {
+      if (mounted) setState(() => _isRegistered = false);
+    });
   }
 
   Future<void> _makeCall() async {
@@ -68,28 +104,46 @@ class _DialpadPageState extends State<DialpadPage> {
     }
   }
 
-  void _simulateIncomingCall() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => IncomingCallPage(
-          engine: widget.engine,
-          callId: 'incoming-demo',
-          callerId: '+33123456789',
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
+    final displayName = _username ?? 'Compte';
+    final statusColor = _isRegistered ? Colors.green : Colors.red;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Dialpad'),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                displayName,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Tooltip(
+              message: _isRegistered ? 'Enregistré' : 'Non enregistré',
+              child: Container(
+                width: 10,
+                height: 10,
+                decoration: BoxDecoration(
+                  color: statusColor,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+          ],
+        ),
         actions: [
           IconButton(
-            tooltip: 'Simuler appel entrant',
-            onPressed: _simulateIncomingCall,
-            icon: const Icon(Icons.phone_callback_outlined),
+            tooltip: 'Paramètres',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const SettingsPage(),
+                ),
+              );
+            },
+            icon: const Icon(Icons.more_vert),
           ),
         ],
       ),
@@ -108,16 +162,18 @@ class _DialpadPageState extends State<DialpadPage> {
             ),
             const SizedBox(height: 16),
             _Dialpad(onDigit: _appendDigit, onBackspace: _backspace),
-            const Spacer(),
-            ElevatedButton.icon(
-              onPressed: _isCalling ? null : _makeCall,
-              icon: const Icon(Icons.phone),
-              label: Text(_isCalling ? 'Appel...' : 'Appeler'),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size.fromHeight(48),
-              ),
-            ),
           ],
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        minimum: const EdgeInsets.all(16),
+        child: ElevatedButton.icon(
+          onPressed: _isCalling ? null : _makeCall,
+          icon: const Icon(Icons.phone),
+          label: Text(_isCalling ? 'Appel...' : 'Appeler'),
+          style: ElevatedButton.styleFrom(
+            minimumSize: const Size.fromHeight(48),
+          ),
         ),
       ),
     );
