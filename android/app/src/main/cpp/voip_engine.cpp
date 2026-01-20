@@ -7,6 +7,7 @@
 #include <pjsip.h>
 #include <pjsip_ua.h>
 #include <pjsua-lib/pjsua.h>
+#include <pjmedia/audiodev.h>
 
 #define LOG_TAG "PjsipNative"
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, LOG_TAG, __VA_ARGS__)
@@ -151,6 +152,19 @@ static bool ensure_endpoint() {
         return false;
     }
 
+    // Try to bind default audio devices; if unavailable, fall back to null audio
+    status = pjsua_set_snd_dev(PJMEDIA_AUD_DEFAULT_CAPTURE_DEV, PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV);
+    if (status != PJ_SUCCESS) {
+        char errbuf[128];
+        pj_strerror(status, errbuf, sizeof(errbuf));
+        LOGE("set_snd_dev failed: %d (%s). Falling back to null sound device.", status, errbuf);
+        pj_status_t null_status = pjsua_set_null_snd_dev();
+        if (null_status != PJ_SUCCESS) {
+            pj_strerror(null_status, errbuf, sizeof(errbuf));
+            LOGE("set_null_snd_dev failed: %d (%s)", null_status, errbuf);
+        }
+    }
+
     g_initialized = true;
     LOGI("PJSIP initialized");
     return true;
@@ -240,6 +254,14 @@ Java_fr_celya_celyavox_PjsipEngine_nativeMakeCall(JNIEnv *env, jobject, jstring 
     std::lock_guard<std::mutex> lock(g_mutex);
     pj_str_t dst = {const_cast<char *>(dest.c_str()), static_cast<pj_ssize_t>(strlen(dest.c_str()))};
     pj_status_t status = pjsua_call_make_call(g_acc_id, &dst, 0, nullptr, nullptr, &call_id);
+    if (status == PJMEDIA_EAUD_NODEFDEV) {
+        LOGE("make_call failed: %d (no audio device). Retrying with null sound device.", status);
+        pj_status_t null_status = pjsua_set_null_snd_dev();
+        if (null_status == PJ_SUCCESS) {
+            call_id = PJSUA_INVALID_ID;
+            status = pjsua_call_make_call(g_acc_id, &dst, 0, nullptr, nullptr, &call_id);
+        }
+    }
     env->ReleaseStringUTFChars(jnumber, number);
     if (status != PJ_SUCCESS) {
         char errbuf[128];
