@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'dart:async';
 
+import 'package:permission_handler/permission_handler.dart';
+
 import '../provisioning/provisioning_channel.dart';
 import '../voip/voip_events.dart';
 import '../voip/voip_engine.dart';
@@ -27,6 +29,7 @@ class _DialpadPageState extends State<DialpadPage> {
   @override
   void initState() {
     super.initState();
+    _ensureMicPermission();
     _loadUsername();
     _listenRegistration();
     _registerOnStart();
@@ -47,6 +50,14 @@ class _DialpadPageState extends State<DialpadPage> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _username = null);
+    }
+  }
+
+  Future<void> _ensureMicPermission() async {
+    final status = await Permission.microphone.request();
+    if (!mounted) return;
+    if (!status.isGranted) {
+      _showMessage('Permission micro refusée. L’appel audio ne pourra pas démarrer.');
     }
   }
 
