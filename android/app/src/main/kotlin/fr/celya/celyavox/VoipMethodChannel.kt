@@ -52,7 +52,11 @@ class VoipMethodChannel(
                 }
                 "makeCall" -> {
                     val callee = requireArgument<String>(call, "callee")
-                    engine.startCall(callee)
+                    val ok = engine.startCall(callee)
+                    if (!ok) {
+                        result.error("CALL", "Native makeCall failed", null)
+                        return
+                    }
                     result.success(null)
                 }
                 "acceptCall" -> {

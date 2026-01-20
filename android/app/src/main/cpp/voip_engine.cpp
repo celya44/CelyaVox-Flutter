@@ -86,7 +86,16 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e) {
 static void on_reg_state(pjsua_acc_id acc_id) {
     pjsua_acc_info info;
     if (pjsua_acc_get_info(acc_id, &info) != PJ_SUCCESS) return;
-    emit_event("registration", info.status_text.ptr ? info.status_text.ptr : "");
+    std::string status_text;
+    if (info.status_text.ptr && info.status_text.slen > 0) {
+        status_text.assign(info.status_text.ptr, info.status_text.slen);
+    }
+    std::string message = std::to_string(info.status);
+    if (!status_text.empty()) {
+        message += " ";
+        message += status_text;
+    }
+    emit_event("registration", message.c_str());
 }
 
 static bool ensure_endpoint() {
@@ -104,6 +113,8 @@ static bool ensure_endpoint() {
     ua_cfg.cb.on_incoming_call = &on_incoming_call;
     ua_cfg.cb.on_call_state = &on_call_state;
     ua_cfg.cb.on_reg_state = &on_reg_state;
+    static const pj_str_t kUserAgent = pj_str(const_cast<char *>("CelyaVox Mobile"));
+    ua_cfg.user_agent = kUserAgent;
 
     pjsua_logging_config log_cfg;
     pjsua_logging_config_default(&log_cfg);
@@ -205,6 +216,7 @@ Java_fr_celya_celyavox_PjsipEngine_nativeRegister(JNIEnv *env, jobject, jstring 
         LOGE("Account add failed: %d", status);
         return JNI_FALSE;
     }
+    pjsua_acc_set_default(g_acc_id);
     LOGI("Registered account id=%d", g_acc_id);
     return JNI_TRUE;
 }
@@ -225,11 +237,15 @@ Java_fr_celya_celyavox_PjsipEngine_nativeMakeCall(JNIEnv *env, jobject, jstring 
     const char *number = env->GetStringUTFChars(jnumber, nullptr);
     std::string dest = "sip:" + std::string(number);
     pjsua_call_id call_id = PJSUA_INVALID_ID;
+    std::lock_guard<std::mutex> lock(g_mutex);
     pj_str_t dst = {const_cast<char *>(dest.c_str()), static_cast<pj_ssize_t>(strlen(dest.c_str()))};
     pj_status_t status = pjsua_call_make_call(g_acc_id, &dst, 0, nullptr, nullptr, &call_id);
     env->ReleaseStringUTFChars(jnumber, number);
     if (status != PJ_SUCCESS) {
-        LOGE("make_call failed: %d", status);
+        char errbuf[128];
+        pj_strerror(status, errbuf, sizeof(errbuf));
+        LOGE("make_call failed: %d (%s)", status, errbuf);
+        emit_event("call_error", errbuf);
         return JNI_FALSE;
     }
     LOGI("Calling %s (id=%d)", dest.c_str(), call_id);

@@ -61,8 +61,8 @@ class VoipEngine(
         sipEngine.unregister()
     }
 
-    fun startCall(callee: String) {
-        sipEngine.makeCall(callee)
+    fun startCall(callee: String): Boolean {
+        return sipEngine.makeCall(callee)
     }
 
     fun endCall(callId: String) {
