@@ -146,16 +146,20 @@ static bool ensure_endpoint() {
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_fr_celya_celyavox_PjsipEngine_nativeInit(JNIEnv *env, jclass clazz) {
+Java_fr_celya_celyavox_PjsipEngine_nativeInit(JNIEnv *env, jobject obj) {
     if (!g_vm) {
         env->GetJavaVM(&g_vm);
     }
-    g_engineClass = static_cast<jclass>(env->NewGlobalRef(clazz));
+    if (!g_engineClass) {
+        jclass localClass = env->GetObjectClass(obj);
+        g_engineClass = static_cast<jclass>(env->NewGlobalRef(localClass));
+        env->DeleteLocalRef(localClass);
+    }
     return ensure_endpoint() ? JNI_TRUE : JNI_FALSE;
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_fr_celya_celyavox_PjsipEngine_nativeRegister(JNIEnv *env, jclass, jstring juser, jstring jpass, jstring jdomain, jstring jproxy) {
+Java_fr_celya_celyavox_PjsipEngine_nativeRegister(JNIEnv *env, jobject, jstring juser, jstring jpass, jstring jdomain, jstring jproxy) {
     if (!ensure_endpoint()) return JNI_FALSE;
 
     const char *user = env->GetStringUTFChars(juser, nullptr);
@@ -206,7 +210,7 @@ Java_fr_celya_celyavox_PjsipEngine_nativeRegister(JNIEnv *env, jclass, jstring j
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_fr_celya_celyavox_PjsipEngine_nativeUnregister(JNIEnv *, jclass) {
+Java_fr_celya_celyavox_PjsipEngine_nativeUnregister(JNIEnv *, jobject) {
     std::lock_guard<std::mutex> lock(g_mutex);
     if (g_acc_id != PJSUA_INVALID_ID) {
         pjsua_acc_del(g_acc_id);
@@ -216,7 +220,7 @@ Java_fr_celya_celyavox_PjsipEngine_nativeUnregister(JNIEnv *, jclass) {
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_fr_celya_celyavox_PjsipEngine_nativeMakeCall(JNIEnv *env, jclass, jstring jnumber) {
+Java_fr_celya_celyavox_PjsipEngine_nativeMakeCall(JNIEnv *env, jobject, jstring jnumber) {
     if (!ensure_endpoint() || g_acc_id == PJSUA_INVALID_ID) return JNI_FALSE;
     const char *number = env->GetStringUTFChars(jnumber, nullptr);
     std::string dest = "sip:" + std::string(number);
@@ -233,7 +237,7 @@ Java_fr_celya_celyavox_PjsipEngine_nativeMakeCall(JNIEnv *env, jclass, jstring j
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_fr_celya_celyavox_PjsipEngine_nativeAcceptCall(JNIEnv *env, jclass, jstring jcallId) {
+Java_fr_celya_celyavox_PjsipEngine_nativeAcceptCall(JNIEnv *env, jobject, jstring jcallId) {
     const char *cid = env->GetStringUTFChars(jcallId, nullptr);
     int call_id = atoi(cid);
     env->ReleaseStringUTFChars(jcallId, cid);
@@ -246,7 +250,7 @@ Java_fr_celya_celyavox_PjsipEngine_nativeAcceptCall(JNIEnv *env, jclass, jstring
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_fr_celya_celyavox_PjsipEngine_nativeHangupCall(JNIEnv *env, jclass, jstring jcallId) {
+Java_fr_celya_celyavox_PjsipEngine_nativeHangupCall(JNIEnv *env, jobject, jstring jcallId) {
     const char *cid = env->GetStringUTFChars(jcallId, nullptr);
     int call_id = atoi(cid);
     env->ReleaseStringUTFChars(jcallId, cid);
