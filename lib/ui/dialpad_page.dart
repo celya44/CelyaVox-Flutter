@@ -80,11 +80,11 @@ class _DialpadPageState extends State<DialpadPage> {
     }
     if (!callee.contains('@')) {
       final domain = await ProvisioningChannel.getSipDomain();
-      if (domain == null || domain.trim().isEmpty) {
-        _showMessage('Domaine SIP manquant.');
-        return;
+      if (domain != null && domain.trim().isNotEmpty) {
+        callee = '$callee@${domain.trim()}';
+      } else {
+        _showMessage('Domaine SIP manquant, appel sans domaine.');
       }
-      callee = '$callee@${domain.trim()}';
     }
     setState(() => _isCalling = true);
     try {

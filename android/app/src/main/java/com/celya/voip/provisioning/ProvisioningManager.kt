@@ -47,20 +47,20 @@ class ProvisioningManager(
     }
 
     private fun store(config: ProvisioningConfig) {
-        config.get("sip_password")?.let { secureStorage.saveSipPassword(it) }
+        getAny(config, "sip_password", "SipPassword")?.let { secureStorage.saveSipPassword(it) }
         config.get("api_key")?.let { secureStorage.saveApiKey(it) }
         config.get("ldap_password")?.let { secureStorage.saveLdapPassword(it) }
-        config.get("sip_username")?.let { prefs.edit().putString(KEY_SIP_USERNAME, it).apply() }
-        config.get("sip_domain")?.let { prefs.edit().putString(KEY_SIP_DOMAIN, it).apply() }
-        config.get("sip_proxy")?.let { prefs.edit().putString(KEY_SIP_PROXY, it).apply() }
+        getAny(config, "sip_username", "SipUsername")?.let { prefs.edit().putString(KEY_SIP_USERNAME, it).apply() }
+        getAny(config, "sip_domain", "SipDomaine", "SipDomain")?.let { prefs.edit().putString(KEY_SIP_DOMAIN, it).apply() }
+        getAny(config, "sip_proxy", "SipProxy")?.let { prefs.edit().putString(KEY_SIP_PROXY, it).apply() }
         val nonSensitive = config.entries.filterKeys { it !in SENSITIVE_KEYS }
         prefs.edit().putString(KEY_PROVISIONING_DUMP, toJson(nonSensitive)).apply()
     }
 
     private fun configureSip(config: ProvisioningConfig) {
-        val username = config.get("sip_username") ?: return
-        val password = config.get("sip_password") ?: return
-        val domain = config.get("sip_domain") ?: return
+        val username = getAny(config, "sip_username", "SipUsername") ?: return
+        val password = getAny(config, "sip_password", "SipPassword") ?: return
+        val domain = getAny(config, "sip_domain", "SipDomaine", "SipDomain") ?: return
         val port = config.get("sip_wss_port")?.toIntOrNull() ?: 443
         sipAccountManager.configureAccount(username, password, domain, port)
     }
@@ -104,6 +104,14 @@ class ProvisioningManager(
         return json.toString()
     }
 
+    private fun getAny(config: ProvisioningConfig, vararg keys: String): String? {
+        for (key in keys) {
+            val value = config.get(key)
+            if (!value.isNullOrBlank()) return value
+        }
+        return null
+    }
+
     private fun fromJson(raw: String): Map<String, String> {
         val json = org.json.JSONObject(raw)
         val keys = json.keys()
@@ -121,6 +129,11 @@ class ProvisioningManager(
         private const val KEY_SIP_DOMAIN = "sip_domain"
         private const val KEY_SIP_PROXY = "sip_proxy"
         private const val KEY_PROVISIONING_DUMP = "provisioning_dump"
-        private val SENSITIVE_KEYS = setOf("sip_password", "api_key", "ldap_password")
+        private val SENSITIVE_KEYS = setOf(
+            "sip_password",
+            "SipPassword",
+            "api_key",
+            "ldap_password"
+        )
     }
 }

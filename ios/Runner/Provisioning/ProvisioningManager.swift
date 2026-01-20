@@ -43,20 +43,31 @@ final class ProvisioningManager {
     }
 
     private func store(_ config: ProvisioningConfig) throws {
-        if let sipPassword = config.get("sip_password") { try storage.saveSipPassword(sipPassword) }
+        if let sipPassword = first(config, keys: ["sip_password", "SipPassword"]) {
+            try storage.saveSipPassword(sipPassword)
+        }
         if let apiKey = config.get("api_key") { try storage.saveApiKey(apiKey) }
         if let ldapPassword = config.get("ldap_password") { try storage.saveLdapPassword(ldapPassword) }
     }
 
     private func configureSip(_ config: ProvisioningConfig) throws {
-        guard let username = config.get("sip_username"),
-              let password = config.get("sip_password"),
-              let domain = config.get("sip_domain") else {
+        guard let username = first(config, keys: ["sip_username", "SipUsername"]),
+              let password = first(config, keys: ["sip_password", "SipPassword"]),
+              let domain = first(config, keys: ["sip_domain", "SipDomaine", "SipDomain"]) else {
             throw NSError(domain: "Provisioning", code: -2, userInfo: [NSLocalizedDescriptionKey: "Missing SIP credentials"])
         }
         let port = Int(config.get("sip_wss_port") ?? "") ?? 443
         let accountConfig = SipAccountConfig(username: username, password: password, domain: domain, wssPort: port)
         try sipManager.configureAccount(config: accountConfig)
+    }
+
+    private func first(_ config: ProvisioningConfig, keys: [String]) -> String? {
+        for key in keys {
+            if let value = config.get(key), !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return value
+            }
+        }
+        return nil
     }
 
     func isProvisioned() -> Bool {
