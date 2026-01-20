@@ -2,6 +2,7 @@ package com.celya.voip.provisioning
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import com.celya.voip.security.SecureStorage
 import com.celya.voip.sip.SipAccountManager
 import java.io.BufferedInputStream
@@ -62,7 +63,11 @@ class ProvisioningManager(
         val password = getAny(config, "sip_password", "SipPassword") ?: return
         val domain = getAny(config, "sip_domain", "SipDomaine", "SipDomain") ?: return
         val port = config.get("sip_wss_port")?.toIntOrNull() ?: 443
-        sipAccountManager.configureAccount(username, password, domain, port)
+        try {
+            sipAccountManager.configureAccount(username, password, domain, port)
+        } catch (e: IllegalStateException) {
+            Log.w(TAG, "PJSIP unavailable; skipping native provisioning register", e)
+        }
     }
 
     fun isProvisioned(): Boolean = prefs.getBoolean(KEY_PROVISIONED, false)
@@ -124,6 +129,7 @@ class ProvisioningManager(
     }
 
     companion object {
+        private const val TAG = "ProvisioningManager"
         private const val KEY_PROVISIONED = "is_provisioned"
         private const val KEY_SIP_USERNAME = "sip_username"
         private const val KEY_SIP_DOMAIN = "sip_domain"
