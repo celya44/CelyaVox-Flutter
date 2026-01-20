@@ -1,5 +1,6 @@
 package fr.celya.celyavox
 
+import androidx.annotation.Keep
 import android.util.Log
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -30,8 +31,9 @@ class PjsipEngine private constructor() {
         @Volatile
         private var callback: Callback? = null
 
+        @Keep
         @JvmStatic
-        internal fun handleNativeEvent(type: String, message: String) {
+        fun handleNativeEvent(type: String, message: String) {
             Log.d(TAG, "Native event: $type | $message")
             callback?.onEvent(type, message)
         }
