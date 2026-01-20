@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../voip/voip_engine.dart';
+import 'dialpad_page.dart';
 
 class InCallPage extends StatefulWidget {
   const InCallPage({super.key, required this.engine, required this.callId});
@@ -20,7 +21,12 @@ class _InCallPageState extends State<InCallPage> {
     try {
       await widget.engine.hangupCall(widget.callId);
       if (!mounted) return;
-      Navigator.of(context).popUntil((route) => route.isFirst);
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (_) => DialpadPage(engine: widget.engine),
+        ),
+        (_) => false,
+      );
     } catch (e) {
       _showMessage('Erreur: $e');
     } finally {

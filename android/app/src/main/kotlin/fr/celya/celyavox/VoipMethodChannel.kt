@@ -13,6 +13,7 @@ class VoipMethodChannel(
 
     private val appContext: Context = context.applicationContext
     private val channel = MethodChannel(messenger, "voip_engine")
+    private val provisioningManager = com.celya.voip.provisioning.ProvisioningManager(appContext)
 
     init {
         channel.setMethodCallHandler(this)
@@ -30,6 +31,18 @@ class VoipMethodChannel(
                     val password = requireArgument<String>(call, "password")
                     val domain = requireArgument<String>(call, "domain")
                     val proxy = call.argument<String>("proxy") ?: ""
+                    engine.register(username, password, domain, proxy)
+                    result.success(null)
+                }
+                "registerProvisioned" -> {
+                    val username = provisioningManager.getSipUsername()
+                    val password = provisioningManager.getSipPassword()
+                    val domain = provisioningManager.getSipDomain()
+                    val proxy = provisioningManager.getSipProxy() ?: ""
+                    if (username.isNullOrBlank() || password.isNullOrBlank() || domain.isNullOrBlank()) {
+                        result.error("PROVISIONING", "Missing SIP provisioning data", null)
+                        return
+                    }
                     engine.register(username, password, domain, proxy)
                     result.success(null)
                 }

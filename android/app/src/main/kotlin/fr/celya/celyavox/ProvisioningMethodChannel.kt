@@ -44,6 +44,9 @@ class ProvisioningMethodChannel(
             "getSipUsername" -> {
                 result.success(manager.getSipUsername())
             }
+            "getSipDomain" -> {
+                result.success(manager.getSipDomain())
+            }
             "getProvisioningDump" -> {
                 result.success(manager.getProvisioningDump())
             }

@@ -29,6 +29,7 @@ class _DialpadPageState extends State<DialpadPage> {
     super.initState();
     _loadUsername();
     _listenRegistration();
+    _registerOnStart();
   }
 
   @override
@@ -60,11 +61,30 @@ class _DialpadPageState extends State<DialpadPage> {
     });
   }
 
+  Future<void> _registerOnStart() async {
+    try {
+      await widget.engine.registerProvisioned();
+    } catch (_) {
+      // Ignore errors here; registration status is reflected via events.
+    }
+  }
+
   Future<void> _makeCall() async {
-    final callee = _controller.text.trim();
+    var callee = _controller.text.trim();
     if (callee.isEmpty) {
       _showMessage('Entrez un numéro.');
       return;
+    }
+    if (callee.startsWith('sip:')) {
+      callee = callee.substring(4);
+    }
+    if (!callee.contains('@')) {
+      final domain = await ProvisioningChannel.getSipDomain();
+      if (domain == null || domain.trim().isEmpty) {
+        _showMessage('Domaine SIP manquant.');
+        return;
+      }
+      callee = '$callee@${domain.trim()}';
     }
     setState(() => _isCalling = true);
     try {

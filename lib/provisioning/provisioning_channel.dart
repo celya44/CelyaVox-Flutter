@@ -11,6 +11,10 @@ class ProvisioningChannel {
     return _channel.invokeMethod<String>('getSipUsername');
   }
 
+  static Future<String?> getSipDomain() {
+    return _channel.invokeMethod<String>('getSipDomain');
+  }
+
   static Future<Map<String, String>> getProvisioningDump() async {
     final result = await _channel.invokeMethod<Map<dynamic, dynamic>>(
       'getProvisioningDump',

@@ -21,6 +21,8 @@ class VoipEngine {
         'proxy': proxy,
       });
 
+  Future<void> registerProvisioned() => _invoke('registerProvisioned');
+
   Future<void> unregister() => _invoke('unregister');
 
   Future<void> makeCall(String callee) =>
