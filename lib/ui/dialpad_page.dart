@@ -58,6 +58,12 @@ class _DialpadPageState extends State<DialpadPage> {
     if (!mounted) return;
     if (!status.isGranted) {
       _showMessage('Permission micro refusée. L’appel audio ne pourra pas démarrer.');
+      return;
+    }
+    try {
+      await widget.engine.refreshAudio();
+    } catch (_) {
+      _showMessage('Audio non initialisé. Redémarrez l’application.');
     }
   }
 

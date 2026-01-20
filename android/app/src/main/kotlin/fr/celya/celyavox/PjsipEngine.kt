@@ -81,6 +81,12 @@ class PjsipEngine private constructor() {
     }
 
     @Synchronized
+    fun refreshAudio(): Boolean {
+        if (!initialized.get()) init()
+        return nativeRefreshAudio()
+    }
+
+    @Synchronized
     fun acceptCall(callId: String): Boolean {
         if (!initialized.get()) return false
         return nativeAcceptCall(callId)
@@ -98,4 +104,5 @@ class PjsipEngine private constructor() {
     private external fun nativeMakeCall(number: String): Boolean
     private external fun nativeAcceptCall(callId: String): Boolean
     private external fun nativeHangupCall(callId: String): Boolean
+    private external fun nativeRefreshAudio(): Boolean
 }

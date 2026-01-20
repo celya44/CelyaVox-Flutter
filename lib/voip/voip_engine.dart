@@ -28,6 +28,8 @@ class VoipEngine {
   Future<void> makeCall(String callee) =>
       _invoke('makeCall', <String, dynamic>{'callee': callee});
 
+  Future<void> refreshAudio() => _invoke('refreshAudio');
+
   Future<void> acceptCall(String callId) =>
       _invoke('acceptCall', <String, dynamic>{'callId': callId});
 

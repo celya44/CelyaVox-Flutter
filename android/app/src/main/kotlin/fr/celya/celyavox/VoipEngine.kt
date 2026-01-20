@@ -73,6 +73,10 @@ class VoipEngine(
         sipEngine.acceptCall(callId)
     }
 
+    fun refreshAudio(): Boolean {
+        return sipEngine.refreshAudio()
+    }
+
     private fun emit(event: Map<String, Any?>) {
         val sink = eventSink ?: return
         mainHandler.post { sink.success(event) }

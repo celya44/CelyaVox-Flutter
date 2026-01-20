@@ -18,6 +18,7 @@ static jclass g_engineClass = nullptr;
 static std::mutex g_mutex;
 static bool g_initialized = false;
 static pjsua_acc_id g_acc_id = PJSUA_INVALID_ID;
+static bool g_audio_ready = false;
 
 // Forward declarations
 static void emit_event(const char *type, const char *message);
@@ -80,7 +81,24 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e) {
     if (ci.state == PJSIP_INV_STATE_CONFIRMED) {
         emit_event("call_connected", std::to_string(call_id).c_str());
     } else if (ci.state == PJSIP_INV_STATE_DISCONNECTED) {
-        emit_event("call_ended", std::to_string(call_id).c_str());
+        std::string reason;
+        reason += std::to_string(ci.last_status);
+        reason += " ";
+        reason += std::string(ci.last_status_text.ptr ? ci.last_status_text.ptr : "");
+        std::string payload = std::to_string(call_id) + "|" + reason;
+        emit_event("call_ended", payload.c_str());
+    }
+}
+
+static void on_call_media_state(pjsua_call_id call_id) {
+    pjsua_call_info ci;
+    if (pjsua_call_get_info(call_id, &ci) != PJ_SUCCESS) return;
+    for (unsigned i = 0; i < ci.media_cnt; ++i) {
+        if (ci.media[i].type == PJMEDIA_TYPE_AUDIO) {
+            if (ci.media[i].status == PJSUA_CALL_MEDIA_ERROR) {
+                LOGE("Media error on call %d", call_id);
+            }
+        }
     }
 }
 
@@ -113,6 +131,7 @@ static bool ensure_endpoint() {
     pjsua_config_default(&ua_cfg);
     ua_cfg.cb.on_incoming_call = &on_incoming_call;
     ua_cfg.cb.on_call_state = &on_call_state;
+    ua_cfg.cb.on_call_media_state = &on_call_media_state;
     ua_cfg.cb.on_reg_state = &on_reg_state;
     static const pj_str_t kUserAgent = pj_str(const_cast<char *>("CelyaVox Mobile"));
     ua_cfg.user_agent = kUserAgent;
@@ -164,6 +183,7 @@ static bool ensure_endpoint() {
             LOGE("set_null_snd_dev failed: %d (%s)", null_status, errbuf);
         }
     }
+    g_audio_ready = true;
 
     g_initialized = true;
     LOGI("PJSIP initialized");
@@ -181,6 +201,26 @@ Java_fr_celya_celyavox_PjsipEngine_nativeInit(JNIEnv *env, jobject obj) {
         env->DeleteLocalRef(localClass);
     }
     return ensure_endpoint() ? JNI_TRUE : JNI_FALSE;
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_fr_celya_celyavox_PjsipEngine_nativeRefreshAudio(JNIEnv *, jobject) {
+    if (!ensure_endpoint()) return JNI_FALSE;
+    std::lock_guard<std::mutex> lock(g_mutex);
+    pj_status_t status = pjsua_set_snd_dev(PJMEDIA_AUD_DEFAULT_CAPTURE_DEV, PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV);
+    if (status != PJ_SUCCESS) {
+        char errbuf[128];
+        pj_strerror(status, errbuf, sizeof(errbuf));
+        LOGE("refreshAudio set_snd_dev failed: %d (%s). Falling back to null sound device.", status, errbuf);
+        pj_status_t null_status = pjsua_set_null_snd_dev();
+        if (null_status != PJ_SUCCESS) {
+            pj_strerror(null_status, errbuf, sizeof(errbuf));
+            LOGE("refreshAudio set_null_snd_dev failed: %d (%s)", null_status, errbuf);
+            return JNI_FALSE;
+        }
+    }
+    g_audio_ready = true;
+    return JNI_TRUE;
 }
 
 extern "C" JNIEXPORT jboolean JNICALL

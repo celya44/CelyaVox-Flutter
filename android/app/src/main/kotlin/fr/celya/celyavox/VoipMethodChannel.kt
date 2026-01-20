@@ -59,6 +59,14 @@ class VoipMethodChannel(
                     }
                     result.success(null)
                 }
+                "refreshAudio" -> {
+                    val ok = engine.refreshAudio()
+                    if (!ok) {
+                        result.error("AUDIO", "Failed to refresh audio device", null)
+                        return
+                    }
+                    result.success(null)
+                }
                 "acceptCall" -> {
                     val callId = requireArgument<String>(call, "callId")
                     engine.acceptCall(callId)
