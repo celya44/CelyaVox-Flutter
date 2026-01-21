@@ -29,6 +29,11 @@ sealed class VoipEvent {
           callId: map['callId'] as String? ?? '',
           reason: map['reason'] as String?,
         );
+      case 'bluetooth_available':
+        return BluetoothAvailabilityEvent(
+          available: map['available'] as bool? ?? false,
+          name: map['name'] as String? ?? '',
+        );
       default:
         throw PlatformException(
           code: 'UNKNOWN_EVENT',
@@ -62,6 +67,13 @@ class RegistrationEvent extends VoipEvent {
   final String statusText;
 
   const RegistrationEvent({required this.statusText});
+}
+
+class BluetoothAvailabilityEvent extends VoipEvent {
+  final bool available;
+  final String name;
+
+  const BluetoothAvailabilityEvent({required this.available, required this.name});
 }
 
 /// Exposes a broadcast stream of platform VoIP events.

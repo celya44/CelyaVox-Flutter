@@ -98,6 +98,12 @@ class PjsipEngine private constructor() {
         return nativeHangupCall(callId)
     }
 
+    @Synchronized
+    fun sendDtmf(callId: String, digits: String): Boolean {
+        if (!initialized.get()) return false
+        return nativeSendDtmf(callId, digits)
+    }
+
     private external fun nativeInit(): Boolean
     private external fun nativeRegister(username: String, password: String, domain: String, proxy: String): Boolean
     private external fun nativeUnregister()
@@ -105,4 +111,5 @@ class PjsipEngine private constructor() {
     private external fun nativeAcceptCall(callId: String): Boolean
     private external fun nativeHangupCall(callId: String): Boolean
     private external fun nativeRefreshAudio(): Boolean
+    private external fun nativeSendDtmf(callId: String, digits: String): Boolean
 }

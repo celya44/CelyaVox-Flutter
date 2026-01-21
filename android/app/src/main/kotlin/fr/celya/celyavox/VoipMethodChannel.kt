@@ -72,6 +72,34 @@ class VoipMethodChannel(
                     engine.acceptCall(callId)
                     result.success(null)
                 }
+                "setSpeakerphone" -> {
+                    val enabled = requireArgument<Boolean>(call, "enabled")
+                    engine.setSpeakerphone(enabled)
+                    result.success(null)
+                }
+                "setBluetooth" -> {
+                    val enabled = requireArgument<Boolean>(call, "enabled")
+                    engine.setBluetooth(enabled)
+                    result.success(null)
+                }
+                "setMuted" -> {
+                    val enabled = requireArgument<Boolean>(call, "enabled")
+                    engine.setMuted(enabled)
+                    result.success(null)
+                }
+                "isBluetoothAvailable" -> {
+                    result.success(engine.isBluetoothAvailable())
+                }
+                "sendDtmf" -> {
+                    val callId = requireArgument<String>(call, "callId")
+                    val digits = requireArgument<String>(call, "digits")
+                    val ok = engine.sendDtmf(callId, digits)
+                    if (!ok) {
+                        result.error("DTMF", "Failed to send DTMF", null)
+                        return
+                    }
+                    result.success(null)
+                }
                 "hangupCall" -> {
                     val callId = requireArgument<String>(call, "callId")
                     engine.endCall(callId)

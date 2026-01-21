@@ -342,3 +342,21 @@ Java_fr_celya_celyavox_PjsipEngine_nativeHangupCall(JNIEnv *env, jobject, jstrin
     return JNI_TRUE;
 }
 
+extern "C" JNIEXPORT jboolean JNICALL
+Java_fr_celya_celyavox_PjsipEngine_nativeSendDtmf(JNIEnv *env, jobject, jstring jcallId, jstring jdigits) {
+    if (!ensure_endpoint()) return JNI_FALSE;
+    const char *cid = env->GetStringUTFChars(jcallId, nullptr);
+    const char *digits = env->GetStringUTFChars(jdigits, nullptr);
+    int call_id = atoi(cid);
+    pj_str_t dtmf = pj_str(const_cast<char *>(digits));
+    std::lock_guard<std::mutex> lock(g_mutex);
+    pj_status_t status = pjsua_call_dial_dtmf(call_id, &dtmf);
+    env->ReleaseStringUTFChars(jcallId, cid);
+    env->ReleaseStringUTFChars(jdigits, digits);
+    if (status != PJ_SUCCESS) {
+        LOGE("send dtmf failed: %d", status);
+        return JNI_FALSE;
+    }
+    return JNI_TRUE;
+}
+

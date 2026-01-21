@@ -1,6 +1,10 @@
 package fr.celya.celyavox
 
 import android.content.Context
+import android.media.AudioDeviceCallback
+import android.media.AudioManager
+import android.media.AudioDeviceInfo
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -21,6 +25,8 @@ class VoipEngine(
     private val sipEngine = PjsipEngine.instance
     @Volatile
     private var appContext: Context? = null
+    private var audioDeviceCallback: AudioDeviceCallback? = null
+    private var bluetoothAvailable: Boolean = false
 
     init {
         messenger?.let { bindEventChannel(it) }
@@ -45,12 +51,14 @@ class VoipEngine(
         if (!ok) {
             Log.e(TAG, "PJSIP init failed (native lib missing or init error); continuing without SIP")
         }
+        startAudioDeviceMonitoring()
     }
 
     fun dispose() {
         eventChannel?.setStreamHandler(null)
         eventSink = null
         sipEngine.setCallback(null)
+        stopAudioDeviceMonitoring()
     }
 
     fun register(username: String, password: String, domain: String, proxy: String) {
@@ -75,6 +83,106 @@ class VoipEngine(
 
     fun refreshAudio(): Boolean {
         return sipEngine.refreshAudio()
+    }
+
+    fun setSpeakerphone(enabled: Boolean) {
+        val ctx = appContext ?: return
+        val audioManager = ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
+        audioManager.isSpeakerphoneOn = enabled
+        if (enabled && audioManager.isBluetoothScoOn) {
+            audioManager.stopBluetoothSco()
+            audioManager.isBluetoothScoOn = false
+        }
+    }
+
+    fun setBluetooth(enabled: Boolean) {
+        val ctx = appContext ?: return
+        val audioManager = ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
+        if (enabled) {
+            audioManager.isSpeakerphoneOn = false
+            audioManager.startBluetoothSco()
+            audioManager.isBluetoothScoOn = true
+        } else {
+            audioManager.stopBluetoothSco()
+            audioManager.isBluetoothScoOn = false
+        }
+    }
+
+    fun setMuted(enabled: Boolean) {
+        val ctx = appContext ?: return
+        val audioManager = ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        audioManager.isMicrophoneMute = enabled
+    }
+
+    fun isBluetoothAvailable(): Boolean {
+        val ctx = appContext ?: return false
+        val audioManager = ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val devices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+            return devices.any { device ->
+                device.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP ||
+                    device.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO
+            }
+        }
+        return audioManager.isBluetoothScoAvailableOffCall
+    }
+
+    private fun startAudioDeviceMonitoring() {
+        val ctx = appContext ?: return
+        val audioManager = ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            publishBluetoothAvailability(isBluetoothAvailable(), null)
+            return
+        }
+        if (audioDeviceCallback != null) return
+        audioDeviceCallback = object : AudioDeviceCallback() {
+            override fun onAudioDevicesAdded(addedDevices: Array<out AudioDeviceInfo>) {
+                publishBluetoothAvailability(isBluetoothAvailable(), getBluetoothDeviceName())
+            }
+
+            override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>) {
+                publishBluetoothAvailability(isBluetoothAvailable(), getBluetoothDeviceName())
+            }
+        }
+        audioManager.registerAudioDeviceCallback(audioDeviceCallback, null)
+        publishBluetoothAvailability(isBluetoothAvailable(), getBluetoothDeviceName())
+    }
+
+    private fun stopAudioDeviceMonitoring() {
+        val ctx = appContext ?: return
+        val audioManager = ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        audioDeviceCallback?.let { audioManager.unregisterAudioDeviceCallback(it) }
+        audioDeviceCallback = null
+    }
+
+    private fun publishBluetoothAvailability(available: Boolean, name: String?) {
+        if (available == bluetoothAvailable && (name == null || name.isBlank())) return
+        bluetoothAvailable = available
+        emit(
+            mapOf(
+                "type" to "bluetooth_available",
+                "available" to available,
+                "name" to (name ?: ""),
+            )
+        )
+    }
+
+    private fun getBluetoothDeviceName(): String? {
+        val ctx = appContext ?: return null
+        val audioManager = ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return null
+        val devices = audioManager.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+        val device = devices.firstOrNull { d ->
+            d.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP ||
+                d.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO
+        }
+        return device?.productName?.toString()
+    }
+
+    fun sendDtmf(callId: String, digits: String): Boolean {
+        return sipEngine.sendDtmf(callId, digits)
     }
 
     private fun emit(event: Map<String, Any?>) {
