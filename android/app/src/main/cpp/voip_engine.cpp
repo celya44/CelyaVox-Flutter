@@ -97,7 +97,7 @@ static void on_call_media_state(pjsua_call_id call_id) {
         if (ci.media[i].type == PJMEDIA_TYPE_AUDIO) {
             if (ci.media[i].status == PJSUA_CALL_MEDIA_ACTIVE) {
                 // Connect call audio to sound device (playback + capture).
-                const pjmedia_conf_port_id slot = ci.media[i].stream.aud.conf_slot;
+                const pjsua_conf_port_id slot = ci.media[i].stream.aud.conf_slot;
                 pjsua_conf_connect(slot, 0);
                 pjsua_conf_connect(0, slot);
                 LOGI("Media active on call %d, connected to sound device", call_id);
