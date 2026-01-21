@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import '../ui/dialpad_page.dart';
+import '../voip/voip_engine.dart';
 import 'provisioning_channel.dart';
 import 'provisioning_state.dart';
 
@@ -44,11 +46,16 @@ class _ProvisioningPageState extends State<ProvisioningPage> {
     try {
       await ProvisioningChannel.startProvisioning(url);
       await ProvisioningState.setProvisioned(true);
-      if (mounted) {
-        setState(() {
-          _isProvisioned = true;
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _isProvisioned = true;
+      });
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (_) => DialpadPage(engine: const VoipEngine()),
+        ),
+        (_) => false,
+      );
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -122,10 +129,7 @@ class _ProvisioningPageState extends State<ProvisioningPage> {
   @override
   Widget build(BuildContext context) {
     if (_isProvisioned) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Provisioning')),
-        body: const Center(child: Text('Device is provisioned.')),
-      );
+      return DialpadPage(engine: const VoipEngine());
     }
 
     return Scaffold(
