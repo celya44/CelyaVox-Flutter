@@ -70,6 +70,7 @@ find_pjsip_lib(PJSUA2_PATH pjsua2)
 set_target_properties(voip_engine PROPERTIES LINK_FLAGS "-L${PJSIP_LIB_DIR}")
 
 find_library(log-lib log)
+find_library(opensles-lib OpenSLES)
 
 target_link_libraries(
     voip_engine
@@ -88,4 +89,5 @@ target_link_libraries(
     ${PJ_LIB_PATH}
     -Wl,--end-group
     ${log-lib}
+    ${opensles-lib}
 )
