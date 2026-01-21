@@ -143,8 +143,10 @@ static bool ensure_endpoint() {
     pjsua_media_config media_cfg;
     pjsua_media_config_default(&media_cfg);
     media_cfg.has_ioqueue = PJ_TRUE;
-    media_cfg.clock_rate = 16000;
-    media_cfg.snd_clock_rate = 16000;
+    // G.711 est en 8 kHz ; le resampling est désactivé dans config_site.h.
+    // Garder 8 kHz pour éviter l'échec de création de media session.
+    media_cfg.clock_rate = 8000;
+    media_cfg.snd_clock_rate = 8000;
     media_cfg.enable_ice = PJ_FALSE;
 
     status = pjsua_init(&ua_cfg, &log_cfg, &media_cfg);
