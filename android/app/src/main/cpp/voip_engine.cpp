@@ -95,8 +95,16 @@ static void on_call_media_state(pjsua_call_id call_id) {
     if (pjsua_call_get_info(call_id, &ci) != PJ_SUCCESS) return;
     for (unsigned i = 0; i < ci.media_cnt; ++i) {
         if (ci.media[i].type == PJMEDIA_TYPE_AUDIO) {
-            if (ci.media[i].status == PJSUA_CALL_MEDIA_ERROR) {
+            if (ci.media[i].status == PJSUA_CALL_MEDIA_ACTIVE) {
+                // Connect call audio to sound device (playback + capture).
+                const pjmedia_conf_port_id slot = ci.media[i].stream.aud.conf_slot;
+                pjsua_conf_connect(slot, 0);
+                pjsua_conf_connect(0, slot);
+                LOGI("Media active on call %d, connected to sound device", call_id);
+            } else if (ci.media[i].status == PJSUA_CALL_MEDIA_ERROR) {
                 LOGE("Media error on call %d", call_id);
+            } else {
+                LOGI("Media status on call %d: %d", call_id, ci.media[i].status);
             }
         }
     }
