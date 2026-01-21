@@ -7,5 +7,5 @@ phone
 
 firebase-service-account.json
 android/app/google-services.json
-ios/App/App/GoogleService-Info.plist
+ios/Runner/GoogleService-Info.plist
 
