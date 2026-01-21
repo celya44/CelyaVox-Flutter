@@ -159,7 +159,17 @@ class VoipConnectionService : ConnectionService() {
                 putString(EXTRA_CALL_ID, callId)
                 putString(EXTRA_CALLER_ID, callerId)
             }
-            telecomManager.addNewIncomingCall(handle, extras)
+            try {
+                telecomManager.addNewIncomingCall(handle, extras)
+            } catch (sec: SecurityException) {
+                Log.e(TAG, "PhoneAccount not registered; attempting re-register", sec)
+                try {
+                    registerSelfManaged(context)
+                    telecomManager.addNewIncomingCall(handle, extras)
+                } catch (inner: SecurityException) {
+                    Log.e(TAG, "Failed to add incoming call after re-register", inner)
+                }
+            }
         }
 
         fun markCallActive(callId: String) {
