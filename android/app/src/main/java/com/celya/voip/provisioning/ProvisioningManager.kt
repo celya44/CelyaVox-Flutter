@@ -80,6 +80,8 @@ class ProvisioningManager(
 
     fun getSipPassword(): String? = secureStorage.getSipPassword()
 
+    fun getApiKey(): String? = secureStorage.getApiKey()
+
     fun getProvisioningDump(): Map<String, String> {
         val result = mutableMapOf<String, String>()
         val raw = prefs.getString(KEY_PROVISIONING_DUMP, null)

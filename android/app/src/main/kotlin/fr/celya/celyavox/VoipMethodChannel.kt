@@ -90,6 +90,11 @@ class VoipMethodChannel(
                 "isBluetoothAvailable" -> {
                     result.success(engine.isBluetoothAvailable())
                 }
+                "getFcmToken" -> {
+                    val ctx = appContext
+                    val token = FcmTokenStore.getToken(ctx)
+                    result.success(token)
+                }
                 "sendDtmf" -> {
                     val callId = requireArgument<String>(call, "callId")
                     val digits = requireArgument<String>(call, "digits")

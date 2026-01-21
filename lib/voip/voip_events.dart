@@ -34,6 +34,11 @@ sealed class VoipEvent {
           available: map['available'] as bool? ?? false,
           name: map['name'] as String? ?? '',
         );
+      case 'fcm_token':
+        return FcmTokenEvent(
+          token: map['token'] as String? ?? '',
+          updatedAt: map['updatedAt'] as int? ?? 0,
+        );
       default:
         throw PlatformException(
           code: 'UNKNOWN_EVENT',
@@ -74,6 +79,13 @@ class BluetoothAvailabilityEvent extends VoipEvent {
   final String name;
 
   const BluetoothAvailabilityEvent({required this.available, required this.name});
+}
+
+class FcmTokenEvent extends VoipEvent {
+  final String token;
+  final int updatedAt;
+
+  const FcmTokenEvent({required this.token, required this.updatedAt});
 }
 
 /// Exposes a broadcast stream of platform VoIP events.

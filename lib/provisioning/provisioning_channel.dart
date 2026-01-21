@@ -15,6 +15,10 @@ class ProvisioningChannel {
     return _channel.invokeMethod<String>('getSipDomain');
   }
 
+  static Future<String?> getApiKey() {
+    return _channel.invokeMethod<String>('getApiKey');
+  }
+
   static Future<Map<String, String>> getProvisioningDump() async {
     final result = await _channel.invokeMethod<Map<dynamic, dynamic>>(
       'getProvisioningDump',

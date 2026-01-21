@@ -31,6 +31,15 @@ class VoipFirebaseService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
         Log.i(TAG, "FCM token refreshed: $token")
-        // TODO: send token to backend when available.
+        FcmTokenStore.saveToken(this, token)
+        val intent = android.content.Intent(ACTION_FCM_TOKEN).apply {
+            putExtra(EXTRA_TOKEN, token)
+        }
+        sendBroadcast(intent)
+    }
+
+    companion object {
+        const val ACTION_FCM_TOKEN = "fr.celya.celyavox.FCM_TOKEN"
+        const val EXTRA_TOKEN = "token"
     }
 }

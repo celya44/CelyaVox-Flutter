@@ -44,6 +44,11 @@ class VoipEngine {
       return (result as bool?) ?? false;
     }
 
+    Future<String?> getFcmToken() async {
+      final result = await _invoke('getFcmToken');
+      return result as String?;
+    }
+
     Future<void> setMuted(bool enabled) =>
       _invoke('setMuted', <String, dynamic>{'enabled': enabled});
 

@@ -5,6 +5,9 @@ import android.media.AudioDeviceCallback
 import android.media.AudioManager
 import android.media.AudioDeviceInfo
 import android.os.Build
+import android.content.BroadcastReceiver
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
@@ -27,6 +30,7 @@ class VoipEngine(
     private var appContext: Context? = null
     private var audioDeviceCallback: AudioDeviceCallback? = null
     private var bluetoothAvailable: Boolean = false
+    private var fcmReceiver: BroadcastReceiver? = null
 
     init {
         messenger?.let { bindEventChannel(it) }
@@ -52,6 +56,7 @@ class VoipEngine(
             Log.e(TAG, "PJSIP init failed (native lib missing or init error); continuing without SIP")
         }
         startAudioDeviceMonitoring()
+        startFcmTokenMonitoring()
     }
 
     fun dispose() {
@@ -59,6 +64,7 @@ class VoipEngine(
         eventSink = null
         sipEngine.setCallback(null)
         stopAudioDeviceMonitoring()
+        stopFcmTokenMonitoring()
     }
 
     fun register(username: String, password: String, domain: String, proxy: String) {
@@ -167,6 +173,46 @@ class VoipEngine(
                 "name" to (name ?: ""),
             )
         )
+    }
+
+    private fun startFcmTokenMonitoring() {
+        val ctx = appContext ?: return
+        if (fcmReceiver != null) return
+        fcmReceiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                if (intent?.action != VoipFirebaseService.ACTION_FCM_TOKEN) return
+                val token = intent.getStringExtra(VoipFirebaseService.EXTRA_TOKEN) ?: return
+                emit(
+                    mapOf(
+                        "type" to "fcm_token",
+                        "token" to token,
+                        "updatedAt" to System.currentTimeMillis(),
+                    )
+                )
+            }
+        }
+        ctx.registerReceiver(
+            fcmReceiver,
+            IntentFilter(VoipFirebaseService.ACTION_FCM_TOKEN)
+        )
+
+        // Emit cached token if present.
+        val cached = FcmTokenStore.getToken(ctx)
+        if (!cached.isNullOrBlank()) {
+            emit(
+                mapOf(
+                    "type" to "fcm_token",
+                    "token" to cached,
+                    "updatedAt" to FcmTokenStore.getUpdatedAt(ctx),
+                )
+            )
+        }
+    }
+
+    private fun stopFcmTokenMonitoring() {
+        val ctx = appContext ?: return
+        fcmReceiver?.let { ctx.unregisterReceiver(it) }
+        fcmReceiver = null
     }
 
     private fun getBluetoothDeviceName(): String? {

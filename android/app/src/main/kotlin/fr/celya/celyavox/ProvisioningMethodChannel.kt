@@ -47,6 +47,9 @@ class ProvisioningMethodChannel(
             "getSipDomain" -> {
                 result.success(manager.getSipDomain())
             }
+            "getApiKey" -> {
+                result.success(manager.getApiKey())
+            }
             "getProvisioningDump" -> {
                 result.success(manager.getProvisioningDump())
             }
