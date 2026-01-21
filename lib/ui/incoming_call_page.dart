@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../voip/voip_engine.dart';
 import 'in_call_page.dart';
@@ -17,9 +18,26 @@ class IncomingCallPage extends StatefulWidget {
 class _IncomingCallPageState extends State<IncomingCallPage> {
   bool _isProcessing = false;
 
+  Future<bool> _ensureMicPermission() async {
+    final status = await Permission.microphone.request();
+    if (!mounted) return false;
+    if (!status.isGranted) {
+      _showMessage('Permission micro refusée. L’appel audio ne pourra pas démarrer.');
+      return false;
+    }
+    try {
+      await widget.engine.refreshAudio();
+    } catch (_) {
+      _showMessage('Audio non initialisé. Redémarrez l’application.');
+    }
+    return true;
+  }
+
   Future<void> _accept() async {
     setState(() => _isProcessing = true);
     try {
+      final ok = await _ensureMicPermission();
+      if (!ok) return;
       await widget.engine.acceptCall(widget.callId);
       if (!mounted) return;
       Navigator.of(context).pushReplacement(

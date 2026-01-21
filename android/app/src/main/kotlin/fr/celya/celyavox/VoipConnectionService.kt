@@ -73,7 +73,7 @@ class VoipConnectionService : ConnectionService() {
     }
 
     private fun createManagedConnection(callId: String?, callerId: String?, incoming: Boolean): VoipConnection {
-        return object : VoipConnection(callId = callId, callerId = callerId) {
+        return object : VoipConnection(applicationContext, callId = callId, callerId = callerId) {
             override fun onAnswer() {
                 engine.acceptCall(callId ?: "")
                 super.onAnswer()
@@ -163,7 +163,11 @@ class VoipConnectionService : ConnectionService() {
         }
 
         fun markCallActive(callId: String) {
-            connections[callId]?.setActive()
+            connections[callId]?.apply {
+                onCallConnected()
+                setActive()
+            }
+            PjsipEngine.instance.refreshAudio()
         }
 
         fun markCallEnded(callId: String) {
