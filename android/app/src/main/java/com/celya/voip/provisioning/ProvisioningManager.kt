@@ -35,8 +35,23 @@ class ProvisioningManager(
         connection.doInput = true
         connection.connect()
         if (connection.responseCode !in 200..299) {
+            val errorBody = try {
+                connection.errorStream?.use { stream ->
+                    val raw = stream.readBytes().toString(Charsets.UTF_8)
+                    raw.take(4000)
+                }
+            } catch (_: Exception) {
+                null
+            }
             connection.disconnect()
-            throw IllegalStateException("Provisioning download failed with ${connection.responseCode}")
+            val details = if (!errorBody.isNullOrBlank()) {
+                " (body: $errorBody)"
+            } else {
+                ""
+            }
+            throw IllegalStateException(
+                "Provisioning download failed with ${connection.responseCode} for $url$details"
+            )
         }
         return connection.inputStream.use { it.readBytes() }
     }

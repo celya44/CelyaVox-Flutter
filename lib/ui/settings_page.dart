@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 
+import '../log/app_logger.dart';
 import '../provisioning/provisioning_channel.dart';
 import '../provisioning/provisioning_page.dart';
 import '../provisioning/provisioning_state.dart';
@@ -14,6 +16,30 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   bool _loadingDump = false;
   bool _resetting = false;
+  bool _exportingLogs = false;
+
+  Future<void> _exportLogs() async {
+    if (_exportingLogs) return;
+    setState(() => _exportingLogs = true);
+    try {
+      final file = await AppLogger.instance.getLogFile();
+      final box = context.findRenderObject() as RenderBox?;
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'Logs CelyaVox',
+        sharePositionOrigin: box == null
+            ? null
+            : box.localToGlobal(Offset.zero) & box.size,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur export logs: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _exportingLogs = false);
+    }
+  }
 
   Future<void> _showDump() async {
     setState(() => _loadingDump = true);
@@ -112,6 +138,12 @@ class _SettingsPageState extends State<SettingsPage> {
               onPressed: _resetting ? null : _resetProvisioning,
               icon: const Icon(Icons.restart_alt),
               label: Text(_resetting ? 'Réinitialisation...' : 'Reset provisioning'),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: _exportingLogs ? null : _exportLogs,
+              icon: const Icon(Icons.share),
+              label: Text(_exportingLogs ? 'Export...' : 'Exporter les logs'),
             ),
           ],
         ),

@@ -13,6 +13,7 @@ import android.os.Looper
 import android.util.Log
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.EventChannel
+import com.google.firebase.messaging.FirebaseMessaging
 
 /**
  * Bridges Flutter to native PJSIP and ConnectionService, relaying events via EventChannel.
@@ -197,6 +198,24 @@ class VoipEngine(
         } else {
             ctx.registerReceiver(fcmReceiver, filter)
         }
+
+        // Ensure we have a token even if onNewToken hasn't fired yet.
+        FirebaseMessaging.getInstance().token
+            .addOnSuccessListener { token ->
+                if (!token.isNullOrBlank()) {
+                    FcmTokenStore.saveToken(ctx, token)
+                    emit(
+                        mapOf(
+                            "type" to "fcm_token",
+                            "token" to token,
+                            "updatedAt" to System.currentTimeMillis(),
+                        )
+                    )
+                }
+            }
+            .addOnFailureListener { e ->
+                Log.w(TAG, "Failed to fetch FCM token", e)
+            }
 
         // Emit cached token if present.
         val cached = FcmTokenStore.getToken(ctx)

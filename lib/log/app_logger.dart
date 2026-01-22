@@ -34,6 +34,11 @@ class AppLogger {
     await log('API RESPONSE: $url status=$statusCode body=$safeBody');
   }
 
+  Future<File> getLogFile() async {
+    await init();
+    return _file!;
+  }
+
   Map<String, String> _maskParams(Map<String, String> params) {
     final masked = <String, String>{};
     params.forEach((key, value) {
