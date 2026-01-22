@@ -4,7 +4,6 @@ import android.app.role.RoleManager
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
-import androidx.activity.result.contract.ActivityResultContracts
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import com.google.firebase.FirebaseApp
@@ -15,12 +14,12 @@ class MainActivity : FlutterActivity() {
     private var voipEngine: VoipEngine? = null
     private var methodChannel: VoipMethodChannel? = null
     private var provisioningChannel: ProvisioningMethodChannel? = null
-    private val roleRequestLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+    @Deprecated("Deprecated in Java")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQ_SELF_MANAGED_ROLE && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val roleManager = getSystemService(RoleManager::class.java)
-            val held = roleManager.isRoleHeld(RoleManager.ROLE_SELF_MANAGED_CALLS)
+            val held = roleManager.isRoleHeld(ROLE_SELF_MANAGED_CALLS)
             Log.i(TAG, "ROLE_SELF_MANAGED_CALLS granted=$held")
             if (held) {
                 VoipConnectionService.registerSelfManaged(this)
@@ -51,21 +50,24 @@ class MainActivity : FlutterActivity() {
     private fun requestSelfManagedRoleIfNeeded() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
         val roleManager = getSystemService(RoleManager::class.java)
-        if (!roleManager.isRoleAvailable(RoleManager.ROLE_SELF_MANAGED_CALLS)) {
+        if (!roleManager.isRoleAvailable(ROLE_SELF_MANAGED_CALLS)) {
             Log.w(TAG, "ROLE_SELF_MANAGED_CALLS not available on this device")
             return
         }
-        if (roleManager.isRoleHeld(RoleManager.ROLE_SELF_MANAGED_CALLS)) {
+        if (roleManager.isRoleHeld(ROLE_SELF_MANAGED_CALLS)) {
             Log.i(TAG, "ROLE_SELF_MANAGED_CALLS already granted")
             VoipConnectionService.registerSelfManaged(this)
             return
         }
         Log.i(TAG, "Requesting ROLE_SELF_MANAGED_CALLS")
-        val intent = roleManager.createRequestRoleIntent(RoleManager.ROLE_SELF_MANAGED_CALLS)
-        roleRequestLauncher.launch(intent)
+        val intent = roleManager.createRequestRoleIntent(ROLE_SELF_MANAGED_CALLS)
+        @Suppress("DEPRECATION")
+        startActivityForResult(intent, REQ_SELF_MANAGED_ROLE)
     }
 
     companion object {
         private const val TAG = "MainActivity"
+        private const val REQ_SELF_MANAGED_ROLE = 9001
+        private const val ROLE_SELF_MANAGED_CALLS = "android.app.role.SELF_MANAGED_CALLS"
     }
 }
