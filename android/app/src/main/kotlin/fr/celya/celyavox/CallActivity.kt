@@ -71,7 +71,10 @@ class CallActivity : AppCompatActivity() {
         val accept = Button(this).apply {
             text = "Répondre"
             setOnClickListener {
-                // TODO: integrate with ConnectionService answer flow
+                val callId = intent?.getStringExtra(EXTRA_CALL_ID).orEmpty()
+                if (callId.isNotEmpty()) {
+                    PjsipEngine.instance.acceptCall(callId)
+                }
                 finish()
             }
         }
@@ -79,7 +82,10 @@ class CallActivity : AppCompatActivity() {
         val decline = Button(this).apply {
             text = "Raccrocher"
             setOnClickListener {
-                // TODO: integrate with ConnectionService reject/hangup flow
+                val callId = intent?.getStringExtra(EXTRA_CALL_ID).orEmpty()
+                if (callId.isNotEmpty()) {
+                    PjsipEngine.instance.hangupCall(callId)
+                }
                 finish()
             }
         }

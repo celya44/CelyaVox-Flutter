@@ -2,6 +2,7 @@ package fr.celya.celyavox
 
 import android.content.ComponentName
 import android.content.Context
+import android.app.role.RoleManager
 import android.os.Build
 import android.telecom.Connection
 import android.telecom.ConnectionRequest
@@ -119,6 +120,10 @@ class VoipConnectionService : ConnectionService() {
                 Log.w(TAG, "Self-managed ConnectionService requires Android 10+")
                 return false
             }
+            if (!isSelfManagedRoleGranted(context)) {
+                Log.w(TAG, "ROLE_SELF_MANAGED_CALLS not granted")
+                return false
+            }
             val telecomManager = context.getSystemService(Context.TELECOM_SERVICE) as TelecomManager
             val handle = PhoneAccountHandle(
                 ComponentName(context, VoipConnectionService::class.java),
@@ -152,6 +157,10 @@ class VoipConnectionService : ConnectionService() {
 
         fun startIncomingCall(context: Context, callId: String, callerId: String?): Boolean {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return false
+            if (!isSelfManagedRoleGranted(context)) {
+                Log.w(TAG, "Skipping Telecom incoming call: role not granted")
+                return false
+            }
             val telecomManager = context.getSystemService(Context.TELECOM_SERVICE) as TelecomManager
             val handle = PhoneAccountHandle(
                 ComponentName(context, VoipConnectionService::class.java),
@@ -176,6 +185,17 @@ class VoipConnectionService : ConnectionService() {
                 }
             }
             return false
+        }
+
+        private fun isSelfManagedRoleGranted(context: Context): Boolean {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return false
+            return try {
+                val roleManager = context.getSystemService(RoleManager::class.java)
+                roleManager.isRoleHeld("android.app.role.SELF_MANAGED_CALLS")
+            } catch (e: Exception) {
+                Log.w(TAG, "RoleManager check failed", e)
+                false
+            }
         }
 
         fun markCallActive(callId: String) {
