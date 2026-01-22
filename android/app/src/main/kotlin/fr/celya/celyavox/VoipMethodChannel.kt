@@ -103,6 +103,7 @@ class VoipMethodChannel(
                             if (!fresh.isNullOrBlank()) {
                                 FcmTokenStore.saveToken(ctx, fresh)
                             }
+                            android.util.Log.i("VoipMethodChannel", "getFcmToken success: ${fresh?.take(8)}…")
                             result.success(fresh)
                         }
                         .addOnFailureListener { e ->

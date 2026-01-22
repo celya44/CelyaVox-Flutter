@@ -32,6 +32,7 @@ class VoipEngine(
     private var audioDeviceCallback: AudioDeviceCallback? = null
     private var bluetoothAvailable: Boolean = false
     private var fcmReceiver: BroadcastReceiver? = null
+    private var pendingFcmToken: String? = null
 
     init {
         messenger?.let { bindEventChannel(it) }
@@ -205,13 +206,17 @@ class VoipEngine(
                 if (!token.isNullOrBlank()) {
                     FcmTokenStore.saveToken(ctx, token)
                     Log.i(TAG, "FCM token fetched: ${token.take(8)}…")
-                    emit(
-                        mapOf(
-                            "type" to "fcm_token",
-                            "token" to token,
-                            "updatedAt" to System.currentTimeMillis(),
+                    if (eventSink != null) {
+                        emit(
+                            mapOf(
+                                "type" to "fcm_token",
+                                "token" to token,
+                                "updatedAt" to System.currentTimeMillis(),
+                            )
                         )
-                    )
+                    } else {
+                        pendingFcmToken = token
+                    }
                 } else {
                     Log.w(TAG, "FCM token fetch returned empty")
                 }
@@ -223,13 +228,17 @@ class VoipEngine(
         // Emit cached token if present.
         val cached = FcmTokenStore.getToken(ctx)
         if (!cached.isNullOrBlank()) {
-            emit(
-                mapOf(
-                    "type" to "fcm_token",
-                    "token" to cached,
-                    "updatedAt" to FcmTokenStore.getUpdatedAt(ctx),
+            if (eventSink != null) {
+                emit(
+                    mapOf(
+                        "type" to "fcm_token",
+                        "token" to cached,
+                        "updatedAt" to FcmTokenStore.getUpdatedAt(ctx),
+                    )
                 )
-            )
+            } else {
+                pendingFcmToken = cached
+            }
         }
     }
 
@@ -313,6 +322,18 @@ class VoipEngine(
 
     override fun onListen(arguments: Any?, events: EventChannel.EventSink) {
         eventSink = events
+        val ctx = appContext
+        val pending = pendingFcmToken
+        if (ctx != null && !pending.isNullOrBlank()) {
+            emit(
+                mapOf(
+                    "type" to "fcm_token",
+                    "token" to pending,
+                    "updatedAt" to FcmTokenStore.getUpdatedAt(ctx),
+                )
+            )
+            pendingFcmToken = null
+        }
     }
 
     override fun onCancel(arguments: Any?) {
