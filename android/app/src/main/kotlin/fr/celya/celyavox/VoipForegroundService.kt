@@ -40,6 +40,7 @@ class VoipForegroundService : Service() {
             .setContentText(if (callId.isNotEmpty()) "ID: $callId" else "")
             .setSmallIcon(android.R.drawable.sym_call_incoming)
             .setContentIntent(contentIntent)
+            .setFullScreenIntent(contentIntent, true)
             .setCategory(Notification.CATEGORY_CALL)
             .setOngoing(true)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)

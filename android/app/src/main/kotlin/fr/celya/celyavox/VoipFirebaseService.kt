@@ -1,6 +1,8 @@
 package fr.celya.celyavox
 
+import android.content.Intent
 import android.util.Log
+import com.celya.voip.provisioning.ProvisioningManager
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 
@@ -25,8 +27,56 @@ class VoipFirebaseService : FirebaseMessagingService() {
 
         if (type == "incoming_call") {
             Log.i(TAG, "Incoming call push received (callId=$callId, callerId=$callerId)")
-            // TODO: Trigger native incoming-call handling / wake mechanisms when added.
+            handleIncomingCallPush(callId, callerId)
         }
+    }
+
+    private fun handleIncomingCallPush(callId: String, callerId: String) {
+        // Keep process alive + show notification/UX
+        VoipForegroundService.start(this, callId, callerId)
+        try {
+            VoipConnectionService.registerSelfManaged(this)
+            VoipConnectionService.startIncomingCall(this, callId, callerId)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to start ConnectionService incoming call", e)
+        }
+        startIncomingCallActivity(callId, callerId)
+        registerSipInBackground()
+    }
+
+    private fun startIncomingCallActivity(callId: String, callerId: String) {
+        val intent = Intent(this, CallActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                Intent.FLAG_ACTIVITY_SINGLE_TOP
+            putExtra(CallActivity.EXTRA_CALL_ID, callId)
+            putExtra(CallActivity.EXTRA_CALLER_ID, callerId)
+        }
+        try {
+            startActivity(intent)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to start CallActivity", e)
+        }
+    }
+
+    private fun registerSipInBackground() {
+        Thread {
+            try {
+                val manager = ProvisioningManager(applicationContext)
+                val username = manager.getSipUsername()
+                val password = manager.getSipPassword()
+                val domain = manager.getSipDomain()
+                val proxy = manager.getSipProxy() ?: ""
+                if (username.isNullOrBlank() || password.isNullOrBlank() || domain.isNullOrBlank()) {
+                    Log.w(TAG, "Skipping SIP register: missing provisioning data")
+                    return@Thread
+                }
+                val ok = PjsipEngine.instance.register(username, password, domain, proxy)
+                Log.i(TAG, "SIP register triggered from push: $ok")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to register SIP from push", e)
+            }
+        }.start()
     }
 
     override fun onNewToken(token: String) {

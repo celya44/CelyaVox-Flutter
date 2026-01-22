@@ -139,12 +139,12 @@ function sendWakeUpNotification($token) {
             // PAS de clé 'notification' ici - seulement 'data'
             // Cela force Firebase à appeler onMessageReceived() même si l'app est fermée
             'data' => [
-                'type' => 'wake_up',
-                'forceOpen' => 'true',
-                'action' => 'open_app',
+                'type' => 'incoming_call',
+                'callId' => 'wake_' . time(),
+                'callerId' => (string)$extension,
                 'timestamp' => (string)time(),
-                'title' => 'Réveil CelyaVox',
-                'body' => 'Ouverture immédiate de l’app'
+                'title' => 'Appel entrant',
+                'body' => 'Incoming call (wake)'
             ],
             'android' => [
                 'priority' => 'high',
