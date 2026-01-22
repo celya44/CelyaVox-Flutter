@@ -189,6 +189,10 @@ jobs:
           fi
           mkdir -p android/app
           echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > android/app/google-services.json
+          if ! jq -e . android/app/google-services.json >/dev/null 2>&1; then
+            echo "::error title=Invalid JSON::google-services.json is not valid JSON. Recreate the secret with: base64 -w 0 google-services.json";
+            exit 1;
+          fi
           mkdir -p android/app/src/release
           cp -f android/app/google-services.json android/app/src/release/google-services.json
 
@@ -201,7 +205,10 @@ jobs:
             exit 0;
           fi
           mkdir -p ios/Runner
-          echo "$GOOGLE_SERVICE_INFO_PLIST_BASE64" | base64 --decode > ios/Runner/GoogleService-Info.plist
+          if ! printf "%s" "$GOOGLE_SERVICE_INFO_PLIST_BASE64" | base64 --decode --ignore-garbage > ios/Runner/GoogleService-Info.plist; then
+            echo "::error title=Invalid base64::GOOGLE_SERVICE_INFO_PLIST_BASE64 is not valid base64. Recreate the secret with: base64 -w 0 GoogleService-Info.plist";
+            exit 1;
+          fi
 
       - name: Vérifier les headers PJSIP avant build Flutter
         run: |

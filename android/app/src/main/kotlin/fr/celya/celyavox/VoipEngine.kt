@@ -191,10 +191,12 @@ class VoipEngine(
                 )
             }
         }
-        ctx.registerReceiver(
-            fcmReceiver,
-            IntentFilter(VoipFirebaseService.ACTION_FCM_TOKEN)
-        )
+        val filter = IntentFilter(VoipFirebaseService.ACTION_FCM_TOKEN)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ctx.registerReceiver(fcmReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            ctx.registerReceiver(fcmReceiver, filter)
+        }
 
         // Emit cached token if present.
         val cached = FcmTokenStore.getToken(ctx)
