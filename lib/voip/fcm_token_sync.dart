@@ -35,7 +35,10 @@ class FcmTokenSync {
 
   Future<void> _maybeSendCachedToken() async {
     final token = await FcmTokenManager.instance.getToken();
-    if (token == null || token.isEmpty) return;
+    if (token == null || token.isEmpty) {
+      await AppLogger.instance.log('FCM sync skipped: no cached token');
+      return;
+    }
     await _sendTokenIfNeeded(token);
   }
 
@@ -51,6 +54,8 @@ class FcmTokenSync {
       await AppLogger.instance.log('FCM sync skipped: provisioning not ready');
       return;
     }
+
+    await AppLogger.instance.log('FCM sync start: domain=$domain');
 
     final response = await _api.callProvisioned(
       apiClass: 'fcm',

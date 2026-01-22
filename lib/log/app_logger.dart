@@ -11,18 +11,31 @@ class AppLogger {
 
   Future<void> init() async {
     if (_file != null) return;
-    final dir = await getApplicationDocumentsDirectory();
-    final file = File('${dir.path}/celyavox.log');
-    if (!await file.exists()) {
-      await file.create(recursive: true);
+    try {
+      Directory dir;
+      try {
+        dir = await getApplicationDocumentsDirectory();
+      } catch (_) {
+        dir = await getTemporaryDirectory();
+      }
+      final file = File('${dir.path}/celyavox.log');
+      if (!await file.exists()) {
+        await file.create(recursive: true);
+      }
+      _file = file;
+    } catch (_) {
+      // Give up silently if storage is unavailable.
     }
-    _file = file;
   }
 
   Future<void> log(String message) async {
-    await init();
-    final timestamp = DateTime.now().toIso8601String();
-    await _file?.writeAsString('[$timestamp] $message\n', mode: FileMode.append);
+    try {
+      await init();
+      final timestamp = DateTime.now().toIso8601String();
+      await _file?.writeAsString('[$timestamp] $message\n', mode: FileMode.append);
+    } catch (_) {
+      // Ignore logging errors.
+    }
   }
 
   Future<void> logApiRequest(String url, Map<String, String> params) async {
@@ -36,7 +49,14 @@ class AppLogger {
 
   Future<File> getLogFile() async {
     await init();
-    return _file!;
+    final file = _file;
+    if (file == null) {
+      throw StateError('Log file unavailable');
+    }
+    if (!await file.exists()) {
+      await file.create(recursive: true);
+    }
+    return file;
   }
 
   Map<String, String> _maskParams(Map<String, String> params) {

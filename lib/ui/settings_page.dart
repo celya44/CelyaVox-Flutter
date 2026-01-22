@@ -22,7 +22,11 @@ class _SettingsPageState extends State<SettingsPage> {
     if (_exportingLogs) return;
     setState(() => _exportingLogs = true);
     try {
+      await AppLogger.instance.log('User requested log export');
       final file = await AppLogger.instance.getLogFile();
+      if (!await file.exists()) {
+        throw StateError('Log file missing: ${file.path}');
+      }
       final box = context.findRenderObject() as RenderBox?;
       await Share.shareXFiles(
         [XFile(file.path)],

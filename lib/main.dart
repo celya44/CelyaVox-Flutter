@@ -10,11 +10,12 @@ import 'voip/voip_engine.dart';
 
 final VoipEngine voipEngine = const VoipEngine();
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  AppLogger.instance.init();
-  FcmTokenManager.instance.init(voipEngine);
-  FcmTokenSync.instance.init(voipEngine);
+  await AppLogger.instance.init();
+  await AppLogger.instance.log('App start');
+  await FcmTokenManager.instance.init(voipEngine);
+  await FcmTokenSync.instance.init(voipEngine);
   runApp(const VoipApp());
 }
 
