@@ -15,6 +15,9 @@ class FcmTokenManager {
   static const _prefsUpdatedAtKey = 'fcm_token_updated_at';
 
   StreamSubscription<VoipEvent>? _sub;
+  Timer? _retryTimer;
+  int _retryCount = 0;
+  static const int _maxRetries = 12;
 
   Future<void> init(VoipEngine engine) async {
     await _loadFromNative(engine);
@@ -22,6 +25,7 @@ class FcmTokenManager {
       if (event is FcmTokenEvent) {
         await _saveToken(event.token, event.updatedAt);
         await AppLogger.instance.log('FCM token received');
+        _stopRetry();
       }
     });
   }
@@ -41,13 +45,30 @@ class FcmTokenManager {
       final token = await engine.getFcmToken();
       if (token == null || token.isEmpty) {
         await AppLogger.instance.log('FCM token not available yet');
+        _scheduleRetry(engine);
         return;
       }
       await _saveToken(token, DateTime.now().millisecondsSinceEpoch);
       await AppLogger.instance.log('FCM token loaded from native');
+      _stopRetry();
     } catch (_) {
       // Ignore if native token not available yet.
     }
+  }
+
+  void _scheduleRetry(VoipEngine engine) {
+    if (_retryTimer != null || _retryCount >= _maxRetries) return;
+    _retryCount += 1;
+    final delaySeconds = (_retryCount * 5).clamp(5, 60);
+    _retryTimer = Timer(Duration(seconds: delaySeconds), () {
+      _retryTimer = null;
+      _loadFromNative(engine);
+    });
+  }
+
+  void _stopRetry() {
+    _retryTimer?.cancel();
+    _retryTimer = null;
   }
 
   Future<void> _saveToken(String token, int updatedAt) async {
@@ -57,6 +78,7 @@ class FcmTokenManager {
   }
 
   Future<void> dispose() async {
+    _stopRetry();
     await _sub?.cancel();
     _sub = null;
   }
