@@ -105,7 +105,8 @@ class VoipMethodChannel(
                             }
                             result.success(fresh)
                         }
-                        .addOnFailureListener {
+                        .addOnFailureListener { e ->
+                            android.util.Log.w("VoipMethodChannel", "getFcmToken failed: ${e.message}", e)
                             result.success(null)
                         }
                 }

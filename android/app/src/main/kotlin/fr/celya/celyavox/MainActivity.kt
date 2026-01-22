@@ -1,6 +1,7 @@
 package fr.celya.celyavox
 
 import android.os.Bundle
+import android.util.Log
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import com.google.firebase.FirebaseApp
@@ -14,7 +15,8 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        FirebaseApp.initializeApp(this)
+        val app = FirebaseApp.initializeApp(this)
+        Log.i(TAG, "FirebaseApp initialized: ${app != null}")
         FirebaseMessaging.getInstance().isAutoInitEnabled = true
         val engine = VoipEngine(flutterEngine.dartExecutor.binaryMessenger)
         voipEngine = engine
@@ -28,5 +30,9 @@ class MainActivity : FlutterActivity() {
         methodChannel?.dispose()
         voipEngine?.dispose()
         super.onDestroy()
+    }
+
+    companion object {
+        private const val TAG = "MainActivity"
     }
 }

@@ -204,6 +204,7 @@ class VoipEngine(
             .addOnSuccessListener { token ->
                 if (!token.isNullOrBlank()) {
                     FcmTokenStore.saveToken(ctx, token)
+                    Log.i(TAG, "FCM token fetched: ${token.take(8)}…")
                     emit(
                         mapOf(
                             "type" to "fcm_token",
@@ -211,10 +212,12 @@ class VoipEngine(
                             "updatedAt" to System.currentTimeMillis(),
                         )
                     )
+                } else {
+                    Log.w(TAG, "FCM token fetch returned empty")
                 }
             }
             .addOnFailureListener { e ->
-                Log.w(TAG, "Failed to fetch FCM token", e)
+                Log.w(TAG, "Failed to fetch FCM token: ${e.message}", e)
             }
 
         // Emit cached token if present.
