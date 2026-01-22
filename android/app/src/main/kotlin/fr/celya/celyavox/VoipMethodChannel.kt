@@ -1,6 +1,7 @@
 package fr.celya.celyavox
 
 import android.content.Context
+import com.google.firebase.messaging.FirebaseMessaging
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -93,7 +94,20 @@ class VoipMethodChannel(
                 "getFcmToken" -> {
                     val ctx = appContext
                     val token = FcmTokenStore.getToken(ctx)
-                    result.success(token)
+                    if (!token.isNullOrBlank()) {
+                        result.success(token)
+                        return
+                    }
+                    FirebaseMessaging.getInstance().token
+                        .addOnSuccessListener { fresh ->
+                            if (!fresh.isNullOrBlank()) {
+                                FcmTokenStore.saveToken(ctx, fresh)
+                            }
+                            result.success(fresh)
+                        }
+                        .addOnFailureListener {
+                            result.success(null)
+                        }
                 }
                 "sendDtmf" -> {
                     val callId = requireArgument<String>(call, "callId")

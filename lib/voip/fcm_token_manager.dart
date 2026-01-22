@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../log/app_logger.dart';
 import 'voip_engine.dart';
 import 'voip_events.dart';
 
@@ -20,6 +21,7 @@ class FcmTokenManager {
     _sub ??= VoipEvents.stream.listen((event) async {
       if (event is FcmTokenEvent) {
         await _saveToken(event.token, event.updatedAt);
+        await AppLogger.instance.log('FCM token received');
       }
     });
   }
@@ -37,8 +39,12 @@ class FcmTokenManager {
   Future<void> _loadFromNative(VoipEngine engine) async {
     try {
       final token = await engine.getFcmToken();
-      if (token == null || token.isEmpty) return;
+      if (token == null || token.isEmpty) {
+        await AppLogger.instance.log('FCM token not available yet');
+        return;
+      }
       await _saveToken(token, DateTime.now().millisecondsSinceEpoch);
+      await AppLogger.instance.log('FCM token loaded from native');
     } catch (_) {
       // Ignore if native token not available yet.
     }
