@@ -4,6 +4,7 @@ import android.os.Bundle
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import com.google.firebase.FirebaseApp
+import com.google.firebase.messaging.FirebaseMessaging
 
 class MainActivity : FlutterActivity() {
 
@@ -14,6 +15,7 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         FirebaseApp.initializeApp(this)
+        FirebaseMessaging.getInstance().isAutoInitEnabled = true
         val engine = VoipEngine(flutterEngine.dartExecutor.binaryMessenger)
         voipEngine = engine
         methodChannel = VoipMethodChannel(this, flutterEngine.dartExecutor.binaryMessenger, engine)

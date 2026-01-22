@@ -196,6 +196,19 @@ jobs:
           mkdir -p android/app/src/release
           cp -f android/app/google-services.json android/app/src/release/google-services.json
 
+      - name: Validate google-services.json package
+        run: |
+          if [ ! -f android/app/google-services.json ]; then
+            echo "::error title=Missing google-services.json::File not found after restore"
+            exit 1
+          fi
+          PKG=$(jq -r '.client[0].client_info.android_client_info.package_name' android/app/google-services.json)
+          echo "google-services.json package: $PKG"
+          if [ "$PKG" != "fr.celya.celyavox" ]; then
+            echo "::error title=Package mismatch::google-services.json package $PKG != fr.celya.celyavox"
+            exit 1
+          fi
+
       - name: Restore GoogleService-Info.plist
         env:
           GOOGLE_SERVICE_INFO_PLIST_BASE64: ${{ secrets.GOOGLE_SERVICE_INFO_PLIST_BASE64 }}
