@@ -114,10 +114,10 @@ class VoipConnectionService : ConnectionService() {
 
         private val connections = ConcurrentHashMap<String, VoipConnection>()
 
-        fun registerSelfManaged(context: Context) {
+        fun registerSelfManaged(context: Context): Boolean {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
                 Log.w(TAG, "Self-managed ConnectionService requires Android 10+")
-                return
+                return false
             }
             val telecomManager = context.getSystemService(Context.TELECOM_SERVICE) as TelecomManager
             val handle = PhoneAccountHandle(
@@ -131,9 +131,11 @@ class VoipConnectionService : ConnectionService() {
             try {
                 telecomManager.registerPhoneAccount(account)
                 Log.i(TAG, "Registered self-managed PhoneAccount: ${account.accountHandle.id}")
+                return true
             } catch (sec: SecurityException) {
                 // Devices will throw if MANAGE_OWN_CALLS/role not granted; avoid crashing app.
                 Log.e(TAG, "Failed to register self-managed PhoneAccount (missing permission/role)", sec)
+                return false
             }
         }
 
@@ -148,8 +150,8 @@ class VoipConnectionService : ConnectionService() {
             Log.i(TAG, "Unregistered self-managed PhoneAccount: ${handle.id}")
         }
 
-        fun startIncomingCall(context: Context, callId: String, callerId: String?) {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
+        fun startIncomingCall(context: Context, callId: String, callerId: String?): Boolean {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return false
             val telecomManager = context.getSystemService(Context.TELECOM_SERVICE) as TelecomManager
             val handle = PhoneAccountHandle(
                 ComponentName(context, VoipConnectionService::class.java),
@@ -161,15 +163,19 @@ class VoipConnectionService : ConnectionService() {
             }
             try {
                 telecomManager.addNewIncomingCall(handle, extras)
+                return true
             } catch (sec: SecurityException) {
                 Log.e(TAG, "PhoneAccount not registered; attempting re-register", sec)
                 try {
-                    registerSelfManaged(context)
-                    telecomManager.addNewIncomingCall(handle, extras)
+                    if (registerSelfManaged(context)) {
+                        telecomManager.addNewIncomingCall(handle, extras)
+                        return true
+                    }
                 } catch (inner: SecurityException) {
                     Log.e(TAG, "Failed to add incoming call after re-register", inner)
                 }
             }
+            return false
         }
 
         fun markCallActive(callId: String) {

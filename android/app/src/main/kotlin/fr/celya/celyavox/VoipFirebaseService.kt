@@ -35,12 +35,18 @@ class VoipFirebaseService : FirebaseMessagingService() {
         // Keep process alive + show notification/UX
         VoipForegroundService.start(this, callId, callerId)
         try {
-            VoipConnectionService.registerSelfManaged(this)
-            VoipConnectionService.startIncomingCall(this, callId, callerId)
+            val registered = VoipConnectionService.registerSelfManaged(this)
+            val ok = if (registered) {
+                VoipConnectionService.startIncomingCall(this, callId, callerId)
+            } else {
+                false
+            }
+            if (!ok) {
+                startIncomingCallActivity(callId, callerId)
+            }
         } catch (e: Exception) {
             Log.w(TAG, "Failed to start ConnectionService incoming call", e)
         }
-        startIncomingCallActivity(callId, callerId)
         registerSipInBackground()
     }
 

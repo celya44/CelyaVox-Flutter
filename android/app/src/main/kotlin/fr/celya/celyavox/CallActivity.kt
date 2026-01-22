@@ -2,6 +2,13 @@ package fr.celya.celyavox
 
 import android.os.Build
 import android.os.Bundle
+import android.media.AudioAttributes
+import android.media.AudioManager
+import android.media.Ringtone
+import android.media.RingtoneManager
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import android.view.View
 import android.view.WindowManager
 import android.widget.Button
@@ -14,10 +21,19 @@ import androidx.appcompat.app.AppCompatActivity
  */
 class CallActivity : AppCompatActivity() {
 
+    private var ringtone: Ringtone? = null
+    private var vibrator: Vibrator? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         applyLockScreenFlags()
         setContentView(buildContentView())
+        startRinging()
+    }
+
+    override fun onDestroy() {
+        stopRinging()
+        super.onDestroy()
     }
 
     private fun applyLockScreenFlags() {
@@ -73,6 +89,58 @@ class CallActivity : AppCompatActivity() {
         root.addView(accept)
         root.addView(decline)
         return root
+    }
+
+    private fun startRinging() {
+        val audioManager = getSystemService(AudioManager::class.java)
+        val ringerMode = audioManager.ringerMode
+        if (ringerMode == AudioManager.RINGER_MODE_SILENT) return
+
+        if (ringerMode == AudioManager.RINGER_MODE_NORMAL) {
+            val uri = RingtoneManager.getActualDefaultRingtoneUri(
+                this,
+                RingtoneManager.TYPE_RINGTONE
+            )
+            val ring = RingtoneManager.getRingtone(this, uri) ?: return
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                ring.audioAttributes = AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build()
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                ring.isLooping = true
+            }
+            ringtone = ring
+            ring.play()
+        }
+
+        if (ringerMode == AudioManager.RINGER_MODE_VIBRATE) {
+            val vib = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val manager = getSystemService(VibratorManager::class.java)
+                manager?.defaultVibrator
+            } else {
+                @Suppress("DEPRECATION")
+                getSystemService(VIBRATOR_SERVICE) as Vibrator
+            }
+            vibrator = vib
+            if (vib != null && vib.hasVibrator()) {
+                val pattern = longArrayOf(0, 500, 500)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    vib.vibrate(VibrationEffect.createWaveform(pattern, 0))
+                } else {
+                    @Suppress("DEPRECATION")
+                    vib.vibrate(pattern, 0)
+                }
+            }
+        }
+    }
+
+    private fun stopRinging() {
+        ringtone?.stop()
+        ringtone = null
+        vibrator?.cancel()
+        vibrator = null
     }
 
     companion object {

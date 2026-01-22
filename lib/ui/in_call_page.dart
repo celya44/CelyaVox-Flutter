@@ -164,85 +164,88 @@ class _InCallPageState extends State<InCallPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Appel en cours')),
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.call, size: 48),
-            const SizedBox(height: 12),
-            Text(
-              widget.callId,
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 24),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              alignment: WrapAlignment.center,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: _toggleSpeaker,
-                  icon: Icon(_speakerOn ? Icons.volume_up : Icons.volume_mute),
-                  label: Text(_speakerOn ? 'Haut-parleur' : 'Écouteur'),
-                ),
-                ElevatedButton.icon(
-                  onPressed: _bluetoothAvailable ? _toggleBluetooth : null,
-                  icon: const Icon(Icons.bluetooth_audio),
-                  label: Text(
-                    _bluetoothOn
-                        ? (_bluetoothName.isNotEmpty ? _bluetoothName : 'Bluetooth')
-                        : 'Bluetooth off',
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Appel en cours')),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.call, size: 48),
+              const SizedBox(height: 12),
+              Text(
+                widget.callId,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 24),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                alignment: WrapAlignment.center,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: _toggleSpeaker,
+                    icon: Icon(_speakerOn ? Icons.volume_up : Icons.volume_mute),
+                    label: Text(_speakerOn ? 'Haut-parleur' : 'Écouteur'),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: _bluetoothAvailable ? _toggleBluetooth : null,
+                    icon: const Icon(Icons.bluetooth_audio),
+                    label: Text(
+                      _bluetoothOn
+                          ? (_bluetoothName.isNotEmpty ? _bluetoothName : 'Bluetooth')
+                          : 'Bluetooth off',
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: _toggleMute,
+                    icon: Icon(_muted ? Icons.mic_off : Icons.mic),
+                    label: Text(_muted ? 'Muet' : 'Micro'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: () => setState(() => _showDtmf = !_showDtmf),
+                    icon: const Icon(Icons.dialpad),
+                    label: Text(_showDtmf ? 'Masquer clavier' : 'Clavier'),
+                  ),
+                ],
+              ),
+              if (_showDtmf) ...[
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: 260,
+                  child: GridView.count(
+                    crossAxisCount: 3,
+                    mainAxisSpacing: 8,
+                    crossAxisSpacing: 8,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    children: const [
+                      '1','2','3','4','5','6','7','8','9','*','0','#'
+                    ].map((digit) {
+                      return ElevatedButton(
+                        onPressed: () => _sendDtmf(digit),
+                        child: Text(
+                          digit,
+                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                        ),
+                      );
+                    }).toList(),
                   ),
                 ),
-                ElevatedButton.icon(
-                  onPressed: _toggleMute,
-                  icon: Icon(_muted ? Icons.mic_off : Icons.mic),
-                  label: Text(_muted ? 'Muet' : 'Micro'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: () => setState(() => _showDtmf = !_showDtmf),
-                  icon: const Icon(Icons.dialpad),
-                  label: Text(_showDtmf ? 'Masquer clavier' : 'Clavier'),
-                ),
               ],
-            ),
-            if (_showDtmf) ...[
-              const SizedBox(height: 20),
-              SizedBox(
-                width: 260,
-                child: GridView.count(
-                  crossAxisCount: 3,
-                  mainAxisSpacing: 8,
-                  crossAxisSpacing: 8,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: const [
-                    '1','2','3','4','5','6','7','8','9','*','0','#'
-                  ].map((digit) {
-                    return ElevatedButton(
-                      onPressed: () => _sendDtmf(digit),
-                      child: Text(
-                        digit,
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                      ),
-                    );
-                  }).toList(),
+              ElevatedButton.icon(
+                onPressed: _isHangingUp ? null : _hangup,
+                icon: const Icon(Icons.call_end),
+                label: Text(_isHangingUp ? 'Raccrochage...' : 'Raccrocher'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.redAccent,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(200, 48),
                 ),
               ),
             ],
-            ElevatedButton.icon(
-              onPressed: _isHangingUp ? null : _hangup,
-              icon: const Icon(Icons.call_end),
-              label: Text(_isHangingUp ? 'Raccrochage...' : 'Raccrocher'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent,
-                foregroundColor: Colors.white,
-                minimumSize: const Size(200, 48),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

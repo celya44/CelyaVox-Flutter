@@ -38,6 +38,7 @@ class _VoipAppState extends State<VoipApp> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       FcmTokenSync.instance.syncCachedToken();
+      voipEngine.registerProvisioned();
     } else if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
