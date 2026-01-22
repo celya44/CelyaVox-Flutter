@@ -18,8 +18,33 @@ void main() {
   runApp(const VoipApp());
 }
 
-class VoipApp extends StatelessWidget {
+class VoipApp extends StatefulWidget {
   const VoipApp({super.key});
+
+  @override
+  State<VoipApp> createState() => _VoipAppState();
+}
+
+class _VoipAppState extends State<VoipApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    FcmTokenSync.instance.syncCachedToken();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      FcmTokenSync.instance.syncCachedToken();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

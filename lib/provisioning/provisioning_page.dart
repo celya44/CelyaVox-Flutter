@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../ui/dialpad_page.dart';
 import '../voip/voip_engine.dart';
+import '../voip/fcm_token_sync.dart';
 import 'provisioning_channel.dart';
 import 'provisioning_state.dart';
 
@@ -46,6 +47,7 @@ class _ProvisioningPageState extends State<ProvisioningPage> {
     try {
       await ProvisioningChannel.startProvisioning(url);
       await ProvisioningState.setProvisioned(true);
+      await FcmTokenSync.instance.syncCachedToken();
       if (!mounted) return;
       setState(() {
         _isProvisioned = true;

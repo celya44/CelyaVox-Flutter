@@ -29,6 +29,10 @@ class FcmTokenSync {
     });
   }
 
+  Future<void> syncCachedToken() async {
+    await _maybeSendCachedToken();
+  }
+
   Future<void> _maybeSendCachedToken() async {
     final token = await FcmTokenManager.instance.getToken();
     if (token == null || token.isEmpty) return;
