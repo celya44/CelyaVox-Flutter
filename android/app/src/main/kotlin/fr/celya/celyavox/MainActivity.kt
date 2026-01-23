@@ -4,6 +4,7 @@ import android.app.role.RoleManager
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.app.NotificationManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
@@ -45,6 +46,9 @@ class MainActivity : FlutterActivity() {
         engine.initialize(this)
         requestSelfManagedRoleIfNeeded()
         requestNotificationPermissionIfNeeded()
+        requestFullScreenIntentIfNeeded()
+        requestMicrophonePermissionIfNeeded()
+        requestPhonePermissionIfNeeded()
     }
 
     override fun onDestroy() {
@@ -100,6 +104,42 @@ class MainActivity : FlutterActivity() {
         )
     }
 
+    private fun requestMicrophonePermissionIfNeeded() {
+        val granted = checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) ==
+            PackageManager.PERMISSION_GRANTED
+        if (granted) return
+        if (ActivityCompat.shouldShowRequestPermissionRationale(
+                this,
+                android.Manifest.permission.RECORD_AUDIO
+            )
+        ) {
+            showRoleStatus("Autorise le micro pour les appels")
+        }
+        ActivityCompat.requestPermissions(
+            this,
+            arrayOf(android.Manifest.permission.RECORD_AUDIO),
+            REQ_MIC_PERMISSION
+        )
+    }
+
+    private fun requestPhonePermissionIfNeeded() {
+        val granted = checkSelfPermission(android.Manifest.permission.READ_PHONE_STATE) ==
+            PackageManager.PERMISSION_GRANTED
+        if (granted) return
+        if (ActivityCompat.shouldShowRequestPermissionRationale(
+                this,
+                android.Manifest.permission.READ_PHONE_STATE
+            )
+        ) {
+            showRoleStatus("Autorise l’accès au téléphone pour gérer les appels")
+        }
+        ActivityCompat.requestPermissions(
+            this,
+            arrayOf(android.Manifest.permission.READ_PHONE_STATE),
+            REQ_PHONE_PERMISSION
+        )
+    }
+
     @Deprecated("Deprecated in Java")
     override fun onRequestPermissionsResult(
         requestCode: Int,
@@ -107,14 +147,35 @@ class MainActivity : FlutterActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode != REQ_NOTIFICATION_PERMISSION) return
-        val granted = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
-        if (granted) {
-            showRoleStatus("Notifications autorisées")
+        if (requestCode == REQ_NOTIFICATION_PERMISSION) {
+            val granted = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
+            if (granted) {
+                showRoleStatus("Notifications autorisées")
+                return
+            }
+            showRoleStatus("Notifications refusées — ouvre les réglages")
+            openNotificationSettings()
             return
         }
-        showRoleStatus("Notifications refusées — ouvre les réglages")
-        openNotificationSettings()
+        if (requestCode == REQ_MIC_PERMISSION) {
+            val granted = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
+            if (granted) {
+                showRoleStatus("Micro autorisé")
+                return
+            }
+            showRoleStatus("Micro refusé — ouvre les réglages")
+            openAppSettings()
+            return
+        }
+        if (requestCode == REQ_PHONE_PERMISSION) {
+            val granted = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
+            if (granted) {
+                showRoleStatus("Téléphone autorisé")
+                return
+            }
+            showRoleStatus("Téléphone refusé — ouvre les réglages")
+            openAppSettings()
+        }
     }
 
     private fun openNotificationSettings() {
@@ -131,10 +192,33 @@ class MainActivity : FlutterActivity() {
         startActivity(intent)
     }
 
+    private fun openAppSettings() {
+        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = Uri.fromParts("package", packageName, null)
+        }
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        startActivity(intent)
+    }
+
+    private fun requestFullScreenIntentIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return
+        val notificationManager = getSystemService(NotificationManager::class.java)
+        val canUse = notificationManager?.canUseFullScreenIntent() == true
+        if (canUse) return
+        showRoleStatus("Autorise l’affichage plein écran des appels")
+        val intent = Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT).apply {
+            data = Uri.fromParts("package", packageName, null)
+        }
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        startActivity(intent)
+    }
+
     companion object {
         private const val TAG = "MainActivity"
         private const val REQ_SELF_MANAGED_ROLE = 9001
         private const val REQ_NOTIFICATION_PERMISSION = 9002
+        private const val REQ_MIC_PERMISSION = 9003
+        private const val REQ_PHONE_PERMISSION = 9004
         private const val ROLE_SELF_MANAGED_CALLS = "android.app.role.SELF_MANAGED_CALLS"
     }
 }
