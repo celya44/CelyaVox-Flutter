@@ -4,6 +4,7 @@ import android.app.role.RoleManager
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import com.google.firebase.FirebaseApp
@@ -52,17 +53,26 @@ class MainActivity : FlutterActivity() {
         val roleManager = getSystemService(RoleManager::class.java)
         if (!roleManager.isRoleAvailable(ROLE_SELF_MANAGED_CALLS)) {
             Log.w(TAG, "ROLE_SELF_MANAGED_CALLS not available on this device")
+            showRoleStatus("Rôle SELF_MANAGED_CALLS non disponible sur cet appareil")
             return
         }
         if (roleManager.isRoleHeld(ROLE_SELF_MANAGED_CALLS)) {
             Log.i(TAG, "ROLE_SELF_MANAGED_CALLS already granted")
+            showRoleStatus("Rôle SELF_MANAGED_CALLS déjà accordé")
             VoipConnectionService.registerSelfManaged(this)
             return
         }
         Log.i(TAG, "Requesting ROLE_SELF_MANAGED_CALLS")
+        showRoleStatus("Demande du rôle SELF_MANAGED_CALLS…")
         val intent = roleManager.createRequestRoleIntent(ROLE_SELF_MANAGED_CALLS)
         @Suppress("DEPRECATION")
         startActivityForResult(intent, REQ_SELF_MANAGED_ROLE)
+    }
+
+    private fun showRoleStatus(message: String) {
+        runOnUiThread {
+            Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+        }
     }
 
     companion object {
