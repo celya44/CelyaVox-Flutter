@@ -20,6 +20,17 @@ static bool g_initialized = false;
 static pjsua_acc_id g_acc_id = PJSUA_INVALID_ID;
 static bool g_audio_ready = false;
 
+static void ensure_pj_thread_registered(const char *name) {
+    if (pj_thread_is_registered()) return;
+    static thread_local pj_thread_desc tls_desc;
+    static thread_local pj_thread_t *tls_thread = nullptr;
+    pj_bzero(&tls_desc, sizeof(tls_desc));
+    pj_status_t status = pj_thread_register(name, tls_desc, &tls_thread);
+    if (status != PJ_SUCCESS) {
+        LOGE("pj_thread_register failed: %d", status);
+    }
+}
+
 // Forward declarations
 static void emit_event(const char *type, const char *message);
 
@@ -126,6 +137,7 @@ static void on_reg_state(pjsua_acc_id acc_id) {
 }
 
 static bool ensure_endpoint() {
+    ensure_pj_thread_registered("jni");
     std::lock_guard<std::mutex> lock(g_mutex);
     if (g_initialized) return true;
 
@@ -202,6 +214,7 @@ static bool ensure_endpoint() {
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_fr_celya_celyavox_PjsipEngine_nativeInit(JNIEnv *env, jobject obj) {
+    ensure_pj_thread_registered("jni");
     if (!g_vm) {
         env->GetJavaVM(&g_vm);
     }
@@ -215,6 +228,7 @@ Java_fr_celya_celyavox_PjsipEngine_nativeInit(JNIEnv *env, jobject obj) {
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_fr_celya_celyavox_PjsipEngine_nativeRefreshAudio(JNIEnv *, jobject) {
+    ensure_pj_thread_registered("jni");
     if (!ensure_endpoint()) return JNI_FALSE;
     std::lock_guard<std::mutex> lock(g_mutex);
     pj_status_t status = pjsua_set_snd_dev(PJMEDIA_AUD_DEFAULT_CAPTURE_DEV, PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV);
@@ -235,6 +249,7 @@ Java_fr_celya_celyavox_PjsipEngine_nativeRefreshAudio(JNIEnv *, jobject) {
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_fr_celya_celyavox_PjsipEngine_nativeRegister(JNIEnv *env, jobject, jstring juser, jstring jpass, jstring jdomain, jstring jproxy) {
+    ensure_pj_thread_registered("jni");
     if (!ensure_endpoint()) return JNI_FALSE;
 
     const char *user = env->GetStringUTFChars(juser, nullptr);
@@ -287,6 +302,7 @@ Java_fr_celya_celyavox_PjsipEngine_nativeRegister(JNIEnv *env, jobject, jstring 
 
 extern "C" JNIEXPORT void JNICALL
 Java_fr_celya_celyavox_PjsipEngine_nativeUnregister(JNIEnv *, jobject) {
+    ensure_pj_thread_registered("jni");
     std::lock_guard<std::mutex> lock(g_mutex);
     if (g_acc_id != PJSUA_INVALID_ID) {
         pjsua_acc_del(g_acc_id);
@@ -297,6 +313,7 @@ Java_fr_celya_celyavox_PjsipEngine_nativeUnregister(JNIEnv *, jobject) {
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_fr_celya_celyavox_PjsipEngine_nativeMakeCall(JNIEnv *env, jobject, jstring jnumber) {
+    ensure_pj_thread_registered("jni");
     if (!ensure_endpoint() || g_acc_id == PJSUA_INVALID_ID) return JNI_FALSE;
     const char *number = env->GetStringUTFChars(jnumber, nullptr);
     std::string dest = "sip:" + std::string(number);
@@ -326,6 +343,7 @@ Java_fr_celya_celyavox_PjsipEngine_nativeMakeCall(JNIEnv *env, jobject, jstring 
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_fr_celya_celyavox_PjsipEngine_nativeAcceptCall(JNIEnv *env, jobject, jstring jcallId) {
+    ensure_pj_thread_registered("jni");
     const char *cid = env->GetStringUTFChars(jcallId, nullptr);
     int call_id = atoi(cid);
     env->ReleaseStringUTFChars(jcallId, cid);
@@ -339,6 +357,7 @@ Java_fr_celya_celyavox_PjsipEngine_nativeAcceptCall(JNIEnv *env, jobject, jstrin
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_fr_celya_celyavox_PjsipEngine_nativeHangupCall(JNIEnv *env, jobject, jstring jcallId) {
+    ensure_pj_thread_registered("jni");
     const char *cid = env->GetStringUTFChars(jcallId, nullptr);
     int call_id = atoi(cid);
     env->ReleaseStringUTFChars(jcallId, cid);
@@ -352,6 +371,7 @@ Java_fr_celya_celyavox_PjsipEngine_nativeHangupCall(JNIEnv *env, jobject, jstrin
 
 extern "C" JNIEXPORT jboolean JNICALL
 Java_fr_celya_celyavox_PjsipEngine_nativeSendDtmf(JNIEnv *env, jobject, jstring jcallId, jstring jdigits) {
+    ensure_pj_thread_registered("jni");
     if (!ensure_endpoint()) return JNI_FALSE;
     const char *cid = env->GetStringUTFChars(jcallId, nullptr);
     const char *digits = env->GetStringUTFChars(jdigits, nullptr);
