@@ -313,14 +313,27 @@ jobs:
           ls -R android/app/build/outputs || true
         working-directory: ./
 
+      - name: Collect artifacts (flatten)
+        run: |
+          set -euo pipefail
+          rm -rf build/artifacts
+          mkdir -p build/artifacts/apk build/artifacts/aab
+          find build/app/outputs -type f -name "*.apk" -exec cp -f {} build/artifacts/apk/ \; || true
+          find android/app/build/outputs -type f -name "*.apk" -exec cp -f {} build/artifacts/apk/ \; || true
+          find build/app/outputs -type f -name "*.aab" -exec cp -f {} build/artifacts/aab/ \; || true
+          find android/app/build/outputs -type f -name "*.aab" -exec cp -f {} build/artifacts/aab/ \; || true
+          if [ -f build/gradle_bundle.log ]; then
+            cp -f build/gradle_bundle.log build/artifacts/aab/gradle_bundle.log
+          fi
+          ls -l build/artifacts/apk || true
+          ls -l build/artifacts/aab || true
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: android-apk
           if-no-files-found: warn
-          path: |
-            build/app/outputs/flutter-apk/*.apk
-            android/app/build/outputs/apk/**/*.apk
+          path: build/artifacts/apk/*
 
       - name: Upload AAB artifact
         if: env.ANDROID_KEYSTORE_BASE64 != ''
@@ -328,7 +341,4 @@ jobs:
         with:
           name: android-aab
           if-no-files-found: warn
-          path: |
-            build/app/outputs/bundle/release/*.aab
-            android/app/build/outputs/bundle/**/*.aab
-            build/gradle_bundle.log
+          path: build/artifacts/aab/*
