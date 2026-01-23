@@ -313,14 +313,22 @@ jobs:
           ls -R android/app/build/outputs || true
         working-directory: ./
 
-      - name: Upload artifacts
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: android-builds
+          name: android-apk
           if-no-files-found: warn
           path: |
             build/app/outputs/flutter-apk/*.apk
             android/app/build/outputs/apk/**/*.apk
+
+      - name: Upload AAB artifact
+        if: env.ANDROID_KEYSTORE_BASE64 != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-aab
+          if-no-files-found: warn
+          path: |
             build/app/outputs/bundle/release/*.aab
             android/app/build/outputs/bundle/**/*.aab
             build/gradle_bundle.log
