@@ -42,6 +42,7 @@ class VoipForegroundService : Service() {
             .setContentIntent(contentIntent)
             .setFullScreenIntent(contentIntent, true)
             .setCategory(Notification.CATEGORY_CALL)
+            .setPriority(NotificationCompat.PRIORITY_MAX)
             .setOngoing(true)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .build()

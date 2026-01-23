@@ -42,27 +42,12 @@ class VoipFirebaseService : FirebaseMessagingService() {
                 false
             }
             if (!ok) {
-                startIncomingCallActivity(callId, callerId)
+                Log.w(TAG, "Telecom incoming call not available; relying on full-screen notification")
             }
         } catch (e: Exception) {
             Log.w(TAG, "Failed to start ConnectionService incoming call", e)
         }
         registerSipInBackground()
-    }
-
-    private fun startIncomingCallActivity(callId: String, callerId: String) {
-        val intent = Intent(this, CallActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-                Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                Intent.FLAG_ACTIVITY_SINGLE_TOP
-            putExtra(CallActivity.EXTRA_CALL_ID, callId)
-            putExtra(CallActivity.EXTRA_CALLER_ID, callerId)
-        }
-        try {
-            startActivity(intent)
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to start CallActivity", e)
-        }
     }
 
     private fun registerSipInBackground() {
