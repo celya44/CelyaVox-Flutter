@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.app.role.RoleManager
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -35,7 +36,7 @@ class VoipForegroundService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or pendingIntentImmutableFlag()
         )
 
-        return NotificationCompat.Builder(this, CHANNEL_ID)
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(if (callerId.isNotEmpty()) callerId else "Appel en cours")
             .setContentText(if (callId.isNotEmpty()) "ID: $callId" else "")
             .setSmallIcon(android.R.drawable.sym_call_incoming)
@@ -45,7 +46,19 @@ class VoipForegroundService : Service() {
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setOngoing(true)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
-            .build()
+        if (shouldShowRoleAction()) {
+            builder.addAction(
+                0,
+                "Activer appels",
+                PendingIntent.getActivity(
+                    this,
+                    1,
+                    Intent(this, RoleRequestActivity::class.java),
+                    PendingIntent.FLAG_UPDATE_CURRENT or pendingIntentImmutableFlag()
+                )
+            )
+        }
+        return builder.build()
     }
 
     private fun createChannel() {
@@ -69,6 +82,14 @@ class VoipForegroundService : Service() {
 
     private fun pendingIntentImmutableFlag(): Int {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0
+    }
+
+    private fun shouldShowRoleAction(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return false
+        val roleManager = getSystemService(RoleManager::class.java)
+        return roleManager != null &&
+            roleManager.isRoleAvailable("android.app.role.SELF_MANAGED_CALLS") &&
+            !roleManager.isRoleHeld("android.app.role.SELF_MANAGED_CALLS")
     }
 
     companion object {

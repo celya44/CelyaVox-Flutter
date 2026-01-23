@@ -39,6 +39,12 @@
             android:excludeFromRecents="true"
             android:theme="@style/Theme.AppCompat.DayNight.NoActionBar" />
 
+        <activity
+            android:name=".RoleRequestActivity"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:theme="@style/Theme.AppCompat.DayNight.NoActionBar" />
+
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
