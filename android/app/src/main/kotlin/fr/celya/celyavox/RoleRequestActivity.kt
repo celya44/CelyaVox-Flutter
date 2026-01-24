@@ -4,7 +4,6 @@ import android.app.role.RoleManager
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 
 class RoleRequestActivity : AppCompatActivity() {
@@ -26,13 +25,11 @@ class RoleRequestActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-            Toast.makeText(this, "Rôle self-managed non supporté", Toast.LENGTH_LONG).show()
             finish()
             return
         }
         val roleManager = getSystemService(RoleManager::class.java)
         if (!roleManager.isRoleAvailable(ROLE_SELF_MANAGED_CALLS)) {
-            Toast.makeText(this, "Rôle self-managed indisponible", Toast.LENGTH_LONG).show()
             finish()
             return
         }
