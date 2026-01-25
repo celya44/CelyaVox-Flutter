@@ -58,7 +58,24 @@ class VoipForegroundService : Service() {
                 )
             )
         }
+        if (shouldOfferFullScreenSettings()) {
+            builder.addAction(
+                0,
+                "Plein écran",
+                PendingIntent.getActivity(
+                    this,
+                    2,
+                    Intent(this, FullScreenIntentSettingsActivity::class.java),
+                    PendingIntent.FLAG_UPDATE_CURRENT or pendingIntentImmutableFlag()
+                )
+            )
+        }
         return builder.build()
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        createChannel()
     }
 
     private fun createChannel() {
@@ -90,6 +107,12 @@ class VoipForegroundService : Service() {
         return roleManager != null &&
             roleManager.isRoleAvailable("android.app.role.SELF_MANAGED_CALLS") &&
             !roleManager.isRoleHeld("android.app.role.SELF_MANAGED_CALLS")
+    }
+
+    private fun shouldOfferFullScreenSettings(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return false
+        val notificationManager = getSystemService(NotificationManager::class.java)
+        return notificationManager?.canUseFullScreenIntent() == false
     }
 
     companion object {
