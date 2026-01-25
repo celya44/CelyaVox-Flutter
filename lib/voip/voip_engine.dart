@@ -44,6 +44,13 @@ class VoipEngine {
       return (result as bool?) ?? false;
     }
 
+      Future<bool> canDrawOverlays() async {
+        final result = await _invoke('canDrawOverlays');
+        return (result as bool?) ?? false;
+      }
+
+      Future<void> openOverlaySettings() => _invoke('openOverlaySettings');
+
     Future<String?> getFcmToken() async {
       final result = await _invoke('getFcmToken');
       return result as String?;
@@ -61,9 +68,9 @@ class VoipEngine {
   Future<void> hangupCall(String callId) =>
       _invoke('hangupCall', <String, dynamic>{'callId': callId});
 
-  Future<void> _invoke(String method, [Map<String, dynamic>? arguments]) async {
+  Future<dynamic> _invoke(String method, [Map<String, dynamic>? arguments]) async {
     try {
-      await _channel.invokeMethod<void>(method, arguments);
+      return await _channel.invokeMethod<dynamic>(method, arguments);
     } on PlatformException catch (e) {
       final message = e.message ?? e.code;
       throw Exception('VoIP method "$method" failed: $message');

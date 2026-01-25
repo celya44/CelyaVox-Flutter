@@ -1,6 +1,9 @@
 package fr.celya.celyavox
 
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import com.google.firebase.messaging.FirebaseMessaging
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.MethodCall
@@ -90,6 +93,17 @@ class VoipMethodChannel(
                 }
                 "isBluetoothAvailable" -> {
                     result.success(engine.isBluetoothAvailable())
+                }
+                "canDrawOverlays" -> {
+                    result.success(Settings.canDrawOverlays(appContext))
+                }
+                "openOverlaySettings" -> {
+                    val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
+                        data = Uri.fromParts("package", appContext.packageName, null)
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    appContext.startActivity(intent)
+                    result.success(null)
                 }
                 "getFcmToken" -> {
                     val ctx = appContext

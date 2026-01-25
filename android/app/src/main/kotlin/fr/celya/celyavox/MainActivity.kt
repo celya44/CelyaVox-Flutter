@@ -50,6 +50,7 @@ class MainActivity : FlutterActivity() {
         requestMicrophonePermissionIfNeeded()
         requestPhonePermissionIfNeeded()
         forceFullScreenIntentSettingsOnce()
+        forceOverlayPermissionOnce()
     }
 
     override fun onDestroy() {
@@ -158,6 +159,20 @@ class MainActivity : FlutterActivity() {
         prefs.edit().putBoolean(KEY_FULL_SCREEN_PROMPTED, true).apply()
     }
 
+    private fun forceOverlayPermissionOnce() {
+        val prefs = getSharedPreferences("onboarding", Context.MODE_PRIVATE)
+        if (prefs.getBoolean(KEY_OVERLAY_PROMPTED, false)) return
+        val canDraw = Settings.canDrawOverlays(this)
+        if (!canDraw) {
+            val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
+                data = Uri.fromParts("package", packageName, null)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(intent)
+        }
+        prefs.edit().putBoolean(KEY_OVERLAY_PROMPTED, true).apply()
+    }
+
     companion object {
         private const val TAG = "MainActivity"
         private const val REQ_SELF_MANAGED_ROLE = 9001
@@ -166,5 +181,6 @@ class MainActivity : FlutterActivity() {
         private const val REQ_PHONE_PERMISSION = 9004
         private const val ROLE_SELF_MANAGED_CALLS = "android.app.role.SELF_MANAGED_CALLS"
         private const val KEY_FULL_SCREEN_PROMPTED = "full_screen_prompted"
+        private const val KEY_OVERLAY_PROMPTED = "overlay_prompted"
     }
 }
