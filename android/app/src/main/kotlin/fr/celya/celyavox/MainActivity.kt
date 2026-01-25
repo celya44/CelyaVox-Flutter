@@ -7,6 +7,7 @@ import android.net.Uri
 import android.app.NotificationManager
 import android.os.Build
 import android.os.Bundle
+import android.content.Context
 import android.provider.Settings
 import android.util.Log
 import androidx.core.app.ActivityCompat
@@ -48,6 +49,7 @@ class MainActivity : FlutterActivity() {
         requestFullScreenIntentIfNeeded()
         requestMicrophonePermissionIfNeeded()
         requestPhonePermissionIfNeeded()
+        forceFullScreenIntentSettingsOnce()
     }
 
     override fun onDestroy() {
@@ -144,6 +146,18 @@ class MainActivity : FlutterActivity() {
         startActivity(intent)
     }
 
+    private fun forceFullScreenIntentSettingsOnce() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return
+        val prefs = getSharedPreferences("onboarding", Context.MODE_PRIVATE)
+        if (prefs.getBoolean(KEY_FULL_SCREEN_PROMPTED, false)) return
+        val intent = Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT).apply {
+            data = Uri.fromParts("package", packageName, null)
+        }
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        startActivity(intent)
+        prefs.edit().putBoolean(KEY_FULL_SCREEN_PROMPTED, true).apply()
+    }
+
     companion object {
         private const val TAG = "MainActivity"
         private const val REQ_SELF_MANAGED_ROLE = 9001
@@ -151,5 +165,6 @@ class MainActivity : FlutterActivity() {
         private const val REQ_MIC_PERMISSION = 9003
         private const val REQ_PHONE_PERMISSION = 9004
         private const val ROLE_SELF_MANAGED_CALLS = "android.app.role.SELF_MANAGED_CALLS"
+        private const val KEY_FULL_SCREEN_PROMPTED = "full_screen_prompted"
     }
 }
