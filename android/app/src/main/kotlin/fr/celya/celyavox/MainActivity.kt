@@ -48,16 +48,17 @@ class MainActivity : FlutterActivity() {
         engine.initialize(this)
         requestSelfManagedRoleIfNeeded()
         requestNotificationPermissionIfNeeded()
-        requestFullScreenIntentIfNeeded()
         requestMicrophonePermissionIfNeeded()
         requestPhonePermissionIfNeeded()
-        forceOverlayPermissionOnce()
     }
 
     override fun onResume() {
         super.onResume()
-        if (isFullScreenIntentAllowed()) return
-        showFullScreenIntentRequiredDialog()
+        if (!isFullScreenIntentAllowed()) {
+            showFullScreenIntentRequiredDialog()
+            return
+        }
+        forceOverlayPermissionOnce()
     }
 
     override fun onDestroy() {
