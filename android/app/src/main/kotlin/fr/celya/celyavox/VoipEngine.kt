@@ -278,7 +278,6 @@ class VoipEngine(
                     val ok = VoipConnectionService.startIncomingCall(ctx, message, null)
                     if (!ok) {
                         VoipForegroundService.start(ctx, message, null)
-                        startIncomingCallActivity(ctx, message, null)
                     }
                 }
                 incomingCall(message, null)
@@ -292,21 +291,6 @@ class VoipEngine(
                 callEnded(message, null)
             }
             else -> emit(mapOf("type" to type, "message" to message))
-        }
-    }
-
-    private fun startIncomingCallActivity(context: Context, callId: String, callerId: String?) {
-        val intent = Intent(context, CallActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-                Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                Intent.FLAG_ACTIVITY_SINGLE_TOP
-            putExtra(CallActivity.EXTRA_CALL_ID, callId)
-            putExtra(CallActivity.EXTRA_CALLER_ID, callerId)
-        }
-        try {
-            context.startActivity(intent)
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to start CallActivity from VoipEngine", e)
         }
     }
 

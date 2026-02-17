@@ -28,9 +28,7 @@ class VoipForegroundService : Service() {
         val contentIntent = PendingIntent.getActivity(
             this,
             0,
-            Intent(this, CallActivity::class.java).apply {
-                putExtra(CallActivity.EXTRA_CALL_ID, callId)
-                putExtra(CallActivity.EXTRA_CALLER_ID, callerId)
+            Intent(this, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             },
             PendingIntent.FLAG_UPDATE_CURRENT or pendingIntentImmutableFlag()
@@ -41,7 +39,6 @@ class VoipForegroundService : Service() {
             .setContentText(if (callId.isNotEmpty()) "ID: $callId" else "")
             .setSmallIcon(android.R.drawable.sym_call_incoming)
             .setContentIntent(contentIntent)
-            .setFullScreenIntent(contentIntent, true)
             .setCategory(Notification.CATEGORY_CALL)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setOngoing(true)

@@ -52,7 +52,9 @@ class MainActivity : FlutterActivity() {
 
     override fun onResume() {
         super.onResume()
+        Log.d(TAG, "onResume")
         if (!isFullScreenIntentAllowed()) {
+            Log.d(TAG, "Full-screen intent not allowed; launching gate")
             launchFullScreenIntentGate()
             return
         }
@@ -144,13 +146,16 @@ class MainActivity : FlutterActivity() {
     private fun requestFullScreenIntentIfNeeded() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return
         if (isFullScreenIntentAllowed()) return
+        Log.d(TAG, "requestFullScreenIntentIfNeeded: launching gate")
         launchFullScreenIntentGate()
     }
 
     private fun isFullScreenIntentAllowed(): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return true
         val notificationManager = getSystemService(NotificationManager::class.java)
-        return notificationManager?.canUseFullScreenIntent() == true
+        val allowed = notificationManager?.canUseFullScreenIntent() == true
+        Log.d(TAG, "canUseFullScreenIntent=$allowed")
+        return allowed
     }
 
     private fun launchFullScreenIntentGate() {

@@ -284,7 +284,7 @@ if ($argc < 2) {
 }
 
 $extension = $argv[1];
-echo "🔍 Recherche du token pour l'extension: $extension...\n";
+//echo "🔍 Recherche du token pour l'extension: $extension...\n";
 
 //$token = getFcmTokenFromExtension($extension);
 
@@ -307,12 +307,12 @@ $result = sendWakeUpNotification($token);
  */
 //if ($result['success']) {
 if (1==1) {
-    echo "✅ Notification envoyée avec succès!\n\n";
+//    echo "✅ Notification envoyée avec succès!\n\n";
     
-    if (isset($result['response']['name'])) {
+/*    if (isset($result['response']['name'])) {
         echo "📊 Résultat FCM:\n";
         echo "   - Message: " . $result['response']['name'] . "\n";
-    }
+} */
 
     $contactAor = $extension;
     echo "🔁 Vérification de l'enregistrement PJSIP pour $contactAor...\n";

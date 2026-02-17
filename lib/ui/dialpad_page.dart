@@ -8,7 +8,6 @@ import '../provisioning/provisioning_channel.dart';
 import '../voip/voip_events.dart';
 import '../voip/voip_engine.dart';
 import 'in_call_page.dart';
-import 'incoming_call_page.dart';
 import 'settings_page.dart';
 
 class DialpadPage extends StatefulWidget {
@@ -74,16 +73,8 @@ class _DialpadPageState extends State<DialpadPage> {
         final ok = event.statusText.contains('200');
         if (mounted) setState(() => _isRegistered = ok);
       } else if (event is IncomingCallEvent) {
+        // System Telecom UI handles incoming calls; no Flutter UI here.
         if (!mounted) return;
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => IncomingCallPage(
-              engine: widget.engine,
-              callId: event.callId,
-              callerId: event.callerId,
-            ),
-          ),
-        );
       }
     }, onError: (_) {
       if (mounted) setState(() => _isRegistered = false);
