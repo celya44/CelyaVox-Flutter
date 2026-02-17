@@ -46,7 +46,6 @@ class MainActivity : FlutterActivity() {
         engine.initialize(this)
         requestSelfManagedRoleIfNeeded()
         requestNotificationPermissionIfNeeded()
-        requestFullScreenIntentIfNeeded()
         requestMicrophonePermissionIfNeeded()
         requestPhonePermissionIfNeeded()
         forceFullScreenIntentSettingsOnce()
@@ -135,22 +134,16 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    private fun requestFullScreenIntentIfNeeded() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return
-        val notificationManager = getSystemService(NotificationManager::class.java)
-        val canUse = notificationManager?.canUseFullScreenIntent() == true
-        if (canUse) return
-        val intent = Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT).apply {
-            data = Uri.fromParts("package", packageName, null)
-        }
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        startActivity(intent)
-    }
-
     private fun forceFullScreenIntentSettingsOnce() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return
         val prefs = getSharedPreferences("onboarding", Context.MODE_PRIVATE)
         if (prefs.getBoolean(KEY_FULL_SCREEN_PROMPTED, false)) return
+        val notificationManager = getSystemService(NotificationManager::class.java)
+        val canUse = notificationManager?.canUseFullScreenIntent() == true
+        if (canUse) {
+            prefs.edit().putBoolean(KEY_FULL_SCREEN_PROMPTED, true).apply()
+            return
+        }
         val intent = Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT).apply {
             data = Uri.fromParts("package", packageName, null)
         }
