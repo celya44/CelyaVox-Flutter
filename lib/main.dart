@@ -58,7 +58,31 @@ class _VoipAppState extends State<VoipApp> with WidgetsBindingObserver {
     final canDraw = await voipEngine.canDrawOverlays();
     if (canDraw) return;
     _overlayPromptedThisSession = true;
-    await voipEngine.openOverlaySettings();
+    if (!mounted) return;
+    final shouldOpen = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Autorisation obligatoire'),
+        content: const Text(
+          "L'autorisation d'affichage par-dessus les autres applis est requise. "
+          "Veuillez l'activer dans les reglages.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Plus tard'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Activer'),
+          ),
+        ],
+      ),
+    );
+    if (shouldOpen == true) {
+      await voipEngine.openOverlaySettings();
+    }
   }
 
   @override
