@@ -72,6 +72,14 @@ class _InCallPageState extends State<InCallPage> {
         if (mounted && event.callId.isNotEmpty) {
           setState(() => _activeCallId = event.callId);
         }
+      } else if (event is CallEndedEvent) {
+        if (!mounted) return;
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (_) => DialpadPage(engine: widget.engine),
+          ),
+          (_) => false,
+        );
       } else if (event is BluetoothAvailabilityEvent) {
         if (!mounted) return;
         setState(() {
@@ -138,8 +146,9 @@ class _InCallPageState extends State<InCallPage> {
 
   Future<void> _hangup() async {
     setState(() => _isHangingUp = true);
+    final callId = _activeCallId.isNotEmpty ? _activeCallId : widget.callId;
     try {
-      await widget.engine.hangupCall(widget.callId);
+      await widget.engine.hangupCall(callId);
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(

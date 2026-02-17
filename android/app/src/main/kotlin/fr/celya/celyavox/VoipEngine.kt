@@ -274,13 +274,18 @@ class VoipEngine(
         when (type) {
             "incoming_call" -> {
                 val ctx = appContext
+                var shouldNotifyFlutter = true
                 if (ctx != null) {
                     val ok = VoipConnectionService.startIncomingCall(ctx, message, null)
                     if (!ok) {
                         VoipForegroundService.start(ctx, message, null)
+                    } else {
+                        shouldNotifyFlutter = false
                     }
                 }
-                incomingCall(message, null)
+                if (shouldNotifyFlutter) {
+                    incomingCall(message, null)
+                }
             }
             "call_connected" -> {
                 VoipConnectionService.markCallActive(message)
