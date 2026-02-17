@@ -21,6 +21,7 @@ class MainActivity : FlutterActivity() {
     private var voipEngine: VoipEngine? = null
     private var methodChannel: VoipMethodChannel? = null
     private var provisioningChannel: ProvisioningMethodChannel? = null
+    private var isOverlayDialogVisible = false
     @Deprecated("Deprecated in Java")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
@@ -58,7 +59,7 @@ class MainActivity : FlutterActivity() {
             launchFullScreenIntentGate()
             return
         }
-        forceOverlayPermissionOnce()
+        requestOverlayPermissionIfNeeded()
     }
 
     override fun onDestroy() {
@@ -165,18 +166,28 @@ class MainActivity : FlutterActivity() {
         startActivity(intent)
     }
 
-    private fun forceOverlayPermissionOnce() {
-        val prefs = getSharedPreferences("onboarding", Context.MODE_PRIVATE)
-        if (prefs.getBoolean(KEY_OVERLAY_PROMPTED, false)) return
+    private fun requestOverlayPermissionIfNeeded() {
         val canDraw = Settings.canDrawOverlays(this)
-        if (!canDraw) {
-            val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
-                data = Uri.fromParts("package", packageName, null)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        if (canDraw) return
+        if (isOverlayDialogVisible) return
+        isOverlayDialogVisible = true
+        AlertDialog.Builder(this)
+            .setTitle("Autorisation obligatoire")
+            .setMessage(
+                "L'autorisation d'affichage par-dessus les autres applis est requise. " +
+                    "Veuillez l'activer dans les reglages."
+            )
+            .setCancelable(false)
+            .setPositiveButton("Activer") { _, _ ->
+                isOverlayDialogVisible = false
+                val intent = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
+                    data = Uri.fromParts("package", packageName, null)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                startActivity(intent)
             }
-            startActivity(intent)
-        }
-        prefs.edit().putBoolean(KEY_OVERLAY_PROMPTED, true).apply()
+            .setOnDismissListener { isOverlayDialogVisible = false }
+            .show()
     }
 
     companion object {
@@ -186,6 +197,5 @@ class MainActivity : FlutterActivity() {
         private const val REQ_MIC_PERMISSION = 9003
         private const val REQ_PHONE_PERMISSION = 9004
         private const val ROLE_SELF_MANAGED_CALLS = "android.app.role.SELF_MANAGED_CALLS"
-        private const val KEY_OVERLAY_PROMPTED = "overlay_prompted"
     }
 }

@@ -28,14 +28,11 @@ class VoipApp extends StatefulWidget {
 }
 
 class _VoipAppState extends State<VoipApp> with WidgetsBindingObserver {
-  bool _overlayPromptedThisSession = false;
-
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     FcmTokenSync.instance.syncCachedToken();
-    _ensureOverlayPermission();
   }
 
   @override
@@ -43,45 +40,10 @@ class _VoipAppState extends State<VoipApp> with WidgetsBindingObserver {
     if (state == AppLifecycleState.resumed) {
       FcmTokenSync.instance.syncCachedToken();
       voipEngine.registerProvisioned();
-      _ensureOverlayPermission();
     } else if (state == AppLifecycleState.inactive ||
         state == AppLifecycleState.paused ||
         state == AppLifecycleState.detached) {
       voipEngine.unregister();
-    }
-  }
-
-  Future<void> _ensureOverlayPermission() async {
-    if (kIsWeb) return;
-    if (defaultTargetPlatform != TargetPlatform.android) return;
-    if (_overlayPromptedThisSession) return;
-    final canDraw = await voipEngine.canDrawOverlays();
-    if (canDraw) return;
-    _overlayPromptedThisSession = true;
-    if (!mounted) return;
-    final shouldOpen = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Autorisation obligatoire'),
-        content: const Text(
-          "L'autorisation d'affichage par-dessus les autres applis est requise. "
-          "Veuillez l'activer dans les reglages.",
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Plus tard'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Activer'),
-          ),
-        ],
-      ),
-    );
-    if (shouldOpen == true) {
-      await voipEngine.openOverlaySettings();
     }
   }
 
