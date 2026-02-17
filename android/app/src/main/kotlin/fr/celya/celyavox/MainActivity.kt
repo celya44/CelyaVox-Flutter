@@ -10,7 +10,6 @@ import android.os.Bundle
 import android.content.Context
 import android.provider.Settings
 import android.util.Log
-import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -22,7 +21,6 @@ class MainActivity : FlutterActivity() {
     private var voipEngine: VoipEngine? = null
     private var methodChannel: VoipMethodChannel? = null
     private var provisioningChannel: ProvisioningMethodChannel? = null
-    private var isFullScreenDialogVisible = false
     @Deprecated("Deprecated in Java")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
@@ -55,7 +53,7 @@ class MainActivity : FlutterActivity() {
     override fun onResume() {
         super.onResume()
         if (!isFullScreenIntentAllowed()) {
-            showFullScreenIntentRequiredDialog()
+            launchFullScreenIntentGate()
             return
         }
         forceOverlayPermissionOnce()
@@ -146,7 +144,7 @@ class MainActivity : FlutterActivity() {
     private fun requestFullScreenIntentIfNeeded() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return
         if (isFullScreenIntentAllowed()) return
-        showFullScreenIntentRequiredDialog()
+        launchFullScreenIntentGate()
     }
 
     private fun isFullScreenIntentAllowed(): Boolean {
@@ -155,28 +153,8 @@ class MainActivity : FlutterActivity() {
         return notificationManager?.canUseFullScreenIntent() == true
     }
 
-    private fun showFullScreenIntentRequiredDialog() {
-        if (isFullScreenDialogVisible) return
-        isFullScreenDialogVisible = true
-        AlertDialog.Builder(this)
-            .setTitle("Autorisation obligatoire")
-            .setMessage(
-                "L'autorisation plein ecran est obligatoire pour recevoir les appels. " +
-                    "Veuillez l'activer dans les reglages."
-            )
-            .setCancelable(false)
-            .setPositiveButton("Activer") { _, _ ->
-                isFullScreenDialogVisible = false
-                openFullScreenIntentSettings()
-            }
-            .setOnDismissListener { isFullScreenDialogVisible = false }
-            .show()
-    }
-
-    private fun openFullScreenIntentSettings() {
-        val intent = Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT).apply {
-            data = Uri.fromParts("package", packageName, null)
-        }
+    private fun launchFullScreenIntentGate() {
+        val intent = Intent(this, FullScreenIntentSettingsActivity::class.java)
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         startActivity(intent)
     }
