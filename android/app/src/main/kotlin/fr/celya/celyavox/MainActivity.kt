@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.content.Context
 import android.provider.Settings
 import android.util.Log
+import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -21,6 +22,7 @@ class MainActivity : FlutterActivity() {
     private var voipEngine: VoipEngine? = null
     private var methodChannel: VoipMethodChannel? = null
     private var provisioningChannel: ProvisioningMethodChannel? = null
+    private var isFullScreenDialogVisible = false
     @Deprecated("Deprecated in Java")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
@@ -46,10 +48,16 @@ class MainActivity : FlutterActivity() {
         engine.initialize(this)
         requestSelfManagedRoleIfNeeded()
         requestNotificationPermissionIfNeeded()
+        requestFullScreenIntentIfNeeded()
         requestMicrophonePermissionIfNeeded()
         requestPhonePermissionIfNeeded()
-        forceFullScreenIntentSettingsOnce()
         forceOverlayPermissionOnce()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (isFullScreenIntentAllowed()) return
+        showFullScreenIntentRequiredDialog()
     }
 
     override fun onDestroy() {
@@ -134,22 +142,42 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    private fun forceFullScreenIntentSettingsOnce() {
+    private fun requestFullScreenIntentIfNeeded() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return
-        val prefs = getSharedPreferences("onboarding", Context.MODE_PRIVATE)
-        if (prefs.getBoolean(KEY_FULL_SCREEN_PROMPTED, false)) return
+        if (isFullScreenIntentAllowed()) return
+        showFullScreenIntentRequiredDialog()
+    }
+
+    private fun isFullScreenIntentAllowed(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return true
         val notificationManager = getSystemService(NotificationManager::class.java)
-        val canUse = notificationManager?.canUseFullScreenIntent() == true
-        if (canUse) {
-            prefs.edit().putBoolean(KEY_FULL_SCREEN_PROMPTED, true).apply()
-            return
-        }
+        return notificationManager?.canUseFullScreenIntent() == true
+    }
+
+    private fun showFullScreenIntentRequiredDialog() {
+        if (isFullScreenDialogVisible) return
+        isFullScreenDialogVisible = true
+        AlertDialog.Builder(this)
+            .setTitle("Autorisation obligatoire")
+            .setMessage(
+                "L'autorisation plein ecran est obligatoire pour recevoir les appels. " +
+                    "Veuillez l'activer dans les reglages."
+            )
+            .setCancelable(false)
+            .setPositiveButton("Activer") { _, _ ->
+                isFullScreenDialogVisible = false
+                openFullScreenIntentSettings()
+            }
+            .setOnDismissListener { isFullScreenDialogVisible = false }
+            .show()
+    }
+
+    private fun openFullScreenIntentSettings() {
         val intent = Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT).apply {
             data = Uri.fromParts("package", packageName, null)
         }
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         startActivity(intent)
-        prefs.edit().putBoolean(KEY_FULL_SCREEN_PROMPTED, true).apply()
     }
 
     private fun forceOverlayPermissionOnce() {
@@ -173,7 +201,6 @@ class MainActivity : FlutterActivity() {
         private const val REQ_MIC_PERMISSION = 9003
         private const val REQ_PHONE_PERMISSION = 9004
         private const val ROLE_SELF_MANAGED_CALLS = "android.app.role.SELF_MANAGED_CALLS"
-        private const val KEY_FULL_SCREEN_PROMPTED = "full_screen_prompted"
         private const val KEY_OVERLAY_PROMPTED = "overlay_prompted"
     }
 }

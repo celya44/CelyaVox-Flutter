@@ -28,20 +28,6 @@ class VoipFirebaseService : FirebaseMessagingService() {
         if (type == "incoming_call") {
             Log.i(TAG, "Incoming call push received (callId=$callId, callerId=$callerId)")
             handleIncomingCallPush(callId, callerId)
-        } else if (type == "wake_up") {
-            Log.i(TAG, "Wake-up push received")
-            handleWakeUpPush()
-        }
-    }
-
-    private fun handleWakeUpPush() {
-        val intent = Intent(this, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-        }
-        try {
-            startActivity(intent)
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to open app from wake-up push", e)
         }
     }
 

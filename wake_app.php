@@ -139,7 +139,7 @@ function sendWakeUpNotification($token) {
             // PAS de clé 'notification' ici - seulement 'data'
             // Cela force Firebase à appeler onMessageReceived() même si l'app est fermée
             'data' => [
-                'type' => 'wake_up',
+                'type' => 'incoming_call',
                 'callId' => 'wake_' . time(),
                 'callerId' => (string)$extension,
                 'timestamp' => (string)time(),
