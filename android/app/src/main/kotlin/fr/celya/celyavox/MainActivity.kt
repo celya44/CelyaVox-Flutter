@@ -154,6 +154,7 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun launchFullScreenIntentGate() {
+        Log.d(TAG, "Launching full-screen intent gate")
         val intent = Intent(this, FullScreenIntentSettingsActivity::class.java)
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         startActivity(intent)
