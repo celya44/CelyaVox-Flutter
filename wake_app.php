@@ -165,6 +165,7 @@ function sendWakeUpNotification($token) {
     ];
     
     $url = "https://fcm.googleapis.com/v1/projects/{$projectId}/messages:send";
+var_dump($url);
     
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_HTTPHEADER, [

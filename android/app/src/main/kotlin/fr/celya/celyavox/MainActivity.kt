@@ -1,5 +1,6 @@
 package fr.celya.celyavox
 
+import android.app.KeyguardManager
 import android.app.role.RoleManager
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -25,20 +26,17 @@ class MainActivity : FlutterActivity() {
     private var methodChannel: VoipMethodChannel? = null
     private var provisioningChannel: ProvisioningMethodChannel? = null
     private var isOverlayDialogVisible = false
+    private var keepOverLockscreenForCall = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (intent?.getBooleanExtra(EXTRA_FROM_ACCEPTED_CALL, false) == true) {
-            applyCallWindowFlags()
-        }
+        updateCallUnlockMode(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        if (intent.getBooleanExtra(EXTRA_FROM_ACCEPTED_CALL, false)) {
-            applyCallWindowFlags()
-        }
+        updateCallUnlockMode(intent)
         notifyAcceptedCallToFlutter(intent)
     }
     @Deprecated("Deprecated in Java")
@@ -72,6 +70,10 @@ class MainActivity : FlutterActivity() {
     override fun onResume() {
         super.onResume()
         Log.d(TAG, "onResume")
+        if (keepOverLockscreenForCall) {
+            applyCallWindowFlags()
+            dismissKeyguardIfPossible()
+        }
         if (!isFullScreenIntentAllowed()) {
             Log.d(TAG, "Full-screen intent not allowed; launching gate")
             launchFullScreenIntentGate()
@@ -207,6 +209,26 @@ class MainActivity : FlutterActivity() {
             setShowWhenLocked(true)
             setTurnScreenOn(true)
         }
+    }
+
+    private fun updateCallUnlockMode(sourceIntent: Intent?) {
+        val fromAcceptedCall = sourceIntent?.getBooleanExtra(EXTRA_FROM_ACCEPTED_CALL, false) == true
+        if (!fromAcceptedCall) return
+        keepOverLockscreenForCall = true
+        applyCallWindowFlags()
+        dismissKeyguardIfPossible()
+        sourceIntent?.removeExtra(EXTRA_FROM_ACCEPTED_CALL)
+        Log.i(TAG, "Call unlock mode enabled")
+    }
+
+    private fun dismissKeyguardIfPossible() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val keyguardManager = getSystemService(KeyguardManager::class.java)
+            keyguardManager?.requestDismissKeyguard(this, null)
+            return
+        }
+        @Suppress("DEPRECATION")
+        window.addFlags(WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD)
     }
 
     private fun notifyAcceptedCallToFlutter(sourceIntent: Intent?) {
