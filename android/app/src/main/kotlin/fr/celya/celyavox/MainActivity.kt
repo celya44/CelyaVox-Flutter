@@ -49,8 +49,7 @@ class MainActivity : FlutterActivity() {
         requestSelfManagedRoleIfNeeded()
         requestNotificationPermissionIfNeeded()
         requestMicrophonePermissionIfNeeded()
-        requestPhonePermissionIfNeeded()
-        requestCallPhonePermissionIfNeeded()
+        requestPhonePermissionsIfNeeded()
     }
 
     override fun onResume() {
@@ -112,25 +111,24 @@ class MainActivity : FlutterActivity() {
         )
     }
 
-    private fun requestPhonePermissionIfNeeded() {
-        val granted = checkSelfPermission(android.Manifest.permission.READ_PHONE_STATE) ==
+    private fun requestPhonePermissionsIfNeeded() {
+        val readGranted = checkSelfPermission(android.Manifest.permission.READ_PHONE_STATE) ==
             PackageManager.PERMISSION_GRANTED
-        if (granted) return
+        val callGranted = checkSelfPermission(android.Manifest.permission.CALL_PHONE) ==
+            PackageManager.PERMISSION_GRANTED
+        Log.i(TAG, "Phone permissions status before request: READ_PHONE_STATE=$readGranted CALL_PHONE=$callGranted")
+        if (readGranted && callGranted) {
+            Log.i(TAG, "Phone permissions already granted")
+            return
+        }
+        Log.i(TAG, "Requesting phone permissions: READ_PHONE_STATE + CALL_PHONE")
         ActivityCompat.requestPermissions(
             this,
-            arrayOf(android.Manifest.permission.READ_PHONE_STATE),
+            arrayOf(
+                android.Manifest.permission.READ_PHONE_STATE,
+                android.Manifest.permission.CALL_PHONE
+            ),
             REQ_PHONE_PERMISSION
-        )
-    }
-
-    private fun requestCallPhonePermissionIfNeeded() {
-        val granted = checkSelfPermission(android.Manifest.permission.CALL_PHONE) ==
-            PackageManager.PERMISSION_GRANTED
-        if (granted) return
-        ActivityCompat.requestPermissions(
-            this,
-            arrayOf(android.Manifest.permission.CALL_PHONE),
-            REQ_CALL_PHONE_PERMISSION
         )
     }
 
@@ -152,12 +150,17 @@ class MainActivity : FlutterActivity() {
             return
         }
         if (requestCode == REQ_PHONE_PERMISSION) {
-            val granted = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
-            if (granted) return
-        }
-        if (requestCode == REQ_CALL_PHONE_PERMISSION) {
-            val granted = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
-            if (granted) return
+            if (grantResults.isEmpty()) {
+                Log.w(TAG, "Phone permission result empty")
+                return
+            }
+            val resultsByPermission = permissions.indices.joinToString { index ->
+                val permission = permissions[index]
+                val granted = grantResults.getOrNull(index) == PackageManager.PERMISSION_GRANTED
+                "$permission=$granted"
+            }
+            Log.i(TAG, "Phone permission result: $resultsByPermission")
+            return
         }
     }
 
@@ -213,7 +216,6 @@ class MainActivity : FlutterActivity() {
         private const val REQ_NOTIFICATION_PERMISSION = 9002
         private const val REQ_MIC_PERMISSION = 9003
         private const val REQ_PHONE_PERMISSION = 9004
-        private const val REQ_CALL_PHONE_PERMISSION = 9005
         private const val ROLE_SELF_MANAGED_CALLS = "android.app.role.SELF_MANAGED_CALLS"
     }
 }
