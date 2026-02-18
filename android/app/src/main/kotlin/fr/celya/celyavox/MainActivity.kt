@@ -1,7 +1,9 @@
 package fr.celya.celyavox
 
 import android.app.role.RoleManager
+import android.content.BroadcastReceiver
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.app.NotificationManager
@@ -26,10 +28,19 @@ class MainActivity : FlutterActivity() {
     private var provisioningChannel: ProvisioningMethodChannel? = null
     private var isOverlayDialogVisible = false
     private var keepOverLockscreenForCall = false
+    private var wasLockscreenCallSession = false
+    private val callEndedReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action != VoipEngine.ACTION_CALL_ENDED) return
+            Log.i(TAG, "Received ACTION_CALL_ENDED")
+            onCallEndedFromNative()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.i(TAG, "onCreate keepOverLockscreenForCall=$keepOverLockscreenForCall")
+        registerReceiver(callEndedReceiver, IntentFilter(VoipEngine.ACTION_CALL_ENDED))
         updateCallUnlockMode(intent)
     }
 
@@ -83,6 +94,7 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onDestroy() {
+        unregisterReceiver(callEndedReceiver)
         provisioningChannel?.dispose()
         methodChannel?.dispose()
         voipEngine?.dispose()
@@ -215,9 +227,38 @@ class MainActivity : FlutterActivity() {
         val fromAcceptedCall = sourceIntent?.getBooleanExtra(EXTRA_FROM_ACCEPTED_CALL, false) == true
         if (!fromAcceptedCall) return
         keepOverLockscreenForCall = true
+        wasLockscreenCallSession = true
         applyCallWindowFlags()
         sourceIntent?.removeExtra(EXTRA_FROM_ACCEPTED_CALL)
         Log.i(TAG, "Call unlock mode enabled")
+    }
+
+    private fun onCallEndedFromNative() {
+        if (!wasLockscreenCallSession) {
+            Log.i(TAG, "Call ended with no lockscreen session; keeping app foreground")
+            return
+        }
+        keepOverLockscreenForCall = false
+        wasLockscreenCallSession = false
+        clearCallWindowFlags()
+        Log.i(TAG, "Call ended from lockscreen session; clearing flags and finishing task")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            finishAndRemoveTask()
+        } else {
+            finish()
+        }
+    }
+
+    private fun clearCallWindowFlags() {
+        window.clearFlags(
+            WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
+                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(false)
+            setTurnScreenOn(false)
+        }
     }
 
     private fun notifyAcceptedCallToFlutter(sourceIntent: Intent?) {

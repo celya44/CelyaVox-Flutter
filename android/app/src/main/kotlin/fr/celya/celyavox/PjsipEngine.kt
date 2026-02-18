@@ -88,8 +88,20 @@ class PjsipEngine private constructor() {
 
     @Synchronized
     fun acceptCall(callId: String): Boolean {
-        if (!initialized.get()) return false
-        return nativeAcceptCall(callId)
+        val ready = initialized.get()
+        Log.i(TAG, "acceptCall requested callId=$callId initialized=$ready")
+        if (!ready) {
+            Log.w(TAG, "acceptCall ignored: engine not initialized")
+            return false
+        }
+        val ok = try {
+            nativeAcceptCall(callId)
+        } catch (t: Throwable) {
+            Log.e(TAG, "nativeAcceptCall failed for callId=$callId", t)
+            false
+        }
+        Log.i(TAG, "acceptCall result callId=$callId ok=$ok")
+        return ok
     }
 
     @Synchronized

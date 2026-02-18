@@ -76,7 +76,10 @@ class VoipConnectionService : ConnectionService() {
     private fun createManagedConnection(callId: String?, callerId: String?, incoming: Boolean): VoipConnection {
         return object : VoipConnection(applicationContext, callId = callId, callerId = callerId) {
             override fun onAnswer() {
-                engine.acceptCall(callId ?: "")
+                val id = callId ?: ""
+                Log.i(TAG, "ConnectionService onAnswer callId=$id")
+                val ok = engine.acceptCall(id)
+                Log.i(TAG, "ConnectionService onAnswer acceptCall result callId=$id ok=$ok")
                 super.onAnswer()
             }
 

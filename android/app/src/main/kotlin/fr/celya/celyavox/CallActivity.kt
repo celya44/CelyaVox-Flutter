@@ -121,7 +121,10 @@ class CallActivity : AppCompatActivity() {
                 val callId = currentCallId
                 if (callId.isNotEmpty()) {
                     Log.i(TAG, "Accept clicked, accepting callId=$callId")
-                    PjsipEngine.instance.acceptCall(callId)
+                    val ok = PjsipEngine.instance.acceptCall(callId)
+                    Log.i(TAG, "Accept action result callId=$callId ok=$ok")
+                } else {
+                    Log.w(TAG, "Accept clicked with empty callId")
                 }
                 Log.i(TAG, "Launching MainActivity after answer")
                 val appIntent = Intent(this@CallActivity, MainActivity::class.java).apply {

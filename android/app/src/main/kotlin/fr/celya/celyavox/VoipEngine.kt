@@ -88,7 +88,9 @@ class VoipEngine(
     }
 
     fun acceptCall(callId: String) {
-        sipEngine.acceptCall(callId)
+        Log.i(TAG, "VoipEngine.acceptCall callId=$callId")
+        val ok = sipEngine.acceptCall(callId)
+        Log.i(TAG, "VoipEngine.acceptCall result callId=$callId ok=$ok")
     }
 
     fun refreshAudio(): Boolean {
@@ -334,9 +336,11 @@ class VoipEngine(
 
     fun callConnected(callId: String) {
         if (eventSink == null) {
+            Log.w(TAG, "call_connected queued (no Flutter listener) callId=$callId")
             pendingConnectedCallId = callId
             return
         }
+        Log.i(TAG, "Emitting call_connected to Flutter callId=$callId")
         emit(
             mapOf(
                 "type" to "call_connected",
@@ -346,6 +350,14 @@ class VoipEngine(
     }
 
     fun callEnded(callId: String, reason: String? = null) {
+        appContext?.let { ctx ->
+            try {
+                ctx.sendBroadcast(Intent(ACTION_CALL_ENDED))
+                Log.i(TAG, "Broadcasted ACTION_CALL_ENDED")
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to broadcast ACTION_CALL_ENDED", e)
+            }
+        }
         emit(
             mapOf(
                 "type" to "call_ended",
@@ -389,6 +401,7 @@ class VoipEngine(
         }
         val pendingConnected = pendingConnectedCallId
         if (!pendingConnected.isNullOrBlank()) {
+            Log.i(TAG, "Replaying pending call_connected to Flutter callId=$pendingConnected")
             emit(
                 mapOf(
                     "type" to "call_connected",
@@ -405,5 +418,6 @@ class VoipEngine(
 
     companion object {
         private const val TAG = "VoipEngine"
+        const val ACTION_CALL_ENDED = "fr.celya.celyavox.ACTION_CALL_ENDED"
     }
 }
