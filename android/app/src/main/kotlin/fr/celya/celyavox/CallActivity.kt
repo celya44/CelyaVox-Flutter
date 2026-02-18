@@ -75,6 +75,12 @@ class CallActivity : AppCompatActivity() {
                 if (callId.isNotEmpty()) {
                     PjsipEngine.instance.acceptCall(callId)
                 }
+                val appIntent = Intent(this@CallActivity, MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP
+                }
+                startActivity(appIntent)
                 finish()
             }
         }

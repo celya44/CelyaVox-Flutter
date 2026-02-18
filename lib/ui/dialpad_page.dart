@@ -24,6 +24,7 @@ class _DialpadPageState extends State<DialpadPage> {
   final TextEditingController _controller = TextEditingController();
   bool _isCalling = false;
   bool _isRegistered = false;
+  bool _isOpeningInCall = false;
   String? _username;
   StreamSubscription<VoipEvent>? _eventsSub;
 
@@ -73,6 +74,20 @@ class _DialpadPageState extends State<DialpadPage> {
       if (event is RegistrationEvent) {
         final ok = event.statusText.contains('200');
         if (mounted) setState(() => _isRegistered = ok);
+      } else if (event is CallConnectedEvent) {
+        if (!mounted || _isOpeningInCall) return;
+        if (event.callId.isEmpty) return;
+        _isOpeningInCall = true;
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => InCallPage(
+              engine: widget.engine,
+              callId: event.callId,
+            ),
+          ),
+        ).then((_) {
+          _isOpeningInCall = false;
+        });
       } else if (event is IncomingCallEvent) {
         if (!mounted) return;
         Navigator.of(context).push(
