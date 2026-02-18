@@ -279,7 +279,7 @@ class VoipEngine(
                 if (ctx != null) {
                     val ok = VoipConnectionService.startIncomingCall(ctx, message, null)
                     if (!ok) {
-                        if (isAppInForeground(ctx)) {
+                        if (isAppInForeground(ctx) && !CallActivity.isVisible) {
                             Log.i(TAG, "App in foreground; routing incoming call to Flutter UI")
                             incomingCall(message, null)
                             return
