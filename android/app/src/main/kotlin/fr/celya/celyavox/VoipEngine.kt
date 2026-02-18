@@ -1,5 +1,6 @@
 package fr.celya.celyavox
 
+import android.app.ActivityManager
 import android.content.Context
 import android.media.AudioDeviceCallback
 import android.media.AudioManager
@@ -278,6 +279,16 @@ class VoipEngine(
                 if (ctx != null) {
                     val ok = VoipConnectionService.startIncomingCall(ctx, message, null)
                     if (!ok) {
+                        if (isAppInForeground(ctx)) {
+                            Log.i(TAG, "App in foreground; routing incoming call to Flutter UI")
+                            incomingCall(message, null)
+                            return
+                        }
+                        val now = System.currentTimeMillis()
+                        if (now - CallActivity.lastLaunchAtMs < 5000L) {
+                            Log.i(TAG, "Recent CallActivity launch detected; skip VoipEngine relaunch")
+                            return
+                        }
                         if (CallActivity.isVisible) {
                             Log.i(TAG, "CallActivity already visible for callId=${CallActivity.visibleCallId}; skip relaunch")
                             return
@@ -301,6 +312,14 @@ class VoipEngine(
             }
             else -> emit(mapOf("type" to type, "message" to message))
         }
+    }
+
+    private fun isAppInForeground(context: Context): Boolean {
+        val activityManager = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        val running = activityManager.runningAppProcesses ?: return false
+        val current = running.firstOrNull { it.processName == context.packageName } ?: return false
+        return current.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND ||
+            current.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE
     }
 
     fun incomingCall(callId: String, callerId: String?) {

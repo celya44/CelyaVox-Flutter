@@ -29,7 +29,6 @@ class CallActivity : AppCompatActivity() {
     private var subtitleView: TextView? = null
     private var acceptButton: Button? = null
     private var declineButton: Button? = null
-    private var isInCallMode = false
     private var currentCallId: String = ""
     private var currentCallerId: String = ""
 
@@ -37,6 +36,7 @@ class CallActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         currentCallId = intent?.getStringExtra(EXTRA_CALL_ID).orEmpty()
         currentCallerId = intent?.getStringExtra(EXTRA_CALLER_ID).orEmpty()
+        lastLaunchAtMs = System.currentTimeMillis()
         Log.i(TAG, "onCreate callId=$currentCallId")
         applyLockScreenFlags()
         setContentView(buildContentView())
@@ -55,7 +55,6 @@ class CallActivity : AppCompatActivity() {
         Log.i(TAG, "onNewIntent switching callId=$nextCallId")
         currentCallId = nextCallId
         currentCallerId = nextCallerId
-        isInCallMode = false
         acceptButton?.visibility = View.VISIBLE
         declineButton?.text = "Raccrocher"
         titleView?.text = if (currentCallerId.isNotEmpty()) currentCallerId else "Appel entrant"
@@ -124,12 +123,7 @@ class CallActivity : AppCompatActivity() {
                     Log.i(TAG, "Accept clicked, accepting callId=$callId")
                     PjsipEngine.instance.acceptCall(callId)
                 }
-                if (isDeviceLocked()) {
-                    Log.i(TAG, "Device still locked after answer; staying in CallActivity in-call mode")
-                    enterInCallMode(callId)
-                    return@setOnClickListener
-                }
-                Log.i(TAG, "Device unlocked after answer; launching MainActivity")
+                Log.i(TAG, "Launching MainActivity after answer")
                 val appIntent = Intent(this@CallActivity, MainActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or
                         Intent.FLAG_ACTIVITY_CLEAR_TOP or
@@ -161,16 +155,6 @@ class CallActivity : AppCompatActivity() {
         root.addView(accept)
         root.addView(decline)
         return root
-    }
-
-    private fun enterInCallMode(callId: String) {
-        if (isInCallMode) return
-        isInCallMode = true
-        stopRinging()
-        titleView?.text = "Appel en cours"
-        subtitleView?.text = if (callId.isNotEmpty()) "Call ID: $callId" else ""
-        acceptButton?.visibility = View.GONE
-        declineButton?.text = "Raccrocher"
     }
 
     private fun startRinging() {
@@ -225,19 +209,14 @@ class CallActivity : AppCompatActivity() {
         vibrator = null
     }
 
-    private fun isDeviceLocked(): Boolean {
-        val keyguardManager = getSystemService(android.app.KeyguardManager::class.java)
-        val locked = keyguardManager?.isKeyguardLocked == true
-        Log.d(TAG, "isDeviceLocked=$locked")
-        return locked
-    }
-
     companion object {
         private const val TAG = "CallActivity"
         @Volatile
         var isVisible: Boolean = false
         @Volatile
         var visibleCallId: String? = null
+        @Volatile
+        var lastLaunchAtMs: Long = 0L
         const val EXTRA_CALL_ID = "callId"
         const val EXTRA_CALLER_ID = "callerId"
     }
