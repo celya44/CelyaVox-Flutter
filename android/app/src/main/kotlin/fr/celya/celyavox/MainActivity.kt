@@ -12,6 +12,7 @@ import android.provider.Settings
 import android.util.Log
 import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
+import java.util.ArrayList
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import com.google.firebase.FirebaseApp
@@ -47,9 +48,7 @@ class MainActivity : FlutterActivity() {
         provisioningChannel = ProvisioningMethodChannel(this, flutterEngine.dartExecutor.binaryMessenger)
         engine.initialize(this)
         requestSelfManagedRoleIfNeeded()
-        requestNotificationPermissionIfNeeded()
-        requestMicrophonePermissionIfNeeded()
-        requestPhonePermissionsIfNeeded()
+        requestStartupPermissionsIfNeeded()
     }
 
     override fun onResume() {
@@ -88,47 +87,51 @@ class MainActivity : FlutterActivity() {
         startActivityForResult(intent, REQ_SELF_MANAGED_ROLE)
     }
 
-    private fun requestNotificationPermissionIfNeeded() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
-        val granted = checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) ==
-            PackageManager.PERMISSION_GRANTED
-        if (granted) return
-        ActivityCompat.requestPermissions(
-            this,
-            arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),
-            REQ_NOTIFICATION_PERMISSION
-        )
-    }
+    private fun requestStartupPermissionsIfNeeded() {
+        val missingPermissions = ArrayList<String>()
 
-    private fun requestMicrophonePermissionIfNeeded() {
-        val granted = checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) ==
-            PackageManager.PERMISSION_GRANTED
-        if (granted) return
-        ActivityCompat.requestPermissions(
-            this,
-            arrayOf(android.Manifest.permission.RECORD_AUDIO),
-            REQ_MIC_PERMISSION
-        )
-    }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            val notificationsGranted =
+                checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) ==
+                    PackageManager.PERMISSION_GRANTED
+            if (!notificationsGranted) {
+                missingPermissions.add(android.Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
 
-    private fun requestPhonePermissionsIfNeeded() {
-        val readGranted = checkSelfPermission(android.Manifest.permission.READ_PHONE_STATE) ==
+        val micGranted = checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) ==
             PackageManager.PERMISSION_GRANTED
-        val callGranted = checkSelfPermission(android.Manifest.permission.CALL_PHONE) ==
+        if (!micGranted) {
+            missingPermissions.add(android.Manifest.permission.RECORD_AUDIO)
+        }
+
+        val readPhoneGranted = checkSelfPermission(android.Manifest.permission.READ_PHONE_STATE) ==
             PackageManager.PERMISSION_GRANTED
-        Log.i(TAG, "Phone permissions status before request: READ_PHONE_STATE=$readGranted CALL_PHONE=$callGranted")
-        if (readGranted && callGranted) {
-            Log.i(TAG, "Phone permissions already granted")
+        if (!readPhoneGranted) {
+            missingPermissions.add(android.Manifest.permission.READ_PHONE_STATE)
+        }
+
+        val callPhoneGranted = checkSelfPermission(android.Manifest.permission.CALL_PHONE) ==
+            PackageManager.PERMISSION_GRANTED
+        if (!callPhoneGranted) {
+            missingPermissions.add(android.Manifest.permission.CALL_PHONE)
+        }
+
+        Log.i(
+            TAG,
+            "Startup permissions status: POST_NOTIFICATIONS=${Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED} RECORD_AUDIO=$micGranted READ_PHONE_STATE=$readPhoneGranted CALL_PHONE=$callPhoneGranted"
+        )
+
+        if (missingPermissions.isEmpty()) {
+            Log.i(TAG, "All startup permissions already granted")
             return
         }
-        Log.i(TAG, "Requesting phone permissions: READ_PHONE_STATE + CALL_PHONE")
+
+        Log.i(TAG, "Requesting startup permissions: ${missingPermissions.joinToString()}")
         ActivityCompat.requestPermissions(
             this,
-            arrayOf(
-                android.Manifest.permission.READ_PHONE_STATE,
-                android.Manifest.permission.CALL_PHONE
-            ),
-            REQ_PHONE_PERMISSION
+            missingPermissions.toTypedArray(),
+            REQ_STARTUP_PERMISSIONS
         )
     }
 
@@ -139,19 +142,9 @@ class MainActivity : FlutterActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == REQ_NOTIFICATION_PERMISSION) {
-            val granted = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
-            if (granted) return
-            return
-        }
-        if (requestCode == REQ_MIC_PERMISSION) {
-            val granted = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
-            if (granted) return
-            return
-        }
-        if (requestCode == REQ_PHONE_PERMISSION) {
+        if (requestCode == REQ_STARTUP_PERMISSIONS) {
             if (grantResults.isEmpty()) {
-                Log.w(TAG, "Phone permission result empty")
+                Log.w(TAG, "Startup permission result empty")
                 return
             }
             val resultsByPermission = permissions.indices.joinToString { index ->
@@ -159,7 +152,7 @@ class MainActivity : FlutterActivity() {
                 val granted = grantResults.getOrNull(index) == PackageManager.PERMISSION_GRANTED
                 "$permission=$granted"
             }
-            Log.i(TAG, "Phone permission result: $resultsByPermission")
+            Log.i(TAG, "Startup permission result: $resultsByPermission")
             return
         }
     }
@@ -213,9 +206,7 @@ class MainActivity : FlutterActivity() {
     companion object {
         private const val TAG = "MainActivity"
         private const val REQ_SELF_MANAGED_ROLE = 9001
-        private const val REQ_NOTIFICATION_PERMISSION = 9002
-        private const val REQ_MIC_PERMISSION = 9003
-        private const val REQ_PHONE_PERMISSION = 9004
+        private const val REQ_STARTUP_PERMISSIONS = 9002
         private const val ROLE_SELF_MANAGED_CALLS = "android.app.role.SELF_MANAGED_CALLS"
     }
 }
