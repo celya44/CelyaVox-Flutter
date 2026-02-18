@@ -11,6 +11,7 @@ import android.media.RingtoneManager
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.util.Log
 import android.view.View
 import android.view.WindowManager
 import android.widget.Button
@@ -25,9 +26,15 @@ class CallActivity : AppCompatActivity() {
 
     private var ringtone: Ringtone? = null
     private var vibrator: Vibrator? = null
+    private var titleView: TextView? = null
+    private var subtitleView: TextView? = null
+    private var acceptButton: Button? = null
+    private var declineButton: Button? = null
+    private var isInCallMode = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Log.i(TAG, "onCreate callId=${intent?.getStringExtra(EXTRA_CALL_ID).orEmpty()}")
         applyLockScreenFlags()
         setContentView(buildContentView())
         startRinging()
@@ -64,20 +71,29 @@ class CallActivity : AppCompatActivity() {
             text = if (callerId.isNotEmpty()) callerId else "Appel entrant"
             textSize = 22f
         }
+        titleView = title
 
         val subtitle = TextView(this).apply {
             text = if (callId.isNotEmpty()) "Call ID: $callId" else ""
             textSize = 14f
         }
+        subtitleView = subtitle
 
         val accept = Button(this).apply {
             text = "Répondre"
             setOnClickListener {
                 val callId = intent?.getStringExtra(EXTRA_CALL_ID).orEmpty()
                 if (callId.isNotEmpty()) {
+                    Log.i(TAG, "Accept clicked, accepting callId=$callId")
                     PjsipEngine.instance.acceptCall(callId)
                 }
                 dismissKeyguardIfPossible()
+                if (isDeviceLocked()) {
+                    Log.i(TAG, "Device still locked after answer; staying in CallActivity in-call mode")
+                    enterInCallMode(callId)
+                    return@setOnClickListener
+                }
+                Log.i(TAG, "Device unlocked after answer; launching MainActivity")
                 val appIntent = Intent(this@CallActivity, MainActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or
                         Intent.FLAG_ACTIVITY_CLEAR_TOP or
@@ -89,23 +105,36 @@ class CallActivity : AppCompatActivity() {
                 finish()
             }
         }
+        acceptButton = accept
 
         val decline = Button(this).apply {
             text = "Raccrocher"
             setOnClickListener {
                 val callId = intent?.getStringExtra(EXTRA_CALL_ID).orEmpty()
                 if (callId.isNotEmpty()) {
+                    Log.i(TAG, "Hangup clicked, ending callId=$callId")
                     PjsipEngine.instance.hangupCall(callId)
                 }
                 finish()
             }
         }
+        declineButton = decline
 
         root.addView(title)
         root.addView(subtitle)
         root.addView(accept)
         root.addView(decline)
         return root
+    }
+
+    private fun enterInCallMode(callId: String) {
+        if (isInCallMode) return
+        isInCallMode = true
+        stopRinging()
+        titleView?.text = "Appel en cours"
+        subtitleView?.text = if (callId.isNotEmpty()) "Call ID: $callId" else ""
+        acceptButton?.visibility = View.GONE
+        declineButton?.text = "Raccrocher"
     }
 
     private fun startRinging() {
@@ -163,6 +192,7 @@ class CallActivity : AppCompatActivity() {
     private fun dismissKeyguardIfPossible() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val keyguardManager = getSystemService(KeyguardManager::class.java)
+            Log.d(TAG, "Requesting dismiss keyguard")
             keyguardManager?.requestDismissKeyguard(this, null)
             return
         }
@@ -170,7 +200,15 @@ class CallActivity : AppCompatActivity() {
         window.addFlags(WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD)
     }
 
+    private fun isDeviceLocked(): Boolean {
+        val keyguardManager = getSystemService(KeyguardManager::class.java)
+        val locked = keyguardManager?.isKeyguardLocked == true
+        Log.d(TAG, "isDeviceLocked=$locked")
+        return locked
+    }
+
     companion object {
+        private const val TAG = "CallActivity"
         const val EXTRA_CALL_ID = "callId"
         const val EXTRA_CALLER_ID = "callerId"
     }

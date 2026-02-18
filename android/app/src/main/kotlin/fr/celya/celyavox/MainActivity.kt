@@ -30,12 +30,14 @@ class MainActivity : FlutterActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Log.i(TAG, "onCreate keepOverLockscreenForCall=$keepOverLockscreenForCall")
         updateCallUnlockMode(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        Log.i(TAG, "onNewIntent fromAcceptedCall=${intent.getBooleanExtra(EXTRA_FROM_ACCEPTED_CALL, false)}")
         updateCallUnlockMode(intent)
         notifyAcceptedCallToFlutter(intent)
     }
@@ -69,7 +71,7 @@ class MainActivity : FlutterActivity() {
 
     override fun onResume() {
         super.onResume()
-        Log.d(TAG, "onResume")
+        Log.d(TAG, "onResume keepOverLockscreenForCall=$keepOverLockscreenForCall")
         if (keepOverLockscreenForCall) {
             applyCallWindowFlags()
             dismissKeyguardIfPossible()
