@@ -1,5 +1,6 @@
 package fr.celya.celyavox
 
+import android.app.KeyguardManager
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -76,10 +77,12 @@ class CallActivity : AppCompatActivity() {
                 if (callId.isNotEmpty()) {
                     PjsipEngine.instance.acceptCall(callId)
                 }
+                dismissKeyguardIfPossible()
                 val appIntent = Intent(this@CallActivity, MainActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK or
                         Intent.FLAG_ACTIVITY_CLEAR_TOP or
                         Intent.FLAG_ACTIVITY_SINGLE_TOP
+                    putExtra(MainActivity.EXTRA_FROM_ACCEPTED_CALL, true)
                 }
                 startActivity(appIntent)
                 finish()
@@ -154,6 +157,16 @@ class CallActivity : AppCompatActivity() {
         ringtone = null
         vibrator?.cancel()
         vibrator = null
+    }
+
+    private fun dismissKeyguardIfPossible() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val keyguardManager = getSystemService(KeyguardManager::class.java)
+            keyguardManager?.requestDismissKeyguard(this, null)
+            return
+        }
+        @Suppress("DEPRECATION")
+        window.addFlags(WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD)
     }
 
     companion object {

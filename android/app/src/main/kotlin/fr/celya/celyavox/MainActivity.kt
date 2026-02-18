@@ -10,6 +10,7 @@ import android.os.Bundle
 import android.content.Context
 import android.provider.Settings
 import android.util.Log
+import android.view.WindowManager
 import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import java.util.ArrayList
@@ -24,6 +25,21 @@ class MainActivity : FlutterActivity() {
     private var methodChannel: VoipMethodChannel? = null
     private var provisioningChannel: ProvisioningMethodChannel? = null
     private var isOverlayDialogVisible = false
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        if (intent?.getBooleanExtra(EXTRA_FROM_ACCEPTED_CALL, false) == true) {
+            applyCallWindowFlags()
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (intent.getBooleanExtra(EXTRA_FROM_ACCEPTED_CALL, false)) {
+            applyCallWindowFlags()
+        }
+    }
     @Deprecated("Deprecated in Java")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
@@ -179,6 +195,18 @@ class MainActivity : FlutterActivity() {
         startActivity(intent)
     }
 
+    private fun applyCallWindowFlags() {
+        window.addFlags(
+            WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or
+                WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
+                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+        )
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            setShowWhenLocked(true)
+            setTurnScreenOn(true)
+        }
+    }
+
     private fun requestOverlayPermissionIfNeeded() {
         val canDraw = Settings.canDrawOverlays(this)
         if (canDraw) return
@@ -208,5 +236,6 @@ class MainActivity : FlutterActivity() {
         private const val REQ_SELF_MANAGED_ROLE = 9001
         private const val REQ_STARTUP_PERMISSIONS = 9002
         private const val ROLE_SELF_MANAGED_CALLS = "android.app.role.SELF_MANAGED_CALLS"
+        const val EXTRA_FROM_ACCEPTED_CALL = "fromAcceptedCall"
     }
 }

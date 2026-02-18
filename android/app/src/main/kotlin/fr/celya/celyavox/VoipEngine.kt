@@ -33,6 +33,7 @@ class VoipEngine(
     private var bluetoothAvailable: Boolean = false
     private var fcmReceiver: BroadcastReceiver? = null
     private var pendingFcmToken: String? = null
+    private var pendingConnectedCallId: String? = null
 
     init {
         messenger?.let { bindEventChannel(it) }
@@ -309,6 +310,10 @@ class VoipEngine(
     }
 
     fun callConnected(callId: String) {
+        if (eventSink == null) {
+            pendingConnectedCallId = callId
+            return
+        }
         emit(
             mapOf(
                 "type" to "call_connected",
@@ -358,6 +363,16 @@ class VoipEngine(
                 )
             )
             pendingFcmToken = null
+        }
+        val pendingConnected = pendingConnectedCallId
+        if (!pendingConnected.isNullOrBlank()) {
+            emit(
+                mapOf(
+                    "type" to "call_connected",
+                    "callId" to pendingConnected,
+                )
+            )
+            pendingConnectedCallId = null
         }
     }
 
