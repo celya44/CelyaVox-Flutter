@@ -39,6 +39,7 @@ class MainActivity : FlutterActivity() {
         if (intent.getBooleanExtra(EXTRA_FROM_ACCEPTED_CALL, false)) {
             applyCallWindowFlags()
         }
+        notifyAcceptedCallToFlutter(intent)
     }
     @Deprecated("Deprecated in Java")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
@@ -65,6 +66,7 @@ class MainActivity : FlutterActivity() {
         engine.initialize(this)
         requestSelfManagedRoleIfNeeded()
         requestStartupPermissionsIfNeeded()
+        notifyAcceptedCallToFlutter(intent)
     }
 
     override fun onResume() {
@@ -207,6 +209,14 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    private fun notifyAcceptedCallToFlutter(sourceIntent: Intent?) {
+        val callId = sourceIntent?.getStringExtra(EXTRA_ACCEPTED_CALL_ID)?.trim().orEmpty()
+        if (callId.isEmpty()) return
+        Log.i(TAG, "Accepted call detected in MainActivity, forwarding call_connected for callId=$callId")
+        voipEngine?.callConnected(callId)
+        sourceIntent?.removeExtra(EXTRA_ACCEPTED_CALL_ID)
+    }
+
     private fun requestOverlayPermissionIfNeeded() {
         val canDraw = Settings.canDrawOverlays(this)
         if (canDraw) return
@@ -237,5 +247,6 @@ class MainActivity : FlutterActivity() {
         private const val REQ_STARTUP_PERMISSIONS = 9002
         private const val ROLE_SELF_MANAGED_CALLS = "android.app.role.SELF_MANAGED_CALLS"
         const val EXTRA_FROM_ACCEPTED_CALL = "fromAcceptedCall"
+        const val EXTRA_ACCEPTED_CALL_ID = "acceptedCallId"
     }
 }

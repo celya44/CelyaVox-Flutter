@@ -83,6 +83,7 @@ class CallActivity : AppCompatActivity() {
                         Intent.FLAG_ACTIVITY_CLEAR_TOP or
                         Intent.FLAG_ACTIVITY_SINGLE_TOP
                     putExtra(MainActivity.EXTRA_FROM_ACCEPTED_CALL, true)
+                    putExtra(MainActivity.EXTRA_ACCEPTED_CALL_ID, callId)
                 }
                 startActivity(appIntent)
                 finish()
