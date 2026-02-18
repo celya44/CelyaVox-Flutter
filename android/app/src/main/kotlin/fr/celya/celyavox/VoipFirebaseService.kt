@@ -51,6 +51,10 @@ class VoipFirebaseService : FirebaseMessagingService() {
     }
 
     private fun openIncomingCallActivity(callId: String, callerId: String) {
+        if (CallActivity.isVisible) {
+            Log.i(TAG, "CallActivity already visible for callId=${CallActivity.visibleCallId}; skip FCM relaunch")
+            return
+        }
         val intent = Intent(this, CallActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or
                 Intent.FLAG_ACTIVITY_CLEAR_TOP or

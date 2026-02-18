@@ -1,6 +1,5 @@
 package fr.celya.celyavox
 
-import android.app.KeyguardManager
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
@@ -31,13 +30,51 @@ class CallActivity : AppCompatActivity() {
     private var acceptButton: Button? = null
     private var declineButton: Button? = null
     private var isInCallMode = false
+    private var currentCallId: String = ""
+    private var currentCallerId: String = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Log.i(TAG, "onCreate callId=${intent?.getStringExtra(EXTRA_CALL_ID).orEmpty()}")
+        currentCallId = intent?.getStringExtra(EXTRA_CALL_ID).orEmpty()
+        currentCallerId = intent?.getStringExtra(EXTRA_CALLER_ID).orEmpty()
+        Log.i(TAG, "onCreate callId=$currentCallId")
         applyLockScreenFlags()
         setContentView(buildContentView())
         startRinging()
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        val nextCallId = intent.getStringExtra(EXTRA_CALL_ID).orEmpty()
+        val nextCallerId = intent.getStringExtra(EXTRA_CALLER_ID).orEmpty()
+        if (nextCallId.isNotEmpty() && nextCallId == currentCallId) {
+            Log.i(TAG, "onNewIntent duplicate callId=$nextCallId ignored")
+            return
+        }
+        Log.i(TAG, "onNewIntent switching callId=$nextCallId")
+        currentCallId = nextCallId
+        currentCallerId = nextCallerId
+        isInCallMode = false
+        acceptButton?.visibility = View.VISIBLE
+        declineButton?.text = "Raccrocher"
+        titleView?.text = if (currentCallerId.isNotEmpty()) currentCallerId else "Appel entrant"
+        subtitleView?.text = if (currentCallId.isNotEmpty()) "Call ID: $currentCallId" else ""
+        startRinging()
+    }
+
+    override fun onStart() {
+        super.onStart()
+        isVisible = true
+        visibleCallId = currentCallId
+        Log.d(TAG, "onStart visibleCallId=$visibleCallId")
+    }
+
+    override fun onStop() {
+        super.onStop()
+        isVisible = false
+        visibleCallId = null
+        Log.d(TAG, "onStop")
     }
 
     override fun onDestroy() {
@@ -59,8 +96,8 @@ class CallActivity : AppCompatActivity() {
     }
 
     private fun buildContentView(): View {
-        val callId = intent?.getStringExtra(EXTRA_CALL_ID).orEmpty()
-        val callerId = intent?.getStringExtra(EXTRA_CALLER_ID).orEmpty()
+        val callId = currentCallId
+        val callerId = currentCallerId
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -82,12 +119,11 @@ class CallActivity : AppCompatActivity() {
         val accept = Button(this).apply {
             text = "Répondre"
             setOnClickListener {
-                val callId = intent?.getStringExtra(EXTRA_CALL_ID).orEmpty()
+                val callId = currentCallId
                 if (callId.isNotEmpty()) {
                     Log.i(TAG, "Accept clicked, accepting callId=$callId")
                     PjsipEngine.instance.acceptCall(callId)
                 }
-                dismissKeyguardIfPossible()
                 if (isDeviceLocked()) {
                     Log.i(TAG, "Device still locked after answer; staying in CallActivity in-call mode")
                     enterInCallMode(callId)
@@ -110,7 +146,7 @@ class CallActivity : AppCompatActivity() {
         val decline = Button(this).apply {
             text = "Raccrocher"
             setOnClickListener {
-                val callId = intent?.getStringExtra(EXTRA_CALL_ID).orEmpty()
+                val callId = currentCallId
                 if (callId.isNotEmpty()) {
                     Log.i(TAG, "Hangup clicked, ending callId=$callId")
                     PjsipEngine.instance.hangupCall(callId)
@@ -189,19 +225,8 @@ class CallActivity : AppCompatActivity() {
         vibrator = null
     }
 
-    private fun dismissKeyguardIfPossible() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val keyguardManager = getSystemService(KeyguardManager::class.java)
-            Log.d(TAG, "Requesting dismiss keyguard")
-            keyguardManager?.requestDismissKeyguard(this, null)
-            return
-        }
-        @Suppress("DEPRECATION")
-        window.addFlags(WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD)
-    }
-
     private fun isDeviceLocked(): Boolean {
-        val keyguardManager = getSystemService(KeyguardManager::class.java)
+        val keyguardManager = getSystemService(android.app.KeyguardManager::class.java)
         val locked = keyguardManager?.isKeyguardLocked == true
         Log.d(TAG, "isDeviceLocked=$locked")
         return locked
@@ -209,6 +234,10 @@ class CallActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "CallActivity"
+        @Volatile
+        var isVisible: Boolean = false
+        @Volatile
+        var visibleCallId: String? = null
         const val EXTRA_CALL_ID = "callId"
         const val EXTRA_CALLER_ID = "callerId"
     }

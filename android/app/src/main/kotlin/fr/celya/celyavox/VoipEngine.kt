@@ -278,6 +278,10 @@ class VoipEngine(
                 if (ctx != null) {
                     val ok = VoipConnectionService.startIncomingCall(ctx, message, null)
                     if (!ok) {
+                        if (CallActivity.isVisible) {
+                            Log.i(TAG, "CallActivity already visible for callId=${CallActivity.visibleCallId}; skip relaunch")
+                            return
+                        }
                         val launched = startIncomingCallActivity(ctx, message, null)
                         if (!launched) {
                             incomingCall(message, null)
