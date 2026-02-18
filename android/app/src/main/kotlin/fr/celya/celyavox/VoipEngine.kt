@@ -274,16 +274,15 @@ class VoipEngine(
         when (type) {
             "incoming_call" -> {
                 val ctx = appContext
-                var shouldNotifyFlutter = true
                 if (ctx != null) {
                     val ok = VoipConnectionService.startIncomingCall(ctx, message, null)
                     if (!ok) {
-                        VoipForegroundService.start(ctx, message, null)
-                    } else {
-                        shouldNotifyFlutter = false
+                        val launched = startIncomingCallActivity(ctx, message, null)
+                        if (!launched) {
+                            incomingCall(message, null)
+                        }
                     }
-                }
-                if (shouldNotifyFlutter) {
+                } else {
                     incomingCall(message, null)
                 }
             }
@@ -326,6 +325,24 @@ class VoipEngine(
                 "reason" to reason,
             )
         )
+    }
+
+    private fun startIncomingCallActivity(context: Context, callId: String, callerId: String?): Boolean {
+        val intent = Intent(context, CallActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                Intent.FLAG_ACTIVITY_SINGLE_TOP
+            putExtra(CallActivity.EXTRA_CALL_ID, callId)
+            putExtra(CallActivity.EXTRA_CALLER_ID, callerId)
+        }
+        return try {
+            context.startActivity(intent)
+            Log.i(TAG, "CallActivity launched from VoipEngine incoming event")
+            true
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to launch CallActivity from VoipEngine", e)
+            false
+        }
     }
 
     override fun onListen(arguments: Any?, events: EventChannel.EventSink) {

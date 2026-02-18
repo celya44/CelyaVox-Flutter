@@ -10,6 +10,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
+import android.util.Log
 import androidx.core.app.NotificationCompat
 
 class VoipForegroundService : Service() {
@@ -17,6 +18,7 @@ class VoipForegroundService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val callId = intent?.getStringExtra(EXTRA_CALL_ID).orEmpty()
         val callerId = intent?.getStringExtra(EXTRA_CALLER_ID).orEmpty()
+        Log.i(TAG, "onStartCommand callId=$callId callerId=$callerId")
         startForeground(NOTIFICATION_ID, buildNotification(callId, callerId))
         return START_NOT_STICKY
     }
@@ -25,10 +27,13 @@ class VoipForegroundService : Service() {
 
     private fun buildNotification(callId: String, callerId: String): Notification {
         createChannel()
+        Log.i(TAG, "Building incoming call notification with full-screen intent")
         val contentIntent = PendingIntent.getActivity(
             this,
             0,
-            Intent(this, MainActivity::class.java).apply {
+            Intent(this, CallActivity::class.java).apply {
+                putExtra(CallActivity.EXTRA_CALL_ID, callId)
+                putExtra(CallActivity.EXTRA_CALLER_ID, callerId)
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             },
             PendingIntent.FLAG_UPDATE_CURRENT or pendingIntentImmutableFlag()
@@ -39,8 +44,10 @@ class VoipForegroundService : Service() {
             .setContentText(if (callId.isNotEmpty()) "ID: $callId" else "")
             .setSmallIcon(android.R.drawable.sym_call_incoming)
             .setContentIntent(contentIntent)
+            .setFullScreenIntent(contentIntent, true)
             .setCategory(Notification.CATEGORY_CALL)
             .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setOngoing(true)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
         if (shouldShowRoleAction()) {
@@ -87,6 +94,7 @@ class VoipForegroundService : Service() {
             lockscreenVisibility = Notification.VISIBILITY_PUBLIC
         }
         manager.createNotificationChannel(channel)
+        Log.d(TAG, "Notification channel ensured: $CHANNEL_ID")
     }
 
     override fun onDestroy() {
@@ -113,6 +121,7 @@ class VoipForegroundService : Service() {
     }
 
     companion object {
+        private const val TAG = "VoipForegroundService"
         private const val CHANNEL_ID = "voip_call_channel"
         private const val NOTIFICATION_ID = 2001
         const val EXTRA_CALL_ID = "callId"

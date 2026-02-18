@@ -32,8 +32,6 @@ class VoipFirebaseService : FirebaseMessagingService() {
     }
 
     private fun handleIncomingCallPush(callId: String, callerId: String) {
-        // Keep process alive + show notification/UX
-        VoipForegroundService.start(this, callId, callerId)
         try {
             val registered = VoipConnectionService.registerSelfManaged(this)
             val ok = if (registered) {
@@ -42,12 +40,30 @@ class VoipFirebaseService : FirebaseMessagingService() {
                 false
             }
             if (!ok) {
-                Log.w(TAG, "Telecom incoming call not available; relying on full-screen notification")
+                Log.w(TAG, "Telecom incoming call not available; launching CallActivity directly")
+                openIncomingCallActivity(callId, callerId)
             }
         } catch (e: Exception) {
             Log.w(TAG, "Failed to start ConnectionService incoming call", e)
+            openIncomingCallActivity(callId, callerId)
         }
         registerSipInBackground()
+    }
+
+    private fun openIncomingCallActivity(callId: String, callerId: String) {
+        val intent = Intent(this, CallActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                Intent.FLAG_ACTIVITY_SINGLE_TOP
+            putExtra(CallActivity.EXTRA_CALL_ID, callId)
+            putExtra(CallActivity.EXTRA_CALLER_ID, callerId)
+        }
+        try {
+            startActivity(intent)
+            Log.i(TAG, "CallActivity launched from FCM push")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to launch CallActivity from FCM push", e)
+        }
     }
 
     private fun registerSipInBackground() {
