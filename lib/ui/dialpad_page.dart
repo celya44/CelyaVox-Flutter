@@ -25,6 +25,7 @@ class _DialpadPageState extends State<DialpadPage> {
   bool _isCalling = false;
   bool _isRegistered = false;
   bool _isOpeningInCall = false;
+  int _selectedIndex = 2;
   String? _username;
   StreamSubscription<VoipEvent>? _eventsSub;
 
@@ -172,9 +173,11 @@ class _DialpadPageState extends State<DialpadPage> {
   Widget build(BuildContext context) {
     final displayName = _username ?? 'Compte';
     final statusColor = _isRegistered ? Colors.green : Colors.red;
-    return Scaffold(
-      appBar: AppBar(
-        title: Row(
+
+    final appBarTitle = switch (_selectedIndex) {
+      0 => const Text('Favoris'),
+      1 => const Text('Historique d\'appel'),
+      2 => Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Flexible(
@@ -197,6 +200,13 @@ class _DialpadPageState extends State<DialpadPage> {
             ),
           ],
         ),
+      3 => const Text('Contacts'),
+      _ => const Text('Avancé'),
+    };
+
+    return Scaffold(
+      appBar: AppBar(
+        title: appBarTitle,
         actions: [
           IconButton(
             tooltip: 'Paramètres',
@@ -211,34 +221,101 @@ class _DialpadPageState extends State<DialpadPage> {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            TextField(
-              controller: _controller,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                labelText: 'Numéro',
-              ),
-              keyboardType: TextInputType.phone,
-              readOnly: true,
-            ),
-            const SizedBox(height: 16),
-            _Dialpad(onDigit: _appendDigit, onBackspace: _backspace),
-          ],
-        ),
-      ),
-      bottomNavigationBar: SafeArea(
-        minimum: const EdgeInsets.all(16),
-        child: ElevatedButton.icon(
-          onPressed: _isCalling ? null : _makeCall,
-          icon: const Icon(Icons.phone),
-          label: Text(_isCalling ? 'Appel...' : 'Appeler'),
-          style: ElevatedButton.styleFrom(
-            minimumSize: const Size.fromHeight(48),
+      body: switch (_selectedIndex) {
+        0 => const _MenuPlaceholder(
+            icon: Icons.star,
+            title: 'Favoris',
           ),
-        ),
+        1 => const _MenuPlaceholder(
+            icon: Icons.history,
+            title: 'Historique d\'appel',
+          ),
+        2 => Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                TextField(
+                  controller: _controller,
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    labelText: 'Numéro',
+                  ),
+                  keyboardType: TextInputType.phone,
+                  readOnly: true,
+                ),
+                const SizedBox(height: 16),
+                _Dialpad(onDigit: _appendDigit, onBackspace: _backspace),
+                const Spacer(),
+                ElevatedButton.icon(
+                  onPressed: _isCalling ? null : _makeCall,
+                  icon: const Icon(Icons.phone),
+                  label: Text(_isCalling ? 'Appel...' : 'Appeler'),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(48),
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        3 => const _MenuPlaceholder(
+            icon: Icons.contacts,
+            title: 'Contacts',
+          ),
+        _ => const _MenuPlaceholder(
+            icon: Icons.tune,
+            title: 'Avancé',
+          ),
+      },
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _selectedIndex,
+        onDestinationSelected: (index) => setState(() => _selectedIndex = index),
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.star),
+            label: 'Favoris',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.history),
+            label: 'Historique',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.dialpad),
+            label: 'Dial pad',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.contacts),
+            label: 'Contacts',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.tune),
+            label: 'Avancé',
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MenuPlaceholder extends StatelessWidget {
+  const _MenuPlaceholder({required this.icon, required this.title});
+
+  final IconData icon;
+  final String title;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 64),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+        ],
       ),
     );
   }
