@@ -66,6 +66,7 @@ class MainActivity : FlutterActivity() {
                 }
             )
         }
+        handleCallLifecycleIntent(intent)
         updateCallUnlockMode(intent)
     }
 
@@ -73,6 +74,7 @@ class MainActivity : FlutterActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         Log.i(TAG, "onNewIntent fromAcceptedCall=${intent.getBooleanExtra(EXTRA_FROM_ACCEPTED_CALL, false)}")
+        handleCallLifecycleIntent(intent)
         updateCallUnlockMode(intent)
         notifyAcceptedCallToFlutter(intent)
     }
@@ -292,6 +294,21 @@ class MainActivity : FlutterActivity() {
         Log.i(TAG, "Accepted call detected in MainActivity, forwarding call_connected for callId=$callId")
         voipEngine?.callConnected(callId)
         sourceIntent?.removeExtra(EXTRA_ACCEPTED_CALL_ID)
+    }
+
+    private fun handleCallLifecycleIntent(sourceIntent: Intent?) {
+        when (sourceIntent?.action) {
+            VoipEngine.ACTION_CALL_ENDED -> {
+                Log.i(TAG, "handleCallLifecycleIntent ACTION_CALL_ENDED")
+                onCallEndedFromNative("ACTION_CALL_ENDED_INTENT")
+                sourceIntent.action = null
+            }
+            VoipEngine.ACTION_CALL_TERMINATE_REQUESTED -> {
+                Log.i(TAG, "handleCallLifecycleIntent ACTION_CALL_TERMINATE_REQUESTED")
+                onCallEndedFromNative("ACTION_CALL_TERMINATE_REQUESTED_INTENT")
+                sourceIntent.action = null
+            }
+        }
     }
 
     private fun requestOverlayPermissionIfNeeded() {

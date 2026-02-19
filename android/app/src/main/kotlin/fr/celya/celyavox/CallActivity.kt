@@ -31,6 +31,7 @@ class CallActivity : AppCompatActivity() {
     private var declineButton: Button? = null
     private var currentCallId: String = ""
     private var currentCallerId: String = ""
+    private var waitingNativeCallIdForAccept = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -56,10 +57,17 @@ class CallActivity : AppCompatActivity() {
         currentCallId = nextCallId
         currentCallerId = nextCallerId
         acceptButton?.visibility = View.VISIBLE
+        acceptButton?.isEnabled = true
+        acceptButton?.text = "Répondre"
         declineButton?.text = "Raccrocher"
         titleView?.text = if (currentCallerId.isNotEmpty()) currentCallerId else "Appel entrant"
         subtitleView?.text = if (currentCallId.isNotEmpty()) "Call ID: $currentCallId" else ""
         startRinging()
+        if (waitingNativeCallIdForAccept && !isPushPlaceholderCallId(currentCallId)) {
+            Log.i(TAG, "Native callId received after pending accept, auto-answering callId=$currentCallId")
+            waitingNativeCallIdForAccept = false
+            tryAcceptAndOpenMain(currentCallId)
+        }
     }
 
     override fun onStart() {
@@ -119,29 +127,18 @@ class CallActivity : AppCompatActivity() {
             text = "Répondre"
             setOnClickListener {
                 val callId = currentCallId
-                var accepted = false
-                if (callId.isNotEmpty()) {
-                    Log.i(TAG, "Accept clicked, accepting callId=$callId")
-                    val ok = PjsipEngine.instance.acceptCall(callId)
-                    Log.i(TAG, "Accept action result callId=$callId ok=$ok")
-                    accepted = ok
-                } else {
+                if (callId.isEmpty()) {
                     Log.w(TAG, "Accept clicked with empty callId")
-                }
-                if (!accepted) {
-                    Log.w(TAG, "Accept failed; keeping CallActivity open for retry")
                     return@setOnClickListener
                 }
-                Log.i(TAG, "Launching MainActivity after answer")
-                val appIntent = Intent(this@CallActivity, MainActivity::class.java).apply {
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or
-                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                        Intent.FLAG_ACTIVITY_SINGLE_TOP
-                    putExtra(MainActivity.EXTRA_FROM_ACCEPTED_CALL, true)
-                    putExtra(MainActivity.EXTRA_ACCEPTED_CALL_ID, callId)
+                if (isPushPlaceholderCallId(callId)) {
+                    waitingNativeCallIdForAccept = true
+                    isEnabled = false
+                    text = "Connexion..."
+                    Log.w(TAG, "Accept clicked with placeholder callId=$callId; waiting for native callId")
+                    return@setOnClickListener
                 }
-                startActivity(appIntent)
-                finish()
+                tryAcceptAndOpenMain(callId)
             }
         }
         acceptButton = accept
@@ -154,7 +151,10 @@ class CallActivity : AppCompatActivity() {
                     Log.i(TAG, "Hangup clicked, ending callId=$callId")
                     val ok = PjsipEngine.instance.hangupCall(callId)
                     Log.i(TAG, "Hangup action result callId=$callId ok=$ok")
-                    sendBroadcast(Intent(VoipEngine.ACTION_CALL_TERMINATE_REQUESTED))
+                    sendBroadcast(
+                        Intent(VoipEngine.ACTION_CALL_TERMINATE_REQUESTED)
+                            .setPackage(packageName)
+                    )
                     Log.i(TAG, "Broadcasted ACTION_CALL_TERMINATE_REQUESTED from CallActivity")
                 }
                 finish()
@@ -219,6 +219,32 @@ class CallActivity : AppCompatActivity() {
         ringtone = null
         vibrator?.cancel()
         vibrator = null
+    }
+
+    private fun tryAcceptAndOpenMain(callId: String) {
+        Log.i(TAG, "Accept clicked, accepting callId=$callId")
+        val ok = PjsipEngine.instance.acceptCall(callId)
+        Log.i(TAG, "Accept action result callId=$callId ok=$ok")
+        if (!ok) {
+            Log.w(TAG, "Accept failed; keeping CallActivity open for retry")
+            acceptButton?.isEnabled = true
+            acceptButton?.text = "Répondre"
+            return
+        }
+        Log.i(TAG, "Launching MainActivity after answer")
+        val appIntent = Intent(this@CallActivity, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                Intent.FLAG_ACTIVITY_SINGLE_TOP
+            putExtra(MainActivity.EXTRA_FROM_ACCEPTED_CALL, true)
+            putExtra(MainActivity.EXTRA_ACCEPTED_CALL_ID, callId)
+        }
+        startActivity(appIntent)
+        finish()
+    }
+
+    private fun isPushPlaceholderCallId(callId: String): Boolean {
+        return callId.startsWith("wake_")
     }
 
     companion object {

@@ -88,10 +88,23 @@ class VoipEngine(
         Log.i(TAG, "VoipEngine.endCall callId=$callId ok=$ok")
         appContext?.let { ctx ->
             try {
-                ctx.sendBroadcast(Intent(ACTION_CALL_TERMINATE_REQUESTED))
+                ctx.sendBroadcast(Intent(ACTION_CALL_TERMINATE_REQUESTED).setPackage(ctx.packageName))
                 Log.i(TAG, "Broadcasted ACTION_CALL_TERMINATE_REQUESTED")
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to broadcast ACTION_CALL_TERMINATE_REQUESTED", e)
+            }
+            try {
+                ctx.startActivity(
+                    Intent(ctx, MainActivity::class.java).apply {
+                        action = ACTION_CALL_TERMINATE_REQUESTED
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                            Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                            Intent.FLAG_ACTIVITY_SINGLE_TOP
+                    }
+                )
+                Log.i(TAG, "Dispatched ACTION_CALL_TERMINATE_REQUESTED intent to MainActivity")
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to dispatch ACTION_CALL_TERMINATE_REQUESTED intent", e)
             }
         }
     }
@@ -376,10 +389,23 @@ class VoipEngine(
     fun callEnded(callId: String, reason: String? = null) {
         appContext?.let { ctx ->
             try {
-                ctx.sendBroadcast(Intent(ACTION_CALL_ENDED))
+                ctx.sendBroadcast(Intent(ACTION_CALL_ENDED).setPackage(ctx.packageName))
                 Log.i(TAG, "Broadcasted ACTION_CALL_ENDED")
             } catch (e: Exception) {
                 Log.w(TAG, "Failed to broadcast ACTION_CALL_ENDED", e)
+            }
+            try {
+                ctx.startActivity(
+                    Intent(ctx, MainActivity::class.java).apply {
+                        action = ACTION_CALL_ENDED
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                            Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                            Intent.FLAG_ACTIVITY_SINGLE_TOP
+                    }
+                )
+                Log.i(TAG, "Dispatched ACTION_CALL_ENDED intent to MainActivity")
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to dispatch ACTION_CALL_ENDED intent", e)
             }
         }
         emit(

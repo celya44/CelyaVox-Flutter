@@ -65,6 +65,13 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
+      - name: Ensure iOS project files
+        run: |
+          if [ ! -d ios/Runner.xcodeproj ]; then
+            echo "Missing ios/Runner.xcodeproj. Generating iOS project files with flutter create."
+            flutter create . --platforms=ios
+          fi
+
       - name: Ensure Podfile exists
         run: |
           if [ ! -f ios/Podfile ]; then
