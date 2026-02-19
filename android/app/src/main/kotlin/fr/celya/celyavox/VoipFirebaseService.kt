@@ -1,5 +1,6 @@
 package fr.celya.celyavox
 
+import android.app.ActivityManager
 import android.content.Intent
 import android.util.Log
 import com.celya.voip.provisioning.ProvisioningManager
@@ -27,8 +28,20 @@ class VoipFirebaseService : FirebaseMessagingService() {
 
         if (type == "incoming_call") {
             Log.i(TAG, "Incoming call push received (callId=$callId, callerId=$callerId)")
+            if (isAppInForeground()) {
+                Log.i(TAG, "App in foreground; ignoring incoming_call push and waiting for SIP invite")
+                return
+            }
             handleIncomingCallPush(callId, callerId)
         }
+    }
+
+    private fun isAppInForeground(): Boolean {
+        val activityManager = getSystemService(ACTIVITY_SERVICE) as ActivityManager
+        val running = activityManager.runningAppProcesses ?: return false
+        val current = running.firstOrNull { it.processName == packageName } ?: return false
+        return current.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND ||
+            current.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE
     }
 
     private fun handleIncomingCallPush(callId: String, callerId: String) {
