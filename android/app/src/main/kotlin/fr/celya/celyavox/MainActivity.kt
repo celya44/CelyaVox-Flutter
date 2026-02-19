@@ -268,12 +268,8 @@ class MainActivity : FlutterActivity() {
         keepOverLockscreenForCall = false
         wasLockscreenCallSession = false
         clearCallWindowFlags()
-        Log.i(TAG, "$source for lockscreen session; clearing flags and finishing task")
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            finishAndRemoveTask()
-        } else {
-            finish()
-        }
+        Log.i(TAG, "$source for lockscreen session; clearing flags and moving task to background")
+        moveTaskToBack(true)
     }
 
     private fun clearCallWindowFlags() {
