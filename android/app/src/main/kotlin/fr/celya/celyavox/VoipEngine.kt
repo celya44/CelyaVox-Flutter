@@ -84,7 +84,16 @@ class VoipEngine(
     }
 
     fun endCall(callId: String) {
-        sipEngine.hangupCall(callId)
+        val ok = sipEngine.hangupCall(callId)
+        Log.i(TAG, "VoipEngine.endCall callId=$callId ok=$ok")
+        appContext?.let { ctx ->
+            try {
+                ctx.sendBroadcast(Intent(ACTION_CALL_TERMINATE_REQUESTED))
+                Log.i(TAG, "Broadcasted ACTION_CALL_TERMINATE_REQUESTED")
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to broadcast ACTION_CALL_TERMINATE_REQUESTED", e)
+            }
+        }
     }
 
     fun acceptCall(callId: String) {
@@ -281,6 +290,21 @@ class VoipEngine(
                 if (ctx != null) {
                     val ok = VoipConnectionService.startIncomingCall(ctx, message, null)
                     if (!ok) {
+                        if (CallActivity.isVisible) {
+                            if (message.isNotBlank() && CallActivity.visibleCallId != message) {
+                                Log.i(
+                                    TAG,
+                                    "CallActivity visible with callId=${CallActivity.visibleCallId}; updating to native callId=$message"
+                                )
+                                startIncomingCallActivity(ctx, message, null)
+                            } else {
+                                Log.i(
+                                    TAG,
+                                    "CallActivity already visible for callId=${CallActivity.visibleCallId}; no update needed"
+                                )
+                            }
+                            return
+                        }
                         if (isAppInForeground(ctx) && !CallActivity.isVisible) {
                             Log.i(TAG, "App in foreground; routing incoming call to Flutter UI")
                             incomingCall(message, null)
@@ -419,5 +443,6 @@ class VoipEngine(
     companion object {
         private const val TAG = "VoipEngine"
         const val ACTION_CALL_ENDED = "fr.celya.celyavox.ACTION_CALL_ENDED"
+        const val ACTION_CALL_TERMINATE_REQUESTED = "fr.celya.celyavox.ACTION_CALL_TERMINATE_REQUESTED"
     }
 }

@@ -119,12 +119,18 @@ class CallActivity : AppCompatActivity() {
             text = "Répondre"
             setOnClickListener {
                 val callId = currentCallId
+                var accepted = false
                 if (callId.isNotEmpty()) {
                     Log.i(TAG, "Accept clicked, accepting callId=$callId")
                     val ok = PjsipEngine.instance.acceptCall(callId)
                     Log.i(TAG, "Accept action result callId=$callId ok=$ok")
+                    accepted = ok
                 } else {
                     Log.w(TAG, "Accept clicked with empty callId")
+                }
+                if (!accepted) {
+                    Log.w(TAG, "Accept failed; keeping CallActivity open for retry")
+                    return@setOnClickListener
                 }
                 Log.i(TAG, "Launching MainActivity after answer")
                 val appIntent = Intent(this@CallActivity, MainActivity::class.java).apply {
@@ -146,7 +152,10 @@ class CallActivity : AppCompatActivity() {
                 val callId = currentCallId
                 if (callId.isNotEmpty()) {
                     Log.i(TAG, "Hangup clicked, ending callId=$callId")
-                    PjsipEngine.instance.hangupCall(callId)
+                    val ok = PjsipEngine.instance.hangupCall(callId)
+                    Log.i(TAG, "Hangup action result callId=$callId ok=$ok")
+                    sendBroadcast(Intent(VoipEngine.ACTION_CALL_TERMINATE_REQUESTED))
+                    Log.i(TAG, "Broadcasted ACTION_CALL_TERMINATE_REQUESTED from CallActivity")
                 }
                 finish()
             }

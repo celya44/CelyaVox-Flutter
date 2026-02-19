@@ -31,9 +31,16 @@ class MainActivity : FlutterActivity() {
     private var wasLockscreenCallSession = false
     private val callEndedReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            if (intent?.action != VoipEngine.ACTION_CALL_ENDED) return
-            Log.i(TAG, "Received ACTION_CALL_ENDED")
-            onCallEndedFromNative()
+            when (intent?.action) {
+                VoipEngine.ACTION_CALL_ENDED -> {
+                    Log.i(TAG, "Received ACTION_CALL_ENDED")
+                    onCallEndedFromNative("ACTION_CALL_ENDED")
+                }
+                VoipEngine.ACTION_CALL_TERMINATE_REQUESTED -> {
+                    Log.i(TAG, "Received ACTION_CALL_TERMINATE_REQUESTED")
+                    onCallEndedFromNative("ACTION_CALL_TERMINATE_REQUESTED")
+                }
+            }
         }
     }
 
@@ -43,12 +50,21 @@ class MainActivity : FlutterActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(
                 callEndedReceiver,
-                IntentFilter(VoipEngine.ACTION_CALL_ENDED),
+                IntentFilter().apply {
+                    addAction(VoipEngine.ACTION_CALL_ENDED)
+                    addAction(VoipEngine.ACTION_CALL_TERMINATE_REQUESTED)
+                },
                 Context.RECEIVER_NOT_EXPORTED
             )
         } else {
             @Suppress("DEPRECATION")
-            registerReceiver(callEndedReceiver, IntentFilter(VoipEngine.ACTION_CALL_ENDED))
+            registerReceiver(
+                callEndedReceiver,
+                IntentFilter().apply {
+                    addAction(VoipEngine.ACTION_CALL_ENDED)
+                    addAction(VoipEngine.ACTION_CALL_TERMINATE_REQUESTED)
+                }
+            )
         }
         updateCallUnlockMode(intent)
     }
@@ -242,15 +258,15 @@ class MainActivity : FlutterActivity() {
         Log.i(TAG, "Call unlock mode enabled")
     }
 
-    private fun onCallEndedFromNative() {
+    private fun onCallEndedFromNative(source: String) {
         if (!wasLockscreenCallSession) {
-            Log.i(TAG, "Call ended with no lockscreen session; keeping app foreground")
+            Log.i(TAG, "$source received with no lockscreen session; keeping app foreground")
             return
         }
         keepOverLockscreenForCall = false
         wasLockscreenCallSession = false
         clearCallWindowFlags()
-        Log.i(TAG, "Call ended from lockscreen session; clearing flags and finishing task")
+        Log.i(TAG, "$source for lockscreen session; clearing flags and finishing task")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
             finishAndRemoveTask()
         } else {
