@@ -57,11 +57,10 @@ class CallActivity : AppCompatActivity() {
         currentCallId = nextCallId
         currentCallerId = nextCallerId
         acceptButton?.visibility = View.VISIBLE
-        acceptButton?.isEnabled = true
-        acceptButton?.text = "Répondre"
         declineButton?.text = "Raccrocher"
         titleView?.text = if (currentCallerId.isNotEmpty()) currentCallerId else "Appel entrant"
         subtitleView?.text = if (currentCallId.isNotEmpty()) "Call ID: $currentCallId" else ""
+        updateAcceptButtonState()
         startRinging()
         if (waitingNativeCallIdForAccept && !isPushPlaceholderCallId(currentCallId)) {
             Log.i(TAG, "Native callId received after pending accept, auto-answering callId=$currentCallId")
@@ -142,6 +141,7 @@ class CallActivity : AppCompatActivity() {
             }
         }
         acceptButton = accept
+        updateAcceptButtonState()
 
         val decline = Button(this).apply {
             text = "Raccrocher"
@@ -227,8 +227,7 @@ class CallActivity : AppCompatActivity() {
         Log.i(TAG, "Accept action result callId=$callId ok=$ok")
         if (!ok) {
             Log.w(TAG, "Accept failed; keeping CallActivity open for retry")
-            acceptButton?.isEnabled = true
-            acceptButton?.text = "Répondre"
+            updateAcceptButtonState()
             return
         }
         Log.i(TAG, "Launching MainActivity after answer")
@@ -245,6 +244,20 @@ class CallActivity : AppCompatActivity() {
 
     private fun isPushPlaceholderCallId(callId: String): Boolean {
         return callId.startsWith("wake_")
+    }
+
+    private fun updateAcceptButtonState() {
+        val button = acceptButton ?: return
+        val waitingNative = currentCallId.isBlank() || isPushPlaceholderCallId(currentCallId)
+        if (waitingNative) {
+            button.isEnabled = false
+            button.text = "Connexion..."
+            Log.i(TAG, "Accept disabled: waiting native SIP callId (currentCallId=$currentCallId)")
+            return
+        }
+        button.isEnabled = true
+        button.text = "Répondre"
+        Log.i(TAG, "Accept enabled with native callId=$currentCallId")
     }
 
     companion object {
