@@ -2,6 +2,7 @@ package fr.celya.celyavox
 
 import android.app.role.RoleManager
 import android.content.BroadcastReceiver
+import android.content.ComponentCallbacks2
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
@@ -120,7 +121,30 @@ class MainActivity : FlutterActivity() {
         requestOverlayPermissionIfNeeded()
     }
 
+    override fun onPause() {
+        requestSipUnregister("onPause")
+        super.onPause()
+    }
+
+    override fun onStop() {
+        requestSipUnregister("onStop")
+        super.onStop()
+    }
+
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        requestSipUnregister("onUserLeaveHint")
+    }
+
+    override fun onTrimMemory(level: Int) {
+        super.onTrimMemory(level)
+        if (level >= ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN) {
+            requestSipUnregister("onTrimMemory(UI_HIDDEN)")
+        }
+    }
+
     override fun onDestroy() {
+        requestSipUnregister("onDestroy")
         unregisterReceiver(callEndedReceiver)
         provisioningChannel?.dispose()
         methodChannel?.dispose()
@@ -304,6 +328,20 @@ class MainActivity : FlutterActivity() {
                 onCallEndedFromNative("ACTION_CALL_TERMINATE_REQUESTED_INTENT")
                 sourceIntent.action = null
             }
+        }
+    }
+
+    private fun requestSipUnregister(source: String) {
+        try {
+            Log.i(TAG, "Requesting SIP unregister from $source")
+            val engine = voipEngine
+            if (engine != null) {
+                engine.unregister()
+            } else {
+                PjsipEngine.instance.unregister()
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "SIP unregister failed from $source", e)
         }
     }
 
