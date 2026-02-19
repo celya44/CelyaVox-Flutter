@@ -305,9 +305,12 @@ Java_fr_celya_celyavox_PjsipEngine_nativeUnregister(JNIEnv *, jobject) {
     ensure_pj_thread_registered("jni");
     std::lock_guard<std::mutex> lock(g_mutex);
     if (g_acc_id != PJSUA_INVALID_ID) {
-        pjsua_acc_del(g_acc_id);
-        g_acc_id = PJSUA_INVALID_ID;
-        LOGI("Account unregistered");
+        pj_status_t st = pjsua_acc_set_registration(g_acc_id, PJ_FALSE);
+        if (st == PJ_SUCCESS) {
+            LOGI("Unregister requested (REGISTER expires=0) for account id=%d", g_acc_id);
+        } else {
+            LOGE("Unregister request failed for account id=%d status=%d", g_acc_id, st);
+        }
     }
 }
 

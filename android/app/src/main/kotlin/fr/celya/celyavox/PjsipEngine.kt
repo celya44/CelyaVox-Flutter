@@ -70,8 +70,14 @@ class PjsipEngine private constructor() {
 
     @Synchronized
     fun unregister() {
-        if (!initialized.get()) return
+        val ready = initialized.get()
+        Log.i(TAG, "unregister requested initialized=$ready")
+        if (!ready) {
+            Log.w(TAG, "unregister ignored: engine not initialized")
+            return
+        }
         nativeUnregister()
+        Log.i(TAG, "unregister native call dispatched")
     }
 
     @Synchronized
