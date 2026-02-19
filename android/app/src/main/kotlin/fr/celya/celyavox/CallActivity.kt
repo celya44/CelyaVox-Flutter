@@ -11,9 +11,11 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import android.util.Log
+import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
 import android.widget.Button
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -107,23 +109,56 @@ class CallActivity : AppCompatActivity() {
 
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
             setPadding(48, 72, 48, 72)
+        }
+
+        val icon = ImageView(this).apply {
+            setImageResource(android.R.drawable.sym_call_incoming)
+            layoutParams = LinearLayout.LayoutParams(120, 120).apply {
+                bottomMargin = 24
+            }
         }
 
         val title = TextView(this).apply {
             text = if (callerId.isNotEmpty()) callerId else "Appel entrant"
             textSize = 22f
+            gravity = Gravity.CENTER
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = 10
+            }
         }
         titleView = title
 
         val subtitle = TextView(this).apply {
-            text = if (callId.isNotEmpty()) "Call ID: $callId" else ""
+            text = if (callId.isNotEmpty()) "ID: $callId" else ""
             textSize = 14f
+            gravity = Gravity.CENTER
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                bottomMargin = 28
+            }
         }
         subtitleView = subtitle
 
+        val actionsRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+        }
+
         val accept = Button(this).apply {
             text = "Répondre"
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply {
+                marginEnd = 16
+            }
             setOnClickListener {
                 val callId = currentCallId
                 if (callId.isEmpty()) {
@@ -162,10 +197,13 @@ class CallActivity : AppCompatActivity() {
         }
         declineButton = decline
 
+        actionsRow.addView(accept)
+        actionsRow.addView(decline)
+
+        root.addView(icon)
         root.addView(title)
         root.addView(subtitle)
-        root.addView(accept)
-        root.addView(decline)
+        root.addView(actionsRow)
         return root
     }
 

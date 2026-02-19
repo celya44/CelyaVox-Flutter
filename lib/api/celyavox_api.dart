@@ -18,6 +18,24 @@ class CelyaVoxApiResponse {
 
   bool get isOk => status.toUpperCase() == 'OK';
 
+  dynamic get decodedData {
+    final raw = data;
+    if (raw is String) {
+      final trimmed = raw.trim();
+      final looksLikeJson =
+          (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+          (trimmed.startsWith('[') && trimmed.endsWith(']'));
+      if (looksLikeJson) {
+        try {
+          return jsonDecode(trimmed);
+        } catch (_) {
+          return raw;
+        }
+      }
+    }
+    return raw;
+  }
+
   factory CelyaVoxApiResponse.fromJson(Map<String, dynamic> json) {
     return CelyaVoxApiResponse(
       status: json['status']?.toString() ?? 'ERROR',
@@ -39,6 +57,8 @@ class CelyaVoxApiClient {
     required String apiKey,
     Map<String, String> params = const {},
     bool useHttps = true,
+    int? port,
+    String apiRootPath = '/celyavox-api',
   }) async {
     final query = <String, String>{
       ...params,
@@ -46,10 +66,17 @@ class CelyaVoxApiClient {
     };
 
     final scheme = useHttps ? 'https' : 'http';
+    final domainInfo = _parseDomain(domain);
+    final effectiveHost = domainInfo.host;
+    final effectivePort = port ?? domainInfo.port;
+    final normalizedApiRoot = _normalizePathSegment(apiRootPath);
+    final normalizedClass = _normalizePathSegment(apiClass);
+    final normalizedFunction = _normalizePathSegment(function);
     final uri = Uri(
       scheme: scheme,
-      host: domain,
-      path: '/celyavox-api/$apiClass/$function',
+      host: effectiveHost,
+      port: effectivePort,
+      path: '$normalizedApiRoot/$normalizedClass/$normalizedFunction',
       queryParameters: query,
     );
 
@@ -65,15 +92,23 @@ class CelyaVoxApiClient {
       );
     }
 
-    final decoded = jsonDecode(resp.body);
-    if (decoded is Map<String, dynamic>) {
-      return CelyaVoxApiResponse.fromJson(decoded);
+    try {
+      final decoded = jsonDecode(resp.body);
+      if (decoded is Map<String, dynamic>) {
+        return CelyaVoxApiResponse.fromJson(decoded);
+      }
+      return CelyaVoxApiResponse(
+        status: 'ERROR',
+        message: 'Invalid JSON response',
+        data: resp.body,
+      );
+    } catch (_) {
+      return CelyaVoxApiResponse(
+        status: 'ERROR',
+        message: 'Invalid JSON response',
+        data: resp.body,
+      );
     }
-    return CelyaVoxApiResponse(
-      status: 'ERROR',
-      message: 'Invalid JSON response',
-      data: resp.body,
-    );
   }
 
   Future<CelyaVoxApiResponse> callProvisioned({
@@ -82,6 +117,9 @@ class CelyaVoxApiClient {
     Map<String, String> params = const {},
     bool useHttps = true,
     bool includeExtension = true,
+    int defaultHttpsPort = 445,
+    int? overridePort,
+    String apiRootPath = '/celyavox-api',
   }) async {
     final domain = await ProvisioningChannel.getSipDomain();
     final apiKey = await ProvisioningChannel.getApiKey();
@@ -115,6 +153,75 @@ class CelyaVoxApiClient {
       apiKey: apiKey,
       params: query,
       useHttps: useHttps,
+      port: overridePort ?? (useHttps ? defaultHttpsPort : null),
+      apiRootPath: apiRootPath,
     );
   }
+
+  Future<CelyaVoxApiResponse> callProvisionedEndpoint({
+    required String endpoint,
+    Map<String, String> params = const {},
+    bool useHttps = true,
+    bool includeExtension = true,
+    int defaultHttpsPort = 445,
+    int? overridePort,
+    String apiRootPath = '/celyavox-api',
+  }) async {
+    final parts = endpoint
+        .split('/')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+    if (parts.length != 2) {
+      return const CelyaVoxApiResponse(
+        status: 'ERROR',
+        message: 'Endpoint must be "class/function"',
+        data: null,
+      );
+    }
+
+    return callProvisioned(
+      apiClass: parts[0],
+      function: parts[1],
+      params: params,
+      useHttps: useHttps,
+      includeExtension: includeExtension,
+      defaultHttpsPort: defaultHttpsPort,
+      overridePort: overridePort,
+      apiRootPath: apiRootPath,
+    );
+  }
+
+  _DomainInfo _parseDomain(String value) {
+    final raw = value.trim();
+    if (raw.isEmpty) {
+      return const _DomainInfo(host: '');
+    }
+
+    final withScheme = raw.contains('://') ? raw : 'https://$raw';
+    final uri = Uri.tryParse(withScheme);
+    if (uri == null || uri.host.isEmpty) {
+      return _DomainInfo(host: raw);
+    }
+    return _DomainInfo(
+      host: uri.host,
+      port: uri.hasPort ? uri.port : null,
+    );
+  }
+
+  String _normalizePathSegment(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return '';
+    final withoutPrefix = trimmed.startsWith('/') ? trimmed.substring(1) : trimmed;
+    return withoutPrefix.endsWith('/')
+        ? withoutPrefix.substring(0, withoutPrefix.length - 1)
+        : withoutPrefix;
+  }
+}
+
+class _DomainInfo {
+  final String host;
+  final int? port;
+
+  const _DomainInfo({required this.host, this.port});
 }

@@ -4,6 +4,7 @@ import 'dart:async';
 
 import 'package:permission_handler/permission_handler.dart';
 
+import '../api/celyavox_api.dart';
 import '../provisioning/provisioning_channel.dart';
 import '../voip/voip_events.dart';
 import '../voip/voip_engine.dart';
@@ -22,11 +23,17 @@ class DialpadPage extends StatefulWidget {
 
 class _DialpadPageState extends State<DialpadPage> {
   final TextEditingController _controller = TextEditingController();
+  final TextEditingController _contactSearchController = TextEditingController();
+  final CelyaVoxApiClient _apiClient = CelyaVoxApiClient();
   bool _isCalling = false;
   bool _isRegistered = false;
   bool _isOpeningInCall = false;
+  bool _showContactSearch = false;
+  bool _isSearchingContacts = false;
   int _selectedIndex = 2;
   String? _username;
+  String? _contactsError;
+  List<Map<String, dynamic>> _contactResults = const [];
   StreamSubscription<VoipEvent>? _eventsSub;
 
   @override
@@ -42,6 +49,7 @@ class _DialpadPageState extends State<DialpadPage> {
   void dispose() {
     _eventsSub?.cancel();
     _controller.dispose();
+    _contactSearchController.dispose();
     super.dispose();
   }
 
@@ -169,6 +177,141 @@ class _DialpadPageState extends State<DialpadPage> {
     }
   }
 
+  void _toggleContactSearch() {
+    setState(() {
+      _showContactSearch = !_showContactSearch;
+      if (!_showContactSearch) {
+        _contactSearchController.clear();
+        _contactsError = null;
+        _contactResults = const [];
+      }
+    });
+  }
+
+  Future<void> _searchContacts() async {
+    final query = _contactSearchController.text.trim();
+    if (query.isEmpty) {
+      _showMessage('Entrez une valeur pour sn.');
+      return;
+    }
+
+    setState(() {
+      _isSearchingContacts = true;
+      _contactsError = null;
+      _contactResults = const [];
+    });
+
+    try {
+      final response = await _apiClient.callProvisionedEndpoint(
+        endpoint: 'ldap/contacts',
+        params: {
+          'sn': query,
+        },
+        includeExtension: false,
+      );
+
+      if (!mounted) return;
+
+      if (!response.isOk) {
+        setState(() {
+          _contactsError = response.message.isNotEmpty
+              ? response.message
+              : 'Erreur API';
+          _isSearchingContacts = false;
+        });
+        return;
+      }
+
+      final decodedData = response.decodedData;
+      final contacts = <Map<String, dynamic>>[];
+      if (decodedData is List) {
+        for (final item in decodedData) {
+          if (item is Map) {
+            contacts.add(item.map((k, v) => MapEntry(k.toString(), v)));
+          }
+        }
+      }
+
+      setState(() {
+        _contactResults = contacts;
+        _isSearchingContacts = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _contactsError = 'Erreur: $e';
+        _isSearchingContacts = false;
+      });
+    }
+  }
+
+  Widget _buildContactsTab() {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Align(
+            alignment: Alignment.centerRight,
+            child: FilledButton.icon(
+              onPressed: _toggleContactSearch,
+              icon: const Icon(Icons.add),
+              label: const Text('ADD'),
+            ),
+          ),
+          if (_showContactSearch) ...[
+            const SizedBox(height: 12),
+            TextField(
+              controller: _contactSearchController,
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                labelText: 'sn',
+                hintText: 'Ex: goug',
+              ),
+              textInputAction: TextInputAction.search,
+              onSubmitted: (_) => _searchContacts(),
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: _isSearchingContacts ? null : _searchContacts,
+              child: Text(_isSearchingContacts ? 'Recherche...' : 'Rechercher'),
+            ),
+          ],
+          const SizedBox(height: 12),
+          if (_contactsError != null)
+            Text(
+              _contactsError!,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.error,
+              ),
+            ),
+          Expanded(
+            child: _contactResults.isEmpty
+                ? const Center(
+                    child: Text('Aucun contact'),
+                  )
+                : ListView.separated(
+                    itemCount: _contactResults.length,
+                    separatorBuilder: (_, __) => const Divider(height: 1),
+                    itemBuilder: (context, index) {
+                      final contact = _contactResults[index];
+                      final name = contact['name']?.toString() ?? 'Sans nom';
+                      final number = contact['telephoneNumber']?.toString() ?? '';
+                      final ou = contact['ou']?.toString() ?? '';
+                      return ListTile(
+                        leading: const Icon(Icons.person),
+                        title: Text(name),
+                        subtitle: ou.isEmpty ? null : Text(ou),
+                        trailing: Text(number),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final displayName = _username ?? 'Compte';
@@ -258,10 +401,7 @@ class _DialpadPageState extends State<DialpadPage> {
               ],
             ),
           ),
-        3 => const _MenuPlaceholder(
-            icon: Icons.contacts,
-            title: 'Contacts',
-          ),
+        3 => _buildContactsTab(),
         _ => const _MenuPlaceholder(
             icon: Icons.tune,
             title: 'Avancé',
