@@ -117,6 +117,7 @@ class CelyaVoxApiClient {
     Map<String, String> params = const {},
     bool useHttps = true,
     bool includeExtension = true,
+    bool includePrefixe = true,
     int defaultHttpsPort = 445,
     int? overridePort,
     String apiRootPath = '/celyavox-api',
@@ -145,6 +146,12 @@ class CelyaVoxApiClient {
         query['extension'] = ext;
       }
     }
+    if (includePrefixe && !query.containsKey('prefixe')) {
+      final prefixe = await ProvisioningChannel.getApiPrefixe();
+      if (prefixe != null && prefixe.isNotEmpty) {
+        query['prefixe'] = prefixe;
+      }
+    }
 
     return call(
       apiClass: apiClass,
@@ -163,6 +170,7 @@ class CelyaVoxApiClient {
     Map<String, String> params = const {},
     bool useHttps = true,
     bool includeExtension = true,
+    bool includePrefixe = true,
     int defaultHttpsPort = 445,
     int? overridePort,
     String apiRootPath = '/celyavox-api',
@@ -186,6 +194,7 @@ class CelyaVoxApiClient {
       params: params,
       useHttps: useHttps,
       includeExtension: includeExtension,
+      includePrefixe: includePrefixe,
       defaultHttpsPort: defaultHttpsPort,
       overridePort: overridePort,
       apiRootPath: apiRootPath,

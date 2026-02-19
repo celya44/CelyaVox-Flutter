@@ -33,8 +33,15 @@ class _DialpadPageState extends State<DialpadPage> {
   int _selectedIndex = 2;
   String? _username;
   String? _contactsError;
+  String? _dialpadSearchError;
   List<Map<String, dynamic>> _contactResults = const [];
+  List<Map<String, dynamic>> _dialpadSearchResults = const [];
   StreamSubscription<VoipEvent>? _eventsSub;
+  Timer? _contactSearchDebounce;
+  Timer? _dialpadSearchDebounce;
+  int _contactSearchRequestId = 0;
+  int _dialpadSearchRequestId = 0;
+  bool _isSearchingDialpad = false;
 
   @override
   void initState() {
@@ -48,6 +55,8 @@ class _DialpadPageState extends State<DialpadPage> {
   @override
   void dispose() {
     _eventsSub?.cancel();
+    _contactSearchDebounce?.cancel();
+    _dialpadSearchDebounce?.cancel();
     _controller.dispose();
     _contactSearchController.dispose();
     super.dispose();
@@ -174,13 +183,98 @@ class _DialpadPageState extends State<DialpadPage> {
     final text = _controller.text;
     if (text.isNotEmpty) {
       _controller.text = text.substring(0, text.length - 1);
+      _onDialpadSearchChanged(_controller.text);
     }
+  }
+
+  void _onDialpadSearchChanged(String value) {
+    _dialpadSearchDebounce?.cancel();
+    _dialpadSearchDebounce = Timer(const Duration(milliseconds: 300), () {
+      final query = value.trim();
+      if (query.length < 3) {
+        if (!mounted) return;
+        setState(() {
+          _isSearchingDialpad = false;
+          _dialpadSearchError = null;
+          _dialpadSearchResults = const [];
+        });
+        return;
+      }
+      _searchDialpadContacts(query);
+    });
+  }
+
+  Future<void> _searchDialpadContacts(String query) async {
+    final requestId = ++_dialpadSearchRequestId;
+    setState(() {
+      _isSearchingDialpad = true;
+      _dialpadSearchError = null;
+      _dialpadSearchResults = const [];
+    });
+
+    try {
+      final response = await _apiClient.callProvisionedEndpoint(
+        endpoint: 'ldap/contacts',
+        params: {'sn': query},
+        includeExtension: false,
+      );
+
+      if (!mounted) return;
+      if (requestId != _dialpadSearchRequestId) return;
+
+      if (!response.isOk) {
+        setState(() {
+          _dialpadSearchError = response.message.isEmpty ? 'Erreur API' : response.message;
+          _isSearchingDialpad = false;
+        });
+        return;
+      }
+
+      final decodedData = response.decodedData;
+      final contacts = <Map<String, dynamic>>[];
+      if (decodedData is List) {
+        for (final item in decodedData) {
+          if (item is Map) {
+            contacts.add(item.map((k, v) => MapEntry(k.toString(), v)));
+          }
+        }
+      }
+
+      setState(() {
+        _dialpadSearchResults = contacts;
+        _isSearchingDialpad = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      if (requestId != _dialpadSearchRequestId) return;
+      setState(() {
+        _dialpadSearchError = 'Erreur: $e';
+        _isSearchingDialpad = false;
+      });
+    }
+  }
+
+  void _selectDialpadContact(Map<String, dynamic> contact) {
+    final number = contact['telephoneNumber']?.toString().trim() ?? '';
+    if (number.isNotEmpty) {
+      _controller.text = number;
+      _controller.selection = TextSelection.fromPosition(
+        TextPosition(offset: _controller.text.length),
+      );
+    }
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _dialpadSearchResults = const [];
+      _dialpadSearchError = null;
+      _isSearchingDialpad = false;
+    });
   }
 
   void _toggleContactSearch() {
     setState(() {
       _showContactSearch = !_showContactSearch;
       if (!_showContactSearch) {
+        _contactSearchDebounce?.cancel();
         _contactSearchController.clear();
         _contactsError = null;
         _contactResults = const [];
@@ -188,12 +282,41 @@ class _DialpadPageState extends State<DialpadPage> {
     });
   }
 
-  Future<void> _searchContacts() async {
-    final query = _contactSearchController.text.trim();
+  void _onContactSearchChanged(String value) {
+    _contactSearchDebounce?.cancel();
+    _contactSearchDebounce = Timer(const Duration(milliseconds: 300), () {
+      final query = value.trim();
+      if (query.length < 3) {
+        if (!mounted) return;
+        setState(() {
+          _isSearchingContacts = false;
+          _contactsError = null;
+          _contactResults = const [];
+        });
+        return;
+      }
+      _searchContacts(queryOverride: query);
+    });
+  }
+
+  Future<void> _searchContacts({String? queryOverride}) async {
+    final query = (queryOverride ?? _contactSearchController.text).trim();
     if (query.isEmpty) {
       _showMessage('Entrez une valeur pour sn.');
       return;
     }
+
+    if (query.length < 3) {
+      if (!mounted) return;
+      setState(() {
+        _isSearchingContacts = false;
+        _contactsError = null;
+        _contactResults = const [];
+      });
+      return;
+    }
+
+    final requestId = ++_contactSearchRequestId;
 
     setState(() {
       _isSearchingContacts = true;
@@ -211,6 +334,7 @@ class _DialpadPageState extends State<DialpadPage> {
       );
 
       if (!mounted) return;
+      if (requestId != _contactSearchRequestId) return;
 
       if (!response.isOk) {
         setState(() {
@@ -238,6 +362,7 @@ class _DialpadPageState extends State<DialpadPage> {
       });
     } catch (e) {
       if (!mounted) return;
+      if (requestId != _contactSearchRequestId) return;
       setState(() {
         _contactsError = 'Erreur: $e';
         _isSearchingContacts = false;
@@ -269,12 +394,8 @@ class _DialpadPageState extends State<DialpadPage> {
                 hintText: 'Ex: goug',
               ),
               textInputAction: TextInputAction.search,
+              onChanged: _onContactSearchChanged,
               onSubmitted: (_) => _searchContacts(),
-            ),
-            const SizedBox(height: 8),
-            ElevatedButton(
-              onPressed: _isSearchingContacts ? null : _searchContacts,
-              child: Text(_isSearchingContacts ? 'Recherche...' : 'Rechercher'),
             ),
           ],
           const SizedBox(height: 12),
@@ -381,11 +502,54 @@ class _DialpadPageState extends State<DialpadPage> {
                   controller: _controller,
                   decoration: const InputDecoration(
                     border: OutlineInputBorder(),
-                    labelText: 'Numéro',
+                    hintText: 'saisir numéro ou click pour recherche.',
                   ),
-                  keyboardType: TextInputType.phone,
-                  readOnly: true,
+                  keyboardType: TextInputType.text,
+                  onChanged: _onDialpadSearchChanged,
                 ),
+                if (_isSearchingDialpad)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 8),
+                    child: LinearProgressIndicator(minHeight: 2),
+                  ),
+                if (_dialpadSearchError != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        _dialpadSearchError!,
+                        style: TextStyle(color: Theme.of(context).colorScheme.error),
+                      ),
+                    ),
+                  ),
+                if (_dialpadSearchResults.isNotEmpty)
+                  Container(
+                    margin: const EdgeInsets.only(top: 8),
+                    constraints: const BoxConstraints(maxHeight: 180),
+                    decoration: BoxDecoration(
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.outlineVariant,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: ListView.separated(
+                      itemCount: _dialpadSearchResults.length,
+                      shrinkWrap: true,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final contact = _dialpadSearchResults[index];
+                        final name = contact['name']?.toString() ?? 'Sans nom';
+                        final number = contact['telephoneNumber']?.toString() ?? '';
+                        return ListTile(
+                          dense: true,
+                          title: Text(name),
+                          subtitle: number.isEmpty ? null : Text(number),
+                          onTap: () => _selectDialpadContact(contact),
+                        );
+                      },
+                    ),
+                  ),
                 const SizedBox(height: 16),
                 _Dialpad(onDigit: _appendDigit, onBackspace: _backspace),
                 const Spacer(),
@@ -409,26 +573,43 @@ class _DialpadPageState extends State<DialpadPage> {
       },
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
+        height: 72,
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
         onDestinationSelected: (index) => setState(() => _selectedIndex = index),
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.star),
+            icon: Tooltip(
+              message: 'Favoris',
+              child: Icon(Icons.star, size: 30),
+            ),
             label: 'Favoris',
           ),
           NavigationDestination(
-            icon: Icon(Icons.history),
+            icon: Tooltip(
+              message: 'Historique',
+              child: Icon(Icons.history, size: 30),
+            ),
             label: 'Historique',
           ),
           NavigationDestination(
-            icon: Icon(Icons.dialpad),
+            icon: Tooltip(
+              message: 'Dial pad',
+              child: Icon(Icons.dialpad, size: 30),
+            ),
             label: 'Dial pad',
           ),
           NavigationDestination(
-            icon: Icon(Icons.contacts),
+            icon: Tooltip(
+              message: 'Contacts',
+              child: Icon(Icons.contacts, size: 30),
+            ),
             label: 'Contacts',
           ),
           NavigationDestination(
-            icon: Icon(Icons.tune),
+            icon: Tooltip(
+              message: 'Avancé',
+              child: Icon(Icons.tune, size: 30),
+            ),
             label: 'Avancé',
           ),
         ],
