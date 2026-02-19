@@ -40,7 +40,16 @@ class MainActivity : FlutterActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.i(TAG, "onCreate keepOverLockscreenForCall=$keepOverLockscreenForCall")
-        registerReceiver(callEndedReceiver, IntentFilter(VoipEngine.ACTION_CALL_ENDED))
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(
+                callEndedReceiver,
+                IntentFilter(VoipEngine.ACTION_CALL_ENDED),
+                Context.RECEIVER_NOT_EXPORTED
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            registerReceiver(callEndedReceiver, IntentFilter(VoipEngine.ACTION_CALL_ENDED))
+        }
         updateCallUnlockMode(intent)
     }
 
