@@ -6,11 +6,14 @@ import 'package:permission_handler/permission_handler.dart';
 
 import '../api/celyavox_api.dart';
 import '../provisioning/provisioning_channel.dart';
+import '../theme/theme_controller.dart';
 import '../voip/voip_events.dart';
 import '../voip/voip_engine.dart';
 import 'in_call_page.dart';
 import 'settings_page.dart';
 import 'incoming_call_page.dart';
+
+enum _AppMenuAction { settings, toggleTheme }
 
 class DialpadPage extends StatefulWidget {
   const DialpadPage({super.key, required this.engine});
@@ -472,16 +475,49 @@ class _DialpadPageState extends State<DialpadPage> {
       appBar: AppBar(
         title: appBarTitle,
         actions: [
-          IconButton(
-            tooltip: 'Paramètres',
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const SettingsPage(),
-                ),
-              );
-            },
+          PopupMenuButton<_AppMenuAction>(
             icon: const Icon(Icons.more_vert),
+            onSelected: (action) {
+              switch (action) {
+                case _AppMenuAction.settings:
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const SettingsPage(),
+                    ),
+                  );
+                  break;
+                case _AppMenuAction.toggleTheme:
+                  ThemeControllerScope.of(context).toggle();
+                  break;
+              }
+            },
+            itemBuilder: (context) {
+              final isDark = ThemeControllerScope.of(context).isDark;
+              final themeLabel = isDark ? 'Thème clair' : 'Thème sombre';
+              final themeIcon = isDark ? Icons.light_mode : Icons.dark_mode;
+              return [
+                const PopupMenuItem<_AppMenuAction>(
+                  value: _AppMenuAction.settings,
+                  child: Row(
+                    children: [
+                      Icon(Icons.settings),
+                      SizedBox(width: 12),
+                      Text('Paramètres'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem<_AppMenuAction>(
+                  value: _AppMenuAction.toggleTheme,
+                  child: Row(
+                    children: [
+                      Icon(themeIcon),
+                      SizedBox(width: 12),
+                      Text(themeLabel),
+                    ],
+                  ),
+                ),
+              ];
+            },
           ),
         ],
       ),

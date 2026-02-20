@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 
 import 'provisioning/provisioning_page.dart';
 import 'provisioning/provisioning_state.dart';
+import 'theme/theme_controller.dart';
 import 'ui/dialpad_page.dart';
 import 'log/app_logger.dart';
 import 'voip/fcm_token_manager.dart';
@@ -28,11 +29,14 @@ class VoipApp extends StatefulWidget {
 }
 
 class _VoipAppState extends State<VoipApp> with WidgetsBindingObserver {
+  final ThemeController _themeController = ThemeController();
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     FcmTokenSync.instance.syncCachedToken();
+    _themeController.load();
   }
 
   @override
@@ -50,29 +54,49 @@ class _VoipAppState extends State<VoipApp> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _themeController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'VoIP Demo',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-        useMaterial3: true,
-      ),
-      home: FutureBuilder<bool>(
-        future: ProvisioningState.isProvisioned(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
-          final isProvisioned = snapshot.data ?? false;
-          return isProvisioned
-              ? DialpadPage(engine: voipEngine)
-              : const ProvisioningPage();
+    return ThemeControllerScope(
+      controller: _themeController,
+      child: AnimatedBuilder(
+        animation: _themeController,
+        builder: (context, _) {
+          return MaterialApp(
+            title: 'VoIP Demo',
+            theme: ThemeData(
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: Colors.blue,
+                brightness: Brightness.light,
+              ),
+              useMaterial3: true,
+            ),
+            darkTheme: ThemeData(
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: Colors.blue,
+                brightness: Brightness.dark,
+              ),
+              useMaterial3: true,
+            ),
+            themeMode: _themeController.mode,
+            home: FutureBuilder<bool>(
+              future: ProvisioningState.isProvisioned(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState != ConnectionState.done) {
+                  return const Scaffold(
+                    body: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                final isProvisioned = snapshot.data ?? false;
+                return isProvisioned
+                    ? DialpadPage(engine: voipEngine)
+                    : const ProvisioningPage();
+              },
+            ),
+          );
         },
       ),
     );
