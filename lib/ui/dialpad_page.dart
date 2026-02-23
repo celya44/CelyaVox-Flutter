@@ -33,12 +33,16 @@ class _DialpadPageState extends State<DialpadPage> {
   bool _isOpeningInCall = false;
   bool _showContactSearch = false;
   bool _isSearchingContacts = false;
+  bool _isLoadingHistory = false;
+  bool _historyLoaded = false;
   int _selectedIndex = 2;
   String? _username;
   String? _contactsError;
   String? _dialpadSearchError;
+  String? _historyError;
   List<Map<String, dynamic>> _contactResults = const [];
   List<Map<String, dynamic>> _dialpadSearchResults = const [];
+  List<_CallHistoryEntry> _historyEntries = const [];
   StreamSubscription<VoipEvent>? _eventsSub;
   Timer? _contactSearchDebounce;
   Timer? _dialpadSearchDebounce;
@@ -134,6 +138,59 @@ class _DialpadPageState extends State<DialpadPage> {
     }
   }
 
+  Future<void> _loadCallHistory({bool force = false}) async {
+    if (_isLoadingHistory) return;
+    if (_historyLoaded && !force) return;
+
+    setState(() {
+      _isLoadingHistory = true;
+      _historyError = null;
+      if (force) {
+        _historyEntries = const [];
+      }
+    });
+
+    try {
+      final response = await _apiClient.callProvisionedEndpoint(
+        endpoint: 'cdr/calls2',
+        includeExtension: true,
+      );
+
+      if (!mounted) return;
+
+      if (!response.isOk) {
+        setState(() {
+          _historyError = response.message.isEmpty ? 'Erreur API' : response.message;
+          _isLoadingHistory = false;
+        });
+        return;
+      }
+
+      final decodedData = response.decodedData;
+      final parsedEntries = <_CallHistoryEntry>[];
+      if (decodedData is List) {
+        for (final item in decodedData) {
+          if (item is Map) {
+            final map = item.map((k, v) => MapEntry(k.toString(), v));
+            parsedEntries.add(_CallHistoryEntry.fromMap(map));
+          }
+        }
+      }
+
+      setState(() {
+        _historyEntries = parsedEntries;
+        _isLoadingHistory = false;
+        _historyLoaded = true;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _historyError = 'Erreur: $e';
+        _isLoadingHistory = false;
+      });
+    }
+  }
+
   Future<void> _makeCall() async {
     var callee = _controller.text.trim();
     if (callee.isEmpty) {
@@ -180,6 +237,10 @@ class _DialpadPageState extends State<DialpadPage> {
 
   void _appendDigit(String digit) {
     _controller.text += digit;
+    _controller.selection = TextSelection.fromPosition(
+      TextPosition(offset: _controller.text.length),
+    );
+    _onDialpadSearchChanged(_controller.text);
   }
 
   void _backspace() {
@@ -271,6 +332,9 @@ class _DialpadPageState extends State<DialpadPage> {
       _dialpadSearchError = null;
       _isSearchingDialpad = false;
     });
+    if (number.isNotEmpty) {
+      _makeCall();
+    }
   }
 
   void _toggleContactSearch() {
@@ -379,28 +443,18 @@ class _DialpadPageState extends State<DialpadPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Align(
-            alignment: Alignment.centerRight,
-            child: FilledButton.icon(
-              onPressed: _toggleContactSearch,
-              icon: const Icon(Icons.add),
-              label: const Text('ADD'),
+          TextField(
+            controller: _contactSearchController,
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              labelText: 'Recherche contact',
+              hintText: 'Tapez au moins 3 caractères',
+              prefixIcon: Icon(Icons.search),
             ),
+            textInputAction: TextInputAction.search,
+            onChanged: _onContactSearchChanged,
+            onSubmitted: (_) => _searchContacts(),
           ),
-          if (_showContactSearch) ...[
-            const SizedBox(height: 12),
-            TextField(
-              controller: _contactSearchController,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-                labelText: 'sn',
-                hintText: 'Ex: goug',
-              ),
-              textInputAction: TextInputAction.search,
-              onChanged: _onContactSearchChanged,
-              onSubmitted: (_) => _searchContacts(),
-            ),
-          ],
           const SizedBox(height: 12),
           if (_contactsError != null)
             Text(
@@ -434,6 +488,104 @@ class _DialpadPageState extends State<DialpadPage> {
         ],
       ),
     );
+  }
+
+  String _formatHistoryDate(_CallHistoryEntry entry) {
+    final dt = entry.calldate;
+    if (dt == null) return entry.rawCalldate;
+    final day = dt.day.toString().padLeft(2, '0');
+    final month = dt.month.toString().padLeft(2, '0');
+    final year = dt.year.toString();
+    final hour = dt.hour.toString().padLeft(2, '0');
+    final minute = dt.minute.toString().padLeft(2, '0');
+    return '$day/$month/$year $hour:$minute';
+  }
+
+  String _formatBillsec(int seconds) {
+    if (seconds <= 0) return '0s';
+    final mins = seconds ~/ 60;
+    final secs = seconds % 60;
+    if (mins == 0) return '${secs}s';
+    return '${mins}m ${secs.toString().padLeft(2, '0')}s';
+  }
+
+  Widget _buildHistoryTab() {
+    return RefreshIndicator(
+      onRefresh: () => _loadCallHistory(force: true),
+      child: ListView(
+        padding: const EdgeInsets.all(12),
+        children: [
+          if (_isLoadingHistory && _historyEntries.isEmpty)
+            const Padding(
+              padding: EdgeInsets.only(top: 24),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          if (_historyError != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 12),
+              child: Card(
+                child: ListTile(
+                  leading: const Icon(Icons.error_outline),
+                  title: const Text('Historique indisponible'),
+                  subtitle: Text(_historyError!),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.refresh),
+                    onPressed: () => _loadCallHistory(force: true),
+                  ),
+                ),
+              ),
+            ),
+          if (!_isLoadingHistory && _historyError == null && _historyEntries.isEmpty)
+            const Padding(
+              padding: EdgeInsets.only(top: 24),
+              child: Center(child: Text('Aucun appel dans l\'historique')),
+            ),
+          for (final entry in _historyEntries)
+            Card(
+              margin: const EdgeInsets.symmetric(vertical: 4),
+              child: ListTile(
+                leading: Icon(
+                  entry.directionIcon,
+                  color: entry.directionColor,
+                ),
+                title: Text(
+                  entry.primaryDisplay,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                subtitle: Text(
+                  '${_formatHistoryDate(entry)} • ${entry.sens} • ${entry.disposition} • ${_formatBillsec(entry.billsec)}',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                trailing: Text(
+                  entry.num,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                onTap: () => _prefillDialpadFromHistory(entry.num),
+              ),
+            ),
+          if (_isLoadingHistory && _historyEntries.isNotEmpty)
+            const Padding(
+              padding: EdgeInsets.only(top: 8),
+              child: LinearProgressIndicator(minHeight: 2),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _prefillDialpadFromHistory(String value) {
+    final number = value.trim();
+    if (number.isEmpty) return;
+    setState(() {
+      _selectedIndex = 2;
+      _controller.text = number;
+      _controller.selection = TextSelection.fromPosition(
+        TextPosition(offset: _controller.text.length),
+      );
+    });
+    _onDialpadSearchChanged(number);
   }
 
   @override
@@ -526,10 +678,7 @@ class _DialpadPageState extends State<DialpadPage> {
             icon: Icons.star,
             title: 'Favoris',
           ),
-        1 => const _MenuPlaceholder(
-            icon: Icons.history,
-            title: 'Historique d\'appel',
-          ),
+        1 => _buildHistoryTab(),
         2 => Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -611,7 +760,12 @@ class _DialpadPageState extends State<DialpadPage> {
         selectedIndex: _selectedIndex,
         height: 72,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
-        onDestinationSelected: (index) => setState(() => _selectedIndex = index),
+        onDestinationSelected: (index) {
+          setState(() => _selectedIndex = index);
+          if (index == 1) {
+            _loadCallHistory();
+          }
+        },
         destinations: const [
           NavigationDestination(
             icon: Tooltip(
@@ -742,5 +896,78 @@ class _DialButton extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _CallHistoryEntry {
+  final DateTime? calldate;
+  final String rawCalldate;
+  final String clid;
+  final int billsec;
+  final String sens;
+  final String disposition;
+  final String num;
+
+  const _CallHistoryEntry({
+    required this.calldate,
+    required this.rawCalldate,
+    required this.clid,
+    required this.billsec,
+    required this.sens,
+    required this.disposition,
+    required this.num,
+  });
+
+  factory _CallHistoryEntry.fromMap(Map<String, dynamic> map) {
+    final rawDate = map['calldate']?.toString() ?? '';
+    final normalizedDate = rawDate.replaceFirst(' ', 'T');
+    final parsedDate = DateTime.tryParse(normalizedDate);
+    final billsecRaw = map['billsec'];
+    final billsecValue = billsecRaw is int
+        ? billsecRaw
+        : int.tryParse(billsecRaw?.toString() ?? '') ?? 0;
+
+    return _CallHistoryEntry(
+      calldate: parsedDate,
+      rawCalldate: rawDate,
+      clid: map['clid']?.toString() ?? '',
+      billsec: billsecValue,
+      sens: map['sens']?.toString() ?? '',
+      disposition: map['disposition']?.toString() ?? '',
+      num: map['num']?.toString() ?? '',
+    );
+  }
+
+  String get primaryDisplay {
+    final trimmedClid = clid.trim();
+    if (trimmedClid.isNotEmpty) {
+      final match = RegExp(r'"([^"]+)"').firstMatch(trimmedClid);
+      if (match != null) {
+        final extracted = match.group(1)?.trim();
+        if (extracted != null && extracted.isNotEmpty) {
+          return extracted;
+        }
+      }
+      return trimmedClid;
+    }
+    return num;
+  }
+
+  IconData get directionIcon {
+    final s = sens.toLowerCase();
+    if (s.contains('entrant')) return Icons.call_received;
+    if (s.contains('sortant')) return Icons.call_made;
+    return Icons.phone;
+  }
+
+  Color get directionColor {
+    final s = sens.toLowerCase();
+    if (s.contains('entrant')) {
+      return disposition.toUpperCase() == 'ANSWERED' ? Colors.green : Colors.red;
+    }
+    if (s.contains('sortant')) {
+      return disposition.toUpperCase() == 'ANSWERED' ? Colors.blue : Colors.red;
+    }
+    return Colors.grey;
   }
 }
