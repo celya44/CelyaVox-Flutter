@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../log/app_logger.dart';
@@ -27,10 +30,16 @@ class _SettingsPageState extends State<SettingsPage> {
       if (!await file.exists()) {
         throw StateError('Log file missing: ${file.path}');
       }
+      final dump = await ProvisioningChannel.getProvisioningDump();
+      final dumpFile = await _writeProvisioningDump(dump);
       final box = context.findRenderObject() as RenderBox?;
+      final files = <XFile>[XFile(file.path)];
+      if (dumpFile != null) {
+        files.add(XFile(dumpFile.path));
+      }
       await Share.shareXFiles(
-        [XFile(file.path)],
-        text: 'Logs CelyaVox',
+        files,
+        text: 'Logs CelyaVox + Dump provisioning',
         sharePositionOrigin: box == null
             ? null
             : box.localToGlobal(Offset.zero) & box.size,
@@ -43,6 +52,26 @@ class _SettingsPageState extends State<SettingsPage> {
     } finally {
       if (mounted) setState(() => _exportingLogs = false);
     }
+  }
+
+  Future<File?> _writeProvisioningDump(Map<String, String> dump) async {
+    if (dump.isEmpty) return null;
+    final entries = dump.entries.toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+    final text = entries
+        .map((e) => '${e.key}: ${_maskIfNeeded(e.key, e.value)}')
+        .join('\n');
+    final dir = await getTemporaryDirectory();
+    final file = File('${dir.path}/provisioning_dump.txt');
+    await file.writeAsString(text);
+    return file;
+  }
+
+  String _maskIfNeeded(String key, String value) {
+    const maskedKeys = {'api_key', 'sip_password', 'ldap_password', 'token_fcm', 'token'};
+    if (!maskedKeys.contains(key)) return value;
+    if (value.length <= 8) return '***';
+    return '${value.substring(0, 4)}***${value.substring(value.length - 4)}';
   }
 
   Future<void> _showDump() async {

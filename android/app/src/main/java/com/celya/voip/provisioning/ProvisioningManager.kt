@@ -21,7 +21,7 @@ class ProvisioningManager(
     fun start(url: String) {
         val xmlBytes = download(url)
         val config = parse(xmlBytes)
-        store(config)
+        store(config, url)
         configureSip(config)
         prefs.edit().putBoolean(KEY_PROVISIONED, true).apply()
     }
@@ -62,14 +62,18 @@ class ProvisioningManager(
         }
     }
 
-    private fun store(config: ProvisioningConfig) {
+    private fun store(config: ProvisioningConfig, url: String) {
         getAny(config, "sip_password", "SipPassword")?.let { secureStorage.saveSipPassword(it) }
         config.get("api_key")?.let { secureStorage.saveApiKey(it) }
         config.get("ldap_password")?.let { secureStorage.saveLdapPassword(it) }
+        config.get("prefixe")?.let { Log.i(TAG, "Provisioning prefixe=$it") }
         getAny(config, "sip_username", "SipUsername")?.let { prefs.edit().putString(KEY_SIP_USERNAME, it).apply() }
         getAny(config, "sip_domain", "SipDomaine", "SipDomain")?.let { prefs.edit().putString(KEY_SIP_DOMAIN, it).apply() }
         getAny(config, "sip_proxy", "SipProxy")?.let { prefs.edit().putString(KEY_SIP_PROXY, it).apply() }
-        val nonSensitive = config.entries.filterKeys { it !in SENSITIVE_KEYS }
+        val nonSensitive = config.entries.filterKeys { it !in SENSITIVE_KEYS }.toMutableMap()
+        if (url.isNotBlank()) {
+            nonSensitive["provisioning_url"] = url
+        }
         prefs.edit().putString(KEY_PROVISIONING_DUMP, toJson(nonSensitive)).apply()
     }
 
