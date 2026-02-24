@@ -14,13 +14,16 @@ class FcmTokenSync {
 
   static final FcmTokenSync instance = FcmTokenSync._();
 
-  static const _prefsLastTokenKey = 'fcm_token_last_sent';
-  static const _prefsLastSentAtKey = 'fcm_token_last_sent_at';
+  static const _legacyLastTokenKey = 'fcm_token_last_sent';
+  static const _legacyLastSentAtKey = 'fcm_token_last_sent_at';
 
   final _api = CelyaVoxApiClient();
   StreamSubscription<VoipEvent>? _sub;
 
   Future<void> init(VoipEngine engine) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_legacyLastTokenKey);
+    await prefs.remove(_legacyLastSentAtKey);
     await _maybeSendCachedToken();
     _sub ??= VoipEvents.stream.listen((event) {
       if (event is FcmTokenEvent) {
@@ -43,10 +46,6 @@ class FcmTokenSync {
   }
 
   Future<void> _sendTokenIfNeeded(String token) async {
-    final prefs = await SharedPreferences.getInstance();
-    final lastToken = prefs.getString(_prefsLastTokenKey);
-    if (lastToken == token) return;
-
     final domain = await ProvisioningChannel.getSipDomain();
     final apiKey = await ProvisioningChannel.getApiKey();
     if (domain == null || domain.isEmpty || apiKey == null || apiKey.isEmpty) {
@@ -68,11 +67,6 @@ class FcmTokenSync {
 
     if (response.isOk) {
       await AppLogger.instance.log('FCM sync OK');
-      await prefs.setString(_prefsLastTokenKey, token);
-      await prefs.setInt(
-        _prefsLastSentAtKey,
-        DateTime.now().millisecondsSinceEpoch,
-      );
     } else {
       await AppLogger.instance.log('FCM sync ERROR: ${response.message}');
     }

@@ -24,10 +24,6 @@ class ProvisioningChannel {
     const candidateKeys = [
       'prefixe',
       'Prefixe',
-      'prefix',
-      'Prefix',
-      'PrefixNumber',
-      'prefix_number',
     ];
 
     for (final key in candidateKeys) {
