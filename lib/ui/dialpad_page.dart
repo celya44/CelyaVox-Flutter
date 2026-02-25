@@ -804,7 +804,7 @@ class _DialpadPageState extends State<DialpadPage> {
         TextPosition(offset: _controller.text.length),
       );
     });
-    _onDialpadSearchChanged(number);
+    _makeCall();
   }
 
   @override

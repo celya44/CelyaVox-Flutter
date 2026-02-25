@@ -362,9 +362,14 @@ Java_fr_celya_celyavox_PjsipEngine_nativeAcceptCall(JNIEnv *env, jobject, jstrin
 extern "C" JNIEXPORT jboolean JNICALL
 Java_fr_celya_celyavox_PjsipEngine_nativeHangupCall(JNIEnv *env, jobject, jstring jcallId) {
     ensure_pj_thread_registered("jni");
+    if (!ensure_endpoint()) return JNI_FALSE;
     const char *cid = env->GetStringUTFChars(jcallId, nullptr);
     int call_id = atoi(cid);
     env->ReleaseStringUTFChars(jcallId, cid);
+    if (call_id < 0 || call_id >= (int)pjsua_var.ua_cfg.max_calls) {
+        LOGE("hangup failed: invalid call_id=%d", call_id);
+        return JNI_FALSE;
+    }
     pj_status_t status = pjsua_call_hangup(call_id, 0, nullptr, nullptr);
     if (status != PJ_SUCCESS) {
         LOGE("hangup failed: %d", status);

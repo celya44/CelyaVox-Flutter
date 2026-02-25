@@ -112,8 +112,22 @@ class PjsipEngine private constructor() {
 
     @Synchronized
     fun hangupCall(callId: String): Boolean {
-        if (!initialized.get()) return false
-        return nativeHangupCall(callId)
+        val ready = initialized.get()
+        if (!ready) {
+            Log.w(TAG, "hangupCall ignored: engine not initialized")
+            return false
+        }
+        val normalized = callId.trim()
+        if (normalized.isEmpty() || normalized.toIntOrNull() == null) {
+            Log.w(TAG, "hangupCall ignored: invalid callId=$callId")
+            return false
+        }
+        return try {
+            nativeHangupCall(normalized)
+        } catch (t: Throwable) {
+            Log.e(TAG, "nativeHangupCall failed for callId=$callId", t)
+            false
+        }
     }
 
     @Synchronized
