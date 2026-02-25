@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../voip/voip_engine.dart';
+import '../voip/voip_events.dart';
 import 'in_call_page.dart';
 
 class IncomingCallPage extends StatefulWidget {
@@ -17,6 +18,40 @@ class IncomingCallPage extends StatefulWidget {
 
 class _IncomingCallPageState extends State<IncomingCallPage> {
   bool _isProcessing = false;
+  StreamSubscription<VoipEvent>? _eventsSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _startRinging();
+    _listenCallEvents();
+  }
+
+  @override
+  void dispose() {
+    _eventsSub?.cancel();
+    _stopRinging();
+    super.dispose();
+  }
+
+  void _startRinging() {
+    widget.engine.startInAppRinging();
+  }
+
+  void _stopRinging() {
+    widget.engine.stopInAppRinging();
+  }
+
+  void _listenCallEvents() {
+    _eventsSub = VoipEvents.stream.listen((event) {
+      if (event is CallEndedEvent && event.callId == widget.callId) {
+        _stopRinging();
+        if (mounted) {
+          Navigator.of(context).maybePop();
+        }
+      }
+    });
+  }
 
   Future<bool> _ensureMicPermission() async {
     final status = await Permission.microphone.request();
@@ -38,6 +73,7 @@ class _IncomingCallPageState extends State<IncomingCallPage> {
     try {
       final ok = await _ensureMicPermission();
       if (!ok) return;
+      _stopRinging();
       await widget.engine.acceptCall(widget.callId);
       if (!mounted) return;
       Navigator.of(context).pushReplacement(
@@ -60,6 +96,7 @@ class _IncomingCallPageState extends State<IncomingCallPage> {
   Future<void> _decline() async {
     setState(() => _isProcessing = true);
     try {
+      _stopRinging();
       await widget.engine.hangupCall(widget.callId);
       if (!mounted) return;
       Navigator.of(context).pop();

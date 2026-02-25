@@ -76,6 +76,14 @@ class VoipMethodChannel(
                     engine.acceptCall(callId)
                     result.success(null)
                 }
+                "startInAppRinging" -> {
+                    engine.startInAppRinging()
+                    result.success(null)
+                }
+                "stopInAppRinging" -> {
+                    engine.stopInAppRinging()
+                    result.success(null)
+                }
                 "setSpeakerphone" -> {
                     val enabled = requireArgument<Boolean>(call, "enabled")
                     engine.setSpeakerphone(enabled)

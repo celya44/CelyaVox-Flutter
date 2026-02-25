@@ -74,6 +74,10 @@ open class VoipConnection(
         startAudio()
     }
 
+    fun stopRingingNow() {
+        stopRinging()
+    }
+
     private fun startAudio() {
         if (previousMode != null) return
         previousMode = audioManager.mode

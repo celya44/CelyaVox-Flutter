@@ -211,6 +211,7 @@ class VoipConnectionService : ConnectionService() {
 
         fun markCallEnded(callId: String) {
             connections[callId]?.apply {
+                stopRingingNow()
                 setDisconnected(DisconnectCause(DisconnectCause.LOCAL))
                 destroy()
             }

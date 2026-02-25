@@ -33,33 +33,37 @@ class VoipEngine {
   Future<void> acceptCall(String callId) =>
       _invoke('acceptCall', <String, dynamic>{'callId': callId});
 
-    Future<void> setSpeakerphone(bool enabled) =>
+  Future<void> startInAppRinging() => _invoke('startInAppRinging');
+
+  Future<void> stopInAppRinging() => _invoke('stopInAppRinging');
+
+  Future<void> setSpeakerphone(bool enabled) =>
       _invoke('setSpeakerphone', <String, dynamic>{'enabled': enabled});
 
-    Future<void> setBluetooth(bool enabled) =>
+  Future<void> setBluetooth(bool enabled) =>
       _invoke('setBluetooth', <String, dynamic>{'enabled': enabled});
 
-    Future<bool> isBluetoothAvailable() async {
-      final result = await _invoke('isBluetoothAvailable');
-      return (result as bool?) ?? false;
-    }
+  Future<bool> isBluetoothAvailable() async {
+    final result = await _invoke('isBluetoothAvailable');
+    return (result as bool?) ?? false;
+  }
 
-      Future<bool> canDrawOverlays() async {
-        final result = await _invoke('canDrawOverlays');
-        return (result as bool?) ?? false;
-      }
+  Future<bool> canDrawOverlays() async {
+    final result = await _invoke('canDrawOverlays');
+    return (result as bool?) ?? false;
+  }
 
-      Future<void> openOverlaySettings() => _invoke('openOverlaySettings');
+  Future<void> openOverlaySettings() => _invoke('openOverlaySettings');
 
-    Future<String?> getFcmToken() async {
-      final result = await _invoke('getFcmToken');
-      return result as String?;
-    }
+  Future<String?> getFcmToken() async {
+    final result = await _invoke('getFcmToken');
+    return result as String?;
+  }
 
-    Future<void> setMuted(bool enabled) =>
+  Future<void> setMuted(bool enabled) =>
       _invoke('setMuted', <String, dynamic>{'enabled': enabled});
 
-    Future<void> sendDtmf(String callId, String digits) =>
+  Future<void> sendDtmf(String callId, String digits) =>
       _invoke('sendDtmf', <String, dynamic>{
       'callId': callId,
       'digits': digits,

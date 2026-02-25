@@ -553,106 +553,161 @@ class _DialpadPageState extends State<DialpadPage> {
   }
 
   Widget _buildContactsTab() {
-    return ListView(
+    final query = _contactSearchController.text.trim();
+    final showOverlay =
+        _isSearchingContacts || _contactsError != null || query.length >= 3;
+
+    return Padding(
       padding: const EdgeInsets.all(16),
-      children: [
-        TextField(
-          controller: _contactSearchController,
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-            labelText: 'Recherche contact',
-            hintText: 'Tapez au moins 3 caractères',
-            prefixIcon: Icon(Icons.search),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          TextField(
+            controller: _contactSearchController,
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              labelText: 'Recherche contact',
+              hintText: 'Tapez au moins 3 caractères',
+              prefixIcon: Icon(Icons.search),
+            ),
+            textInputAction: TextInputAction.search,
+            onChanged: _onContactSearchChanged,
+            onSubmitted: (_) => _searchContacts(),
           ),
-          textInputAction: TextInputAction.search,
-          onChanged: _onContactSearchChanged,
-          onSubmitted: (_) => _searchContacts(),
-        ),
-        const SizedBox(height: 12),
-        if (_contactsError != null)
-          Text(
-            _contactsError!,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.error,
+          const SizedBox(height: 12),
+          if (_savedContactsError != null)
+            Text(
+              _savedContactsError!,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.error,
+              ),
+            ),
+          const SizedBox(height: 8),
+          Expanded(
+            child: Stack(
+              children: [
+                ListView(
+                  children: [
+                    const Text(
+                      'Contacts sauvegardés',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 6),
+                    if (_isLoadingSavedContacts)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8),
+                        child: LinearProgressIndicator(minHeight: 2),
+                      )
+                    else if (_savedContacts.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8),
+                        child: Text('Aucun contact sauvegardé'),
+                      )
+                    else
+                      ..._savedContacts.map(
+                        (contact) => ListTile(
+                          leading: const Icon(Icons.person),
+                          title: Text(contact.name.isEmpty ? 'Sans nom' : contact.name),
+                          subtitle: Text(
+                            contact.ou.isEmpty
+                                ? contact.number
+                                : '${contact.ou}\n${contact.number}',
+                          ),
+                          isThreeLine: contact.ou.isNotEmpty,
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete_outline),
+                            tooltip: 'Supprimer',
+                            onPressed: () => _removeSavedContact(contact),
+                          ),
+                          onTap: () => _callSavedContact(contact),
+                        ),
+                      ),
+                  ],
+                ),
+                if (showOverlay)
+                  Align(
+                    alignment: Alignment.topCenter,
+                    child: Container(
+                      margin: const EdgeInsets.only(top: 4),
+                      constraints: const BoxConstraints(maxHeight: 260),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surface,
+                        border: Border.all(
+                          color: Theme.of(context).colorScheme.outlineVariant,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.08),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: _isSearchingContacts
+                          ? const Padding(
+                              padding: EdgeInsets.all(12),
+                              child: LinearProgressIndicator(minHeight: 2),
+                            )
+                          : _contactsError != null
+                              ? Padding(
+                                  padding: const EdgeInsets.all(12),
+                                  child: Text(
+                                    _contactsError!,
+                                    style: TextStyle(
+                                      color: Theme.of(context).colorScheme.error,
+                                    ),
+                                  ),
+                                )
+                              : _contactResults.isEmpty
+                                  ? const Padding(
+                                      padding: EdgeInsets.all(12),
+                                      child: Text('Aucun contact'),
+                                    )
+                                  : ListView.separated(
+                                      itemCount: _contactResults.length,
+                                      shrinkWrap: true,
+                                      separatorBuilder: (_, __) =>
+                                          const Divider(height: 1),
+                                      itemBuilder: (context, index) {
+                                        final contact = _contactResults[index];
+                                        final name =
+                                            contact['name']?.toString() ?? 'Sans nom';
+                                        final number = contact['telephoneNumber']
+                                                ?.toString() ??
+                                            '';
+                                        final ou = contact['ou']?.toString() ?? '';
+                                        final isSaved = _isContactSaved(number);
+                                        final subtitleParts = <String>[];
+                                        if (ou.isNotEmpty) subtitleParts.add(ou);
+                                        if (number.isNotEmpty) {
+                                          subtitleParts.add(number);
+                                        }
+                                        return ListTile(
+                                          leading: const Icon(Icons.person_outline),
+                                          title: Text(name),
+                                          subtitle: subtitleParts.isEmpty
+                                              ? null
+                                              : Text(subtitleParts.join('\n')),
+                                          isThreeLine: subtitleParts.length > 1,
+                                          trailing: IconButton(
+                                            icon: Icon(isSaved ? Icons.check : Icons.add),
+                                            tooltip: isSaved ? 'Déjà ajouté' : 'Ajouter',
+                                            onPressed: isSaved
+                                                ? null
+                                                : () => _addSavedContact(contact),
+                                          ),
+                                          onTap: () => _callContactFromContacts(contact),
+                                        );
+                                      },
+                                    ),
+                    ),
+                  ),
+              ],
             ),
           ),
-        if (_savedContactsError != null)
-          Text(
-            _savedContactsError!,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.error,
-            ),
-          ),
-        const SizedBox(height: 8),
-        const Text(
-          'Contacts sauvegardés',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 6),
-        if (_isLoadingSavedContacts)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: LinearProgressIndicator(minHeight: 2),
-          )
-        else if (_savedContacts.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: Text('Aucun contact sauvegardé'),
-          )
-        else
-          ..._savedContacts.map(
-            (contact) => ListTile(
-              leading: const Icon(Icons.person),
-              title: Text(contact.name.isEmpty ? 'Sans nom' : contact.name),
-              subtitle: Text(
-                contact.ou.isEmpty
-                    ? contact.number
-                    : '${contact.ou}\n${contact.number}',
-              ),
-              isThreeLine: contact.ou.isNotEmpty,
-              trailing: IconButton(
-                icon: const Icon(Icons.delete_outline),
-                tooltip: 'Supprimer',
-                onPressed: () => _removeSavedContact(contact),
-              ),
-              onTap: () => _callSavedContact(contact),
-            ),
-          ),
-        const Divider(height: 24),
-        const Text(
-          'Résultats de recherche',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 6),
-        if (_contactResults.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 8),
-            child: Text('Aucun contact'),
-          )
-        else
-          ..._contactResults.map((contact) {
-            final name = contact['name']?.toString() ?? 'Sans nom';
-            final number = contact['telephoneNumber']?.toString() ?? '';
-            final ou = contact['ou']?.toString() ?? '';
-            final isSaved = _isContactSaved(number);
-            final subtitleParts = <String>[];
-            if (ou.isNotEmpty) subtitleParts.add(ou);
-            if (number.isNotEmpty) subtitleParts.add(number);
-            return ListTile(
-              leading: const Icon(Icons.person_outline),
-              title: Text(name),
-              subtitle:
-                  subtitleParts.isEmpty ? null : Text(subtitleParts.join('\n')),
-              isThreeLine: subtitleParts.length > 1,
-              trailing: IconButton(
-                icon: Icon(isSaved ? Icons.check : Icons.add),
-                tooltip: isSaved ? 'Déjà ajouté' : 'Ajouter',
-                onPressed: isSaved ? null : () => _addSavedContact(contact),
-              ),
-              onTap: () => _callContactFromContacts(contact),
-            );
-          }),
-      ],
+        ],
+      ),
     );
   }
 
