@@ -366,8 +366,13 @@ Java_fr_celya_celyavox_PjsipEngine_nativeHangupCall(JNIEnv *env, jobject, jstrin
     const char *cid = env->GetStringUTFChars(jcallId, nullptr);
     int call_id = atoi(cid);
     env->ReleaseStringUTFChars(jcallId, cid);
-    if (call_id < 0 || call_id >= (int)pjsua_var.ua_cfg.max_calls) {
+    if (call_id < 0) {
         LOGE("hangup failed: invalid call_id=%d", call_id);
+        return JNI_FALSE;
+    }
+    pjsua_call_info ci;
+    if (pjsua_call_get_info(call_id, &ci) != PJ_SUCCESS) {
+        LOGE("hangup failed: unknown call_id=%d", call_id);
         return JNI_FALSE;
     }
     pj_status_t status = pjsua_call_hangup(call_id, 0, nullptr, nullptr);
