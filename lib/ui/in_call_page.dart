@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../contacts/saved_contacts_store.dart';
 import '../voip/voip_engine.dart';
 import '../voip/voip_events.dart';
 import 'dialpad_page.dart';
@@ -26,6 +27,7 @@ class _InCallPageState extends State<InCallPage> {
   bool _bluetoothAvailable = false;
   String _bluetoothName = '';
   String _activeCallId = '';
+  String? _savedContactName;
   StreamSubscription<VoipEvent>? _eventsSub;
 
   @override
@@ -34,6 +36,7 @@ class _InCallPageState extends State<InCallPage> {
     _activeCallId = widget.callId;
     _ensureMicPermission();
     _loadBluetoothAvailability();
+    _loadSavedContact();
     _listenCallUpdates();
   }
 
@@ -66,9 +69,38 @@ class _InCallPageState extends State<InCallPage> {
     }
   }
 
+  Future<void> _loadSavedContact() async {
+    final number = _displayNumber(widget.callId);
+    if (number.isEmpty) return;
+    try {
+      final saved = await SavedContactsStore.load();
+      if (!mounted) return;
+      final match = saved.firstWhere(
+        (contact) => contact.number.trim() == number,
+        orElse: () => const SavedContact(name: '', number: '', ou: ''),
+      );
+      if (match.number.isNotEmpty) {
+        setState(() => _savedContactName = match.name.trim().isEmpty ? null : match.name.trim());
+      }
+    } catch (_) {
+      // Ignore lookup errors.
+    }
+  }
+
+  String _displayNumber(String raw) {
+    final value = raw.trim();
+    if (value.isEmpty) return '';
+    final atIndex = value.indexOf('@');
+    return atIndex > 0 ? value.substring(0, atIndex) : value;
+  }
+
   void _listenCallUpdates() {
     _eventsSub = VoipEvents.stream.listen((event) {
       if (event is CallConnectedEvent) {
+        if (mounted && event.callId.isNotEmpty) {
+          setState(() => _activeCallId = event.callId);
+        }
+      } else if (event is OutgoingCallEvent) {
         if (mounted && event.callId.isNotEmpty) {
           setState(() => _activeCallId = event.callId);
         }
@@ -184,9 +216,17 @@ class _InCallPageState extends State<InCallPage> {
               const Icon(Icons.call, size: 48),
               const SizedBox(height: 12),
               Text(
-                widget.callId,
+                _displayNumber(widget.callId),
                 style: Theme.of(context).textTheme.titleLarge,
               ),
+              if (_savedContactName != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    _savedContactName!,
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ),
               const SizedBox(height: 24),
               Wrap(
                 spacing: 12,

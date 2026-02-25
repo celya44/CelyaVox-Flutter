@@ -341,6 +341,7 @@ Java_fr_celya_celyavox_PjsipEngine_nativeMakeCall(JNIEnv *env, jobject, jstring 
         return JNI_FALSE;
     }
     LOGI("Calling %s (id=%d)", dest.c_str(), call_id);
+    emit_event("outgoing_call", std::to_string(call_id).c_str());
     return JNI_TRUE;
 }
 

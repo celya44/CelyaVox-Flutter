@@ -266,14 +266,12 @@ class _DialpadPageState extends State<DialpadPage> {
     _controller.selection = TextSelection.fromPosition(
       TextPosition(offset: _controller.text.length),
     );
-    _onDialpadSearchChanged(_controller.text);
   }
 
   void _backspace() {
     final text = _controller.text;
     if (text.isNotEmpty) {
       _controller.text = text.substring(0, text.length - 1);
-      _onDialpadSearchChanged(_controller.text);
     }
   }
 
@@ -911,51 +909,7 @@ class _DialpadPageState extends State<DialpadPage> {
                     hintText: 'saisir numéro ou click pour recherche.',
                   ),
                   keyboardType: TextInputType.text,
-                  onChanged: _onDialpadSearchChanged,
                 ),
-                if (_isSearchingDialpad)
-                  const Padding(
-                    padding: EdgeInsets.only(top: 8),
-                    child: LinearProgressIndicator(minHeight: 2),
-                  ),
-                if (_dialpadSearchError != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        _dialpadSearchError!,
-                        style: TextStyle(color: Theme.of(context).colorScheme.error),
-                      ),
-                    ),
-                  ),
-                if (_dialpadSearchResults.isNotEmpty)
-                  Container(
-                    margin: const EdgeInsets.only(top: 8),
-                    constraints: const BoxConstraints(maxHeight: 180),
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: Theme.of(context).colorScheme.outlineVariant,
-                      ),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: ListView.separated(
-                      itemCount: _dialpadSearchResults.length,
-                      shrinkWrap: true,
-                      separatorBuilder: (_, __) => const Divider(height: 1),
-                      itemBuilder: (context, index) {
-                        final contact = _dialpadSearchResults[index];
-                        final name = contact['name']?.toString() ?? 'Sans nom';
-                        final number = contact['telephoneNumber']?.toString() ?? '';
-                        return ListTile(
-                          dense: true,
-                          title: Text(name),
-                          subtitle: number.isEmpty ? null : Text(number),
-                          onTap: () => _selectDialpadContact(contact),
-                        );
-                      },
-                    ),
-                  ),
                 const SizedBox(height: 16),
                 _Dialpad(onDigit: _appendDigit, onBackspace: _backspace),
                 const Spacer(),
