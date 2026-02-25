@@ -102,7 +102,13 @@ class CallActivity : AppCompatActivity() {
         super.onStop()
         isVisible = false
         visibleCallId = null
+        stopRinging()
         Log.d(TAG, "onStop")
+    }
+
+    override fun onPause() {
+        stopRinging()
+        super.onPause()
     }
 
     override fun onDestroy() {

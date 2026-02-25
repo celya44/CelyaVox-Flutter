@@ -412,8 +412,11 @@ class VoipEngine(
                 callConnected(message)
             }
             "call_ended" -> {
-                VoipConnectionService.markCallEnded(message)
-                callEnded(message, null)
+                val parts = message.split("|", limit = 2)
+                val callId = parts.firstOrNull().orEmpty()
+                val reason = parts.getOrNull(1)
+                VoipConnectionService.markCallEnded(callId)
+                callEnded(callId, reason)
             }
             else -> emit(mapOf("type" to type, "message" to message))
         }
