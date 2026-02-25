@@ -95,6 +95,7 @@ class VoipEngine(
         val ok = sipEngine.hangupCall(callId)
         Log.i(TAG, "VoipEngine.endCall callId=$callId ok=$ok")
         appContext?.let { ctx ->
+            stopInAppRinging()
             VoipForegroundService.stop(ctx)
             try {
                 ctx.sendBroadcast(Intent(ACTION_CALL_TERMINATE_REQUESTED).setPackage(ctx.packageName))
@@ -453,6 +454,7 @@ class VoipEngine(
 
     fun callEnded(callId: String, reason: String? = null) {
         appContext?.let { ctx ->
+            stopInAppRinging()
             VoipForegroundService.stop(ctx)
             try {
                 ctx.sendBroadcast(Intent(ACTION_CALL_ENDED).setPackage(ctx.packageName))

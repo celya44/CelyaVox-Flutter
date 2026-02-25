@@ -42,10 +42,12 @@ class CallActivity : AppCompatActivity() {
             when (intent?.action) {
                 VoipEngine.ACTION_CALL_ENDED -> {
                     Log.i(TAG, "Received ACTION_CALL_ENDED; closing CallActivity")
+                    stopRinging()
                     finish()
                 }
                 VoipEngine.ACTION_CALL_TERMINATE_REQUESTED -> {
                     Log.i(TAG, "Received ACTION_CALL_TERMINATE_REQUESTED; closing CallActivity")
+                    stopRinging()
                     finish()
                 }
             }
