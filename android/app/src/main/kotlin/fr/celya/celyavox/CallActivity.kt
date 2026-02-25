@@ -1,6 +1,9 @@
 package fr.celya.celyavox
 
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
 import android.media.AudioAttributes
@@ -34,6 +37,20 @@ class CallActivity : AppCompatActivity() {
     private var currentCallId: String = ""
     private var currentCallerId: String = ""
     private var waitingNativeCallIdForAccept = false
+    private val callEndedReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                VoipEngine.ACTION_CALL_ENDED -> {
+                    Log.i(TAG, "Received ACTION_CALL_ENDED; closing CallActivity")
+                    finish()
+                }
+                VoipEngine.ACTION_CALL_TERMINATE_REQUESTED -> {
+                    Log.i(TAG, "Received ACTION_CALL_TERMINATE_REQUESTED; closing CallActivity")
+                    finish()
+                }
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,6 +58,7 @@ class CallActivity : AppCompatActivity() {
         currentCallerId = intent?.getStringExtra(EXTRA_CALLER_ID).orEmpty()
         lastLaunchAtMs = System.currentTimeMillis()
         Log.i(TAG, "onCreate callId=$currentCallId")
+        registerCallEndedReceiver()
         applyLockScreenFlags()
         setContentView(buildContentView())
         startRinging()
@@ -87,7 +105,29 @@ class CallActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         stopRinging()
+        unregisterCallEndedReceiver()
         super.onDestroy()
+    }
+
+    private fun registerCallEndedReceiver() {
+        val filter = IntentFilter().apply {
+            addAction(VoipEngine.ACTION_CALL_ENDED)
+            addAction(VoipEngine.ACTION_CALL_TERMINATE_REQUESTED)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(callEndedReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("DEPRECATION")
+            registerReceiver(callEndedReceiver, filter)
+        }
+    }
+
+    private fun unregisterCallEndedReceiver() {
+        try {
+            unregisterReceiver(callEndedReceiver)
+        } catch (e: IllegalArgumentException) {
+            Log.w(TAG, "Call ended receiver already unregistered", e)
+        }
     }
 
     private fun applyLockScreenFlags() {

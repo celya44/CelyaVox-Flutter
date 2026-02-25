@@ -5,6 +5,7 @@ import 'dart:async';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../api/celyavox_api.dart';
+import '../contacts/saved_contacts_store.dart';
 import '../provisioning/provisioning_channel.dart';
 import '../theme/theme_controller.dart';
 import '../voip/voip_events.dart';
@@ -43,6 +44,9 @@ class _DialpadPageState extends State<DialpadPage> {
   List<Map<String, dynamic>> _contactResults = const [];
   List<Map<String, dynamic>> _dialpadSearchResults = const [];
   List<_CallHistoryEntry> _historyEntries = const [];
+  List<SavedContact> _savedContacts = const [];
+  bool _isLoadingSavedContacts = false;
+  String? _savedContactsError;
   StreamSubscription<VoipEvent>? _eventsSub;
   Timer? _contactSearchDebounce;
   Timer? _dialpadSearchDebounce;
@@ -55,6 +59,7 @@ class _DialpadPageState extends State<DialpadPage> {
     super.initState();
     _ensureMicPermission();
     _loadUsername();
+    _loadSavedContacts();
     _listenRegistration();
     _registerOnStart();
   }
@@ -77,6 +82,27 @@ class _DialpadPageState extends State<DialpadPage> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _username = null);
+    }
+  }
+
+  Future<void> _loadSavedContacts() async {
+    setState(() {
+      _isLoadingSavedContacts = true;
+      _savedContactsError = null;
+    });
+    try {
+      final contacts = await SavedContactsStore.load();
+      if (!mounted) return;
+      setState(() {
+        _savedContacts = contacts;
+        _isLoadingSavedContacts = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _savedContactsError = 'Erreur: $e';
+        _isLoadingSavedContacts = false;
+      });
     }
   }
 
@@ -337,6 +363,95 @@ class _DialpadPageState extends State<DialpadPage> {
     }
   }
 
+  void _callContactFromContacts(Map<String, dynamic> contact) {
+    final number = contact['telephoneNumber']?.toString().trim() ?? '';
+    if (number.isEmpty) {
+      _showMessage('Numéro introuvable pour ce contact.');
+      return;
+    }
+    _controller.text = number;
+    _controller.selection = TextSelection.fromPosition(
+      TextPosition(offset: _controller.text.length),
+    );
+    FocusScope.of(context).unfocus();
+    _makeCall();
+  }
+
+  Future<void> _addSavedContact(Map<String, dynamic> contact) async {
+    final number = contact['telephoneNumber']?.toString().trim() ?? '';
+    if (number.isEmpty) {
+      _showMessage('Numéro introuvable pour ce contact.');
+      return;
+    }
+    final name = contact['name']?.toString().trim() ?? '';
+    final ou = contact['ou']?.toString().trim() ?? '';
+    try {
+      final updated = await SavedContactsStore.add(
+        SavedContact(name: name, number: number, ou: ou),
+      );
+      if (!mounted) return;
+      setState(() => _savedContacts = updated);
+      _showMessage('Contact ajouté.');
+    } catch (e) {
+      _showMessage('Erreur: $e');
+    }
+  }
+
+  void _callSavedContact(SavedContact contact) {
+    final number = contact.number.trim();
+    if (number.isEmpty) {
+      _showMessage('Numéro introuvable pour ce contact.');
+      return;
+    }
+    _controller.text = number;
+    _controller.selection = TextSelection.fromPosition(
+      TextPosition(offset: _controller.text.length),
+    );
+    FocusScope.of(context).unfocus();
+    _makeCall();
+  }
+
+  Future<void> _removeSavedContact(SavedContact contact) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Supprimer ce contact ?'),
+          content: Text(
+            contact.name.isNotEmpty
+                ? 'Supprimer ${contact.name} de vos contacts sauvegardés ?'
+                : 'Supprimer ce contact de vos contacts sauvegardés ?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Annuler'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Supprimer'),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true) return;
+    try {
+      final updated = await SavedContactsStore.removeByNumber(contact.number);
+      if (!mounted) return;
+      setState(() => _savedContacts = updated);
+      _showMessage('Contact supprimé.');
+    } catch (e) {
+      _showMessage('Erreur: $e');
+    }
+  }
+
+  bool _isContactSaved(String number) {
+    final normalized = number.trim();
+    if (normalized.isEmpty) return false;
+    return _savedContacts.any((c) => c.number.trim() == normalized);
+  }
+
   void _toggleContactSearch() {
     setState(() {
       _showContactSearch = !_showContactSearch;
@@ -438,55 +553,106 @@ class _DialpadPageState extends State<DialpadPage> {
   }
 
   Widget _buildContactsTab() {
-    return Padding(
+    return ListView(
       padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          TextField(
-            controller: _contactSearchController,
-            decoration: const InputDecoration(
-              border: OutlineInputBorder(),
-              labelText: 'Recherche contact',
-              hintText: 'Tapez au moins 3 caractères',
-              prefixIcon: Icon(Icons.search),
-            ),
-            textInputAction: TextInputAction.search,
-            onChanged: _onContactSearchChanged,
-            onSubmitted: (_) => _searchContacts(),
+      children: [
+        TextField(
+          controller: _contactSearchController,
+          decoration: const InputDecoration(
+            border: OutlineInputBorder(),
+            labelText: 'Recherche contact',
+            hintText: 'Tapez au moins 3 caractères',
+            prefixIcon: Icon(Icons.search),
           ),
-          const SizedBox(height: 12),
-          if (_contactsError != null)
-            Text(
-              _contactsError!,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.error,
+          textInputAction: TextInputAction.search,
+          onChanged: _onContactSearchChanged,
+          onSubmitted: (_) => _searchContacts(),
+        ),
+        const SizedBox(height: 12),
+        if (_contactsError != null)
+          Text(
+            _contactsError!,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.error,
+            ),
+          ),
+        if (_savedContactsError != null)
+          Text(
+            _savedContactsError!,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.error,
+            ),
+          ),
+        const SizedBox(height: 8),
+        const Text(
+          'Contacts sauvegardés',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 6),
+        if (_isLoadingSavedContacts)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: LinearProgressIndicator(minHeight: 2),
+          )
+        else if (_savedContacts.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Text('Aucun contact sauvegardé'),
+          )
+        else
+          ..._savedContacts.map(
+            (contact) => ListTile(
+              leading: const Icon(Icons.person),
+              title: Text(contact.name.isEmpty ? 'Sans nom' : contact.name),
+              subtitle: Text(
+                contact.ou.isEmpty
+                    ? contact.number
+                    : '${contact.ou}\n${contact.number}',
               ),
+              isThreeLine: contact.ou.isNotEmpty,
+              trailing: IconButton(
+                icon: const Icon(Icons.delete_outline),
+                tooltip: 'Supprimer',
+                onPressed: () => _removeSavedContact(contact),
+              ),
+              onTap: () => _callSavedContact(contact),
             ),
-          Expanded(
-            child: _contactResults.isEmpty
-                ? const Center(
-                    child: Text('Aucun contact'),
-                  )
-                : ListView.separated(
-                    itemCount: _contactResults.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
-                    itemBuilder: (context, index) {
-                      final contact = _contactResults[index];
-                      final name = contact['name']?.toString() ?? 'Sans nom';
-                      final number = contact['telephoneNumber']?.toString() ?? '';
-                      final ou = contact['ou']?.toString() ?? '';
-                      return ListTile(
-                        leading: const Icon(Icons.person),
-                        title: Text(name),
-                        subtitle: ou.isEmpty ? null : Text(ou),
-                        trailing: Text(number),
-                      );
-                    },
-                  ),
           ),
-        ],
-      ),
+        const Divider(height: 24),
+        const Text(
+          'Résultats de recherche',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 6),
+        if (_contactResults.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 8),
+            child: Text('Aucun contact'),
+          )
+        else
+          ..._contactResults.map((contact) {
+            final name = contact['name']?.toString() ?? 'Sans nom';
+            final number = contact['telephoneNumber']?.toString() ?? '';
+            final ou = contact['ou']?.toString() ?? '';
+            final isSaved = _isContactSaved(number);
+            final subtitleParts = <String>[];
+            if (ou.isNotEmpty) subtitleParts.add(ou);
+            if (number.isNotEmpty) subtitleParts.add(number);
+            return ListTile(
+              leading: const Icon(Icons.person_outline),
+              title: Text(name),
+              subtitle:
+                  subtitleParts.isEmpty ? null : Text(subtitleParts.join('\n')),
+              isThreeLine: subtitleParts.length > 1,
+              trailing: IconButton(
+                icon: Icon(isSaved ? Icons.check : Icons.add),
+                tooltip: isSaved ? 'Déjà ajouté' : 'Ajouter',
+                onPressed: isSaved ? null : () => _addSavedContact(contact),
+              ),
+              onTap: () => _callContactFromContacts(contact),
+            );
+          }),
+      ],
     );
   }
 
