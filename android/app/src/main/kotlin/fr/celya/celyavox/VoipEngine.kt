@@ -407,6 +407,14 @@ class VoipEngine(
                     incomingCall(message, null)
                 }
             }
+            "outgoing_call" -> {
+                emit(
+                    mapOf(
+                        "type" to "outgoing_call",
+                        "callId" to message,
+                    )
+                )
+            }
             "call_connected" -> {
                 VoipConnectionService.markCallActive(message)
                 callConnected(message)
