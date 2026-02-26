@@ -118,7 +118,7 @@ class CelyaVoxApiClient {
     bool useHttps = true,
     bool includeExtension = true,
     bool includePrefixe = true,
-    int defaultHttpsPort = 445,
+    int defaultHttpsPort = 8217,
     int? overridePort,
     String apiRootPath = '/celyavox-api',
   }) async {
@@ -171,7 +171,7 @@ class CelyaVoxApiClient {
     bool useHttps = true,
     bool includeExtension = true,
     bool includePrefixe = true,
-    int defaultHttpsPort = 445,
+    int defaultHttpsPort = 8217,
     int? overridePort,
     String apiRootPath = '/celyavox-api',
   }) async {
