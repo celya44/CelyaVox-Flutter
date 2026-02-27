@@ -10,6 +10,8 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import androidx.core.app.NotificationCompat
 
@@ -20,6 +22,7 @@ class VoipForegroundService : Service() {
         val callerId = intent?.getStringExtra(EXTRA_CALLER_ID).orEmpty()
         Log.i(TAG, "onStartCommand callId=$callId callerId=$callerId")
         startForeground(NOTIFICATION_ID, buildNotification(callId, callerId))
+        scheduleNoInviteTimeout()
         return START_NOT_STICKY
     }
 
@@ -41,7 +44,6 @@ class VoipForegroundService : Service() {
 
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle(if (callerId.isNotEmpty()) callerId else "Appel en cours")
-            .setContentText(if (callId.isNotEmpty()) "ID: $callId" else "")
             .setSmallIcon(android.R.drawable.sym_call_incoming)
             .setContentIntent(contentIntent)
             .setFullScreenIntent(contentIntent, true)
@@ -98,8 +100,25 @@ class VoipForegroundService : Service() {
     }
 
     override fun onDestroy() {
+        cancelNoInviteTimeout()
         stopForeground(STOP_FOREGROUND_REMOVE)
         super.onDestroy()
+    }
+
+    private fun scheduleNoInviteTimeout() {
+        cancelNoInviteTimeout()
+        val runnable = Runnable {
+            Log.w(TAG, "No SIP invite after ${NO_INVITE_TIMEOUT_MS}ms; closing UI and stopping foreground")
+            try {
+                sendBroadcast(Intent(VoipEngine.ACTION_CALL_TERMINATE_REQUESTED).setPackage(packageName))
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to broadcast ACTION_CALL_TERMINATE_REQUESTED", e)
+            }
+            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopSelf()
+        }
+        timeoutRunnable = runnable
+        timeoutHandler.postDelayed(runnable, NO_INVITE_TIMEOUT_MS)
     }
 
     private fun pendingIntentImmutableFlag(): Int {
@@ -124,8 +143,17 @@ class VoipForegroundService : Service() {
         private const val TAG = "VoipForegroundService"
         private const val CHANNEL_ID = "voip_call_channel"
         private const val NOTIFICATION_ID = 2001
+        private const val NO_INVITE_TIMEOUT_MS = 10_000L
+        private val timeoutHandler = Handler(Looper.getMainLooper())
+        @Volatile private var timeoutRunnable: Runnable? = null
         const val EXTRA_CALL_ID = "callId"
         const val EXTRA_CALLER_ID = "callerId"
+
+        @JvmStatic
+        fun cancelNoInviteTimeout() {
+            timeoutRunnable?.let { timeoutHandler.removeCallbacks(it) }
+            timeoutRunnable = null
+        }
 
         fun start(context: Context, callId: String?, callerId: String?) {
             val intent = Intent(context, VoipForegroundService::class.java).apply {

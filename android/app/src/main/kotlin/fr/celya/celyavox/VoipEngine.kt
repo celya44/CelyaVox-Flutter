@@ -365,6 +365,7 @@ class VoipEngine(
         Log.d(TAG, "Native event $type | $message")
         when (type) {
             "incoming_call" -> {
+                VoipForegroundService.cancelNoInviteTimeout()
                 val ctx = appContext
                 if (ctx != null) {
                     val ok = VoipConnectionService.startIncomingCall(ctx, message, null)

@@ -306,6 +306,8 @@ echo "Token: " . substr($token, 0, 20) . "...\n\n";
 // Envoi de la notification
 $result = sendWakeUpNotification($token);
 
+var_dump($result);
+
 if ($result['success']) {
     echo "✅ Notification envoyée avec succès!\n\n";
     
@@ -319,7 +321,7 @@ if ($result['success']) {
 
     if (waitForRegisteredContact($contactAor)) {
         echo "📞 Extension $contactAor enregistrée, lancement de l'appel...\n";
-        shell_exec("asterisk -rx 'channel originate PJSIP/$contactAor application Playback demo-congrats'");
+//        shell_exec("asterisk -rx 'channel originate PJSIP/$contactAor application Playback demo-congrats'");
     } else {
         echo "⚠️ Extension $contactAor non enregistrée après plusieurs tentatives, appel annulé.\n";
     }

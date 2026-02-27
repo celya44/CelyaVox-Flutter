@@ -139,12 +139,12 @@ function sendWakeUpNotification($token) {
             // PAS de clé 'notification' ici - seulement 'data'
             // Cela force Firebase à appeler onMessageReceived() même si l'app est fermée
             'data' => [
-                'type' => 'wake_up',
-                'forceOpen' => 'true',
-                'action' => 'open_app',
+                'type' => 'incoming_call',
+                'callId' => 'wake_' . time(),
+                'callerId' => 'Test <103>',
                 'timestamp' => (string)time(),
-                'title' => 'Réveil CelyaVox',
-                'body' => 'Ouverture immédiate de l’app'
+                'title' => 'Appel entrant',
+                'body' => 'Incoming call (wake)'
             ],
             'android' => [
                 'priority' => 'high',
@@ -163,6 +163,7 @@ function sendWakeUpNotification($token) {
             ]
         ]
     ];
+
     
     $url = "https://fcm.googleapis.com/v1/projects/{$projectId}/messages:send";
     
@@ -264,7 +265,7 @@ function waitForRegisteredContact($contactAor, $maxAttempts = 10, $sleepMicrosec
 
 // Chargement de la configuration
 $envPath = __DIR__ . '/.env';
-//loadEnv($envPath);
+loadEnv($envPath);
 
 // Vérification des arguments
 if ($argc < 2) {
@@ -286,9 +287,9 @@ if ($argc < 2) {
 $extension = $argv[1];
 //echo "🔍 Recherche du token pour l'extension: $extension...\n";
 
-//$token = getFcmTokenFromExtension($extension);
+$token = getFcmTokenFromExtension($extension);
 
-/*if (!$token) {
+if (!$token) {
     echo "❌ Erreur: Aucun token FCM trouvé pour l'extension $extension\n";
     exit(1);
 }
@@ -304,15 +305,14 @@ echo "Token: " . substr($token, 0, 20) . "...\n\n";
 
 // Envoi de la notification
 $result = sendWakeUpNotification($token);
- */
-//if ($result['success']) {
-if (1==1) {
-//    echo "✅ Notification envoyée avec succès!\n\n";
+ 
+if ($result['success']) {
+    echo "✅ Notification envoyée avec succès!\n\n";
     
-/*    if (isset($result['response']['name'])) {
+    if (isset($result['response']['name'])) {
         echo "📊 Résultat FCM:\n";
         echo "   - Message: " . $result['response']['name'] . "\n";
-} */
+} 
 
     $contactAor = $extension;
     echo "🔁 Vérification de l'enregistrement PJSIP pour $contactAor...\n";
