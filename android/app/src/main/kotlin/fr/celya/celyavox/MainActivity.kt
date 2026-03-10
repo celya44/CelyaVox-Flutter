@@ -122,12 +122,6 @@ class MainActivity : FlutterActivity() {
         if (keepOverLockscreenForCall) {
             applyCallWindowFlags()
         }
-                val requested = sourceIntent?.getBooleanExtra(EXTRA_BACKGROUND_LAUNCH, false) == true
-                if (!requested) return
-                backgroundLaunchRequested = true
-                sourceIntent.removeExtra(EXTRA_BACKGROUND_LAUNCH)
-                Log.i(TAG, "Background launch flag received")
-            }
         if (!isFullScreenIntentAllowed()) {
             Log.d(TAG, "Full-screen intent not allowed; launching gate")
             launchFullScreenIntentGate()
