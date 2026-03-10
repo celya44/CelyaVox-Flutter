@@ -246,6 +246,7 @@ class CallActivity : AppCompatActivity() {
                     Log.i(TAG, "Broadcasted ACTION_CALL_TERMINATE_REQUESTED from CallActivity")
                 } else {
                     Log.i(TAG, "Hangup clicked before native callId; closing CallActivity only")
+                    launchMainActivityInBackground()
                 }
                 finish()
             }
@@ -333,6 +334,20 @@ class CallActivity : AppCompatActivity() {
         }
         startActivity(appIntent)
         finish()
+    }
+
+    private fun launchMainActivityInBackground() {
+        try {
+            val intent = Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP
+                putExtra(MainActivity.EXTRA_BACKGROUND_LAUNCH, true)
+            }
+            startActivity(intent)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to launch MainActivity in background", e)
+        }
     }
 
     private fun isPushPlaceholderCallId(callId: String): Boolean {

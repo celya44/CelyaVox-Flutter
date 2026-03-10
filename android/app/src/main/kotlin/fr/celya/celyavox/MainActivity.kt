@@ -30,6 +30,7 @@ class MainActivity : FlutterActivity() {
     private var isOverlayDialogVisible = false
     private var keepOverLockscreenForCall = false
     private var wasLockscreenCallSession = false
+    private var backgroundLaunchRequested = false
     private val callEndedReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
@@ -48,6 +49,7 @@ class MainActivity : FlutterActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.i(TAG, "onCreate keepOverLockscreenForCall=$keepOverLockscreenForCall")
+        handleBackgroundLaunchIntent(intent)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(
                 callEndedReceiver,
@@ -75,6 +77,7 @@ class MainActivity : FlutterActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         Log.i(TAG, "onNewIntent fromAcceptedCall=${intent.getBooleanExtra(EXTRA_FROM_ACCEPTED_CALL, false)}")
+        handleBackgroundLaunchIntent(intent)
         handleCallLifecycleIntent(intent)
         updateCallUnlockMode(intent)
         notifyAcceptedCallToFlutter(intent)
@@ -110,9 +113,21 @@ class MainActivity : FlutterActivity() {
     override fun onResume() {
         super.onResume()
         Log.d(TAG, "onResume keepOverLockscreenForCall=$keepOverLockscreenForCall")
+        if (backgroundLaunchRequested) {
+            Log.i(TAG, "Background launch requested; moving task to back")
+            backgroundLaunchRequested = false
+            moveTaskToBack(true)
+            return
+        }
         if (keepOverLockscreenForCall) {
             applyCallWindowFlags()
         }
+                val requested = sourceIntent?.getBooleanExtra(EXTRA_BACKGROUND_LAUNCH, false) == true
+                if (!requested) return
+                backgroundLaunchRequested = true
+                sourceIntent.removeExtra(EXTRA_BACKGROUND_LAUNCH)
+                Log.i(TAG, "Background launch flag received")
+            }
         if (!isFullScreenIntentAllowed()) {
             Log.d(TAG, "Full-screen intent not allowed; launching gate")
             launchFullScreenIntentGate()
@@ -284,6 +299,14 @@ class MainActivity : FlutterActivity() {
         Log.i(TAG, "Call unlock mode enabled")
     }
 
+    private fun handleBackgroundLaunchIntent(sourceIntent: Intent?) {
+        val requested = sourceIntent?.getBooleanExtra(EXTRA_BACKGROUND_LAUNCH, false) == true
+        if (!requested) return
+        backgroundLaunchRequested = true
+        sourceIntent.removeExtra(EXTRA_BACKGROUND_LAUNCH)
+        Log.i(TAG, "Background launch flag received")
+    }
+
     private fun onCallEndedFromNative(source: String) {
         if (!wasLockscreenCallSession) {
             Log.i(TAG, "$source received with no lockscreen session; keeping app foreground")
@@ -376,5 +399,6 @@ class MainActivity : FlutterActivity() {
         private const val ROLE_SELF_MANAGED_CALLS = "android.app.role.SELF_MANAGED_CALLS"
         const val EXTRA_FROM_ACCEPTED_CALL = "fromAcceptedCall"
         const val EXTRA_ACCEPTED_CALL_ID = "acceptedCallId"
+        const val EXTRA_BACKGROUND_LAUNCH = "backgroundLaunch"
     }
 }
