@@ -294,10 +294,11 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun handleBackgroundLaunchIntent(sourceIntent: Intent?) {
-        val requested = sourceIntent?.getBooleanExtra(EXTRA_BACKGROUND_LAUNCH, false) == true
+        val intent = sourceIntent ?: return
+        val requested = intent.getBooleanExtra(EXTRA_BACKGROUND_LAUNCH, false)
         if (!requested) return
         backgroundLaunchRequested = true
-        sourceIntent.removeExtra(EXTRA_BACKGROUND_LAUNCH)
+        intent.removeExtra(EXTRA_BACKGROUND_LAUNCH)
         Log.i(TAG, "Background launch flag received")
     }
 
