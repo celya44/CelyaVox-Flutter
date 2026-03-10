@@ -370,6 +370,8 @@ class VoipEngine(
                 if (ctx != null) {
                     val ok = VoipConnectionService.startIncomingCall(ctx, message, null)
                     if (!ok) {
+                        val now = System.currentTimeMillis()
+                        val recentLaunch = now - CallActivity.lastLaunchAtMs < 10000L
                         if (CallActivity.isVisible) {
                             if (message.isNotBlank() && CallActivity.visibleCallId != message) {
                                 Log.i(
@@ -385,14 +387,14 @@ class VoipEngine(
                             }
                             return
                         }
+                        if (recentLaunch) {
+                            Log.i(TAG, "Recent CallActivity launch detected; updating with native callId=$message")
+                            startIncomingCallActivity(ctx, message, null)
+                            return
+                        }
                         if (isAppInForeground(ctx) && !CallActivity.isVisible) {
                             Log.i(TAG, "App in foreground; routing incoming call to Flutter UI")
                             incomingCall(message, null)
-                            return
-                        }
-                        val now = System.currentTimeMillis()
-                        if (now - CallActivity.lastLaunchAtMs < 5000L) {
-                            Log.i(TAG, "Recent CallActivity launch detected; skip VoipEngine relaunch")
                             return
                         }
                         if (CallActivity.isVisible) {

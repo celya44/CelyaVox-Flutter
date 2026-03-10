@@ -71,6 +71,10 @@ class CallActivity : AppCompatActivity() {
         setIntent(intent)
         val nextCallId = intent.getStringExtra(EXTRA_CALL_ID).orEmpty()
         val nextCallerId = intent.getStringExtra(EXTRA_CALLER_ID).orEmpty()
+        Log.i(
+            TAG,
+            "onNewIntent received: prevCallId=$currentCallId nextCallId=$nextCallId prevCallerId=$currentCallerId nextCallerId=$nextCallerId"
+        )
         if (nextCallId.isNotEmpty() && nextCallId == currentCallId) {
             Log.i(TAG, "onNewIntent duplicate callId=$nextCallId ignored")
             return
@@ -338,7 +342,10 @@ class CallActivity : AppCompatActivity() {
         if (waitingNative) {
             button.isEnabled = false
             button.text = "Connexion..."
-            Log.i(TAG, "Accept disabled: waiting native SIP callId (currentCallId=$currentCallId)")
+            Log.i(
+                TAG,
+                "Accept disabled: waiting native SIP callId (currentCallId=$currentCallId placeholder=${isPushPlaceholderCallId(currentCallId)})"
+            )
             return
         }
         button.isEnabled = true
