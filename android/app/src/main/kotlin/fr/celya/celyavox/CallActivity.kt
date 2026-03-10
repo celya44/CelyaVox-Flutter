@@ -234,7 +234,8 @@ class CallActivity : AppCompatActivity() {
             text = "Raccrocher"
             setOnClickListener {
                 val callId = currentCallId
-                if (callId.isNotEmpty()) {
+                val hasNativeCallId = callId.isNotEmpty() && !isPushPlaceholderCallId(callId)
+                if (hasNativeCallId) {
                     Log.i(TAG, "Hangup clicked, ending callId=$callId")
                     val ok = PjsipEngine.instance.hangupCall(callId)
                     Log.i(TAG, "Hangup action result callId=$callId ok=$ok")
@@ -243,6 +244,8 @@ class CallActivity : AppCompatActivity() {
                             .setPackage(packageName)
                     )
                     Log.i(TAG, "Broadcasted ACTION_CALL_TERMINATE_REQUESTED from CallActivity")
+                } else {
+                    Log.i(TAG, "Hangup clicked before native callId; closing CallActivity only")
                 }
                 finish()
             }
