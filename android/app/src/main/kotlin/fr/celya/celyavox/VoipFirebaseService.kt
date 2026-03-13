@@ -8,6 +8,8 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.os.PowerManager
 import android.util.Log
 import androidx.core.app.NotificationCompat
@@ -59,22 +61,28 @@ class VoipFirebaseService : FirebaseMessagingService() {
             registerSipInBackground()
             return
         }
-        try {
-            val registered = VoipConnectionService.registerSelfManaged(this)
-            val ok = if (registered) {
-                VoipConnectionService.startIncomingCall(this, callId, callerId)
-            } else {
-                false
-            }
-            if (!ok) {
-                Log.w(TAG, "Telecom incoming call not available; launching CallActivity directly")
-                openIncomingCallActivity(callId, callerId)
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to start ConnectionService incoming call", e)
-            openIncomingCallActivity(callId, callerId)
-        }
         registerSipInBackground()
+        Log.i(TAG, "Delaying incoming call UI by ${FULL_SCREEN_DELAY_MS}ms to allow SIP register")
+        Handler(Looper.getMainLooper()).postDelayed(
+            {
+                try {
+                    val registered = VoipConnectionService.registerSelfManaged(this)
+                    val ok = if (registered) {
+                        VoipConnectionService.startIncomingCall(this, callId, callerId)
+                    } else {
+                        false
+                    }
+                    if (!ok) {
+                        Log.w(TAG, "Telecom incoming call not available; launching CallActivity directly")
+                        openIncomingCallActivity(callId, callerId)
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to start ConnectionService incoming call", e)
+                    openIncomingCallActivity(callId, callerId)
+                }
+            },
+            FULL_SCREEN_DELAY_MS
+        )
     }
 
     private fun shouldShowSimpleNotificationOnPush(): Boolean {
@@ -97,7 +105,7 @@ class VoipFirebaseService : FirebaseMessagingService() {
         val contentIntent = PendingIntent.getActivity(
             this,
             0,
-            Intent(this, CallActivity::class.java).apply {
+            Intent(this, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or
                     Intent.FLAG_ACTIVITY_CLEAR_TOP or
                     Intent.FLAG_ACTIVITY_SINGLE_TOP
@@ -196,5 +204,6 @@ class VoipFirebaseService : FirebaseMessagingService() {
         const val EXTRA_TOKEN = "token"
         private const val INCOMING_CALL_CHANNEL_ID = "voip_call_channel"
         private const val INCOMING_CALL_NOTIFICATION_ID = 2101
+        private const val FULL_SCREEN_DELAY_MS = 500L
     }
 }
