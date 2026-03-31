@@ -80,8 +80,8 @@ class CallActivity : AppCompatActivity() {
             return
         }
         Log.i(TAG, "onNewIntent switching callId=$nextCallId")
-        currentCallId = nextCallId
-        currentCallerId = nextCallerId
+        if (nextCallId.isNotEmpty()) currentCallId = nextCallId
+        if (nextCallerId.isNotEmpty()) currentCallerId = nextCallerId
         acceptButton?.visibility = View.VISIBLE
         declineButton?.text = "Raccrocher"
         titleView?.text = if (currentCallerId.isNotEmpty()) currentCallerId else "Appel entrant"

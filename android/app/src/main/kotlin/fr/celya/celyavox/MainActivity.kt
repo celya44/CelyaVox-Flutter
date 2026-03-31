@@ -31,6 +31,7 @@ class MainActivity : FlutterActivity() {
     private var keepOverLockscreenForCall = false
     private var wasLockscreenCallSession = false
     private var backgroundLaunchRequested = false
+    private var screenStateReceiverRegistered = false
     private val callEndedReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
@@ -45,11 +46,22 @@ class MainActivity : FlutterActivity() {
             }
         }
     }
+    private val screenStateReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                Intent.ACTION_SCREEN_OFF -> {
+                    Log.i(TAG, "Screen off detected; forcing SIP unregister")
+                    requestSipUnregister("ACTION_SCREEN_OFF")
+                }
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Log.i(TAG, "onCreate keepOverLockscreenForCall=$keepOverLockscreenForCall")
         handleBackgroundLaunchIntent(intent)
+        registerScreenStateReceiver()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(
                 callEndedReceiver,
@@ -155,10 +167,30 @@ class MainActivity : FlutterActivity() {
     override fun onDestroy() {
         requestSipUnregister("onDestroy")
         unregisterReceiver(callEndedReceiver)
+        unregisterScreenStateReceiver()
         provisioningChannel?.dispose()
         methodChannel?.dispose()
         voipEngine?.dispose()
         super.onDestroy()
+    }
+
+    private fun registerScreenStateReceiver() {
+        if (screenStateReceiverRegistered) return
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_SCREEN_OFF)
+        }
+        registerReceiver(screenStateReceiver, filter)
+        screenStateReceiverRegistered = true
+    }
+
+    private fun unregisterScreenStateReceiver() {
+        if (!screenStateReceiverRegistered) return
+        try {
+            unregisterReceiver(screenStateReceiver)
+        } catch (e: IllegalArgumentException) {
+            Log.w(TAG, "Screen state receiver already unregistered", e)
+        }
+        screenStateReceiverRegistered = false
     }
 
     private fun requestSelfManagedRoleIfNeeded() {
