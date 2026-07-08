@@ -10,8 +10,8 @@ def hasReleaseSigning = false
 android {
     namespace "fr.celya.celyavox"
     compileSdk 36
-    // Pin NDK to match CI setup and native PJSIP build script.
-    ndkVersion "27.3.13750724"
+    // Pin NDK to highest version required by all plugins (backward compatible)
+    ndkVersion "28.2.13676358"
 
     // Build the native PJSIP bridge and package its .so alongside the prebuilt PJSIP libs.
     externalNativeBuild {
