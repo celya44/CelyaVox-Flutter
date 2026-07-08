@@ -116,31 +116,3 @@ dependencies {
     implementation platform("com.google.firebase:firebase-bom:33.2.0")
     implementation "com.google.firebase:firebase-messaging"
 }
-
-// Ensure Flutter can find the generated APKs at project-level build/app/outputs/flutter-apk
-def flutterApkDir = "${rootDir}/../build/app/outputs/flutter-apk"
-
-tasks.register("copyDebugApkForFlutter", Copy) {
-    from(fileTree("${buildDir}/outputs/apk/debug") { include("*.apk") })
-    into(flutterApkDir)
-}
-
-tasks.matching { it.name == "assembleDebug" }.all {
-    finalizedBy("copyDebugApkForFlutter")
-}
-
-tasks.register("copyReleaseApkForFlutter", Copy) {
-    from(fileTree("${buildDir}/outputs/apk/release") { include("*.apk") })
-    into(flutterApkDir)
-    rename { fileName ->
-        if (fileName.contains("-unsigned")) {
-            "app-release.apk"
-        } else {
-            fileName
-        }
-    }
-}
-
-tasks.matching { it.name == "assembleRelease" }.all {
-    finalizedBy("copyReleaseApkForFlutter")
-}
