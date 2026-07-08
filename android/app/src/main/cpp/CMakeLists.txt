@@ -25,17 +25,8 @@ add_library(voip_engine SHARED voip_engine.cpp)
 # PJSIP prebuilt libraries expected in app/src/main/jniLibs/<abi>/
 set(PJSIP_LIB_DIR ${CMAKE_SOURCE_DIR}/../jniLibs/${ANDROID_ABI})
 
-# Check if PJSIP libraries directory exists; if not, provide helpful error message
 if(NOT EXISTS ${PJSIP_LIB_DIR})
-    message(STATUS "PJSIP libs directory not found: ${PJSIP_LIB_DIR}")
-    message(STATUS "You must build PJSIP libraries using: android/pjsip/build_pjsip.sh")
-    message(FATAL_ERROR "Please build or provide PJSIP libraries in jniLibs/${ANDROID_ABI}/")
-endif()
-
-# Verify that at least one PJSIP library exists
-file(GLOB PJSIP_LIB_FILES "${PJSIP_LIB_DIR}/lib*.so" "${PJSIP_LIB_DIR}/lib*.a")
-if(NOT PJSIP_LIB_FILES)
-    message(FATAL_ERROR "No PJSIP libraries found in: ${PJSIP_LIB_DIR}")
+    message(FATAL_ERROR "PJSIP libs directory not found: ${PJSIP_LIB_DIR}")
 endif()
 
 set(PJSIP_LIB_SUFFIXES ".so" ".a")
