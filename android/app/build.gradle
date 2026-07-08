@@ -116,3 +116,18 @@ dependencies {
     implementation platform("com.google.firebase:firebase-bom:33.2.0")
     implementation "com.google.firebase:firebase-messaging"
 }
+
+// Copy release APK to standard Flutter output location
+tasks.register("copyReleaseApk", Copy) {
+    from("${buildDir}/outputs/apk/release") {
+        include("app-release.apk")
+    }
+    into("${project.rootDir}/../build/app/outputs/flutter-apk")
+    rename { "app-release.apk" }
+}
+
+afterEvaluate {
+    tasks.named("assembleRelease") {
+        finalizedBy("copyReleaseApk")
+    }
+}

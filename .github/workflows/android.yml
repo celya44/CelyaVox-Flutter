@@ -249,6 +249,27 @@ jobs:
         run: flutter build apk --release --android-skip-build-dependency-validation
         working-directory: ./
 
+      - name: Find and verify APK after build
+        run: |
+          echo "=== Searching for APK files anywhere in workspace ==="
+          find . -name "*.apk" -type f 2>/dev/null | head -20
+          echo ""
+          echo "=== Checking standard Flutter APK location ==="
+          if [ -f "build/app/outputs/flutter-apk/app-release.apk" ]; then
+            echo "✓ Found: build/app/outputs/flutter-apk/app-release.apk"
+            ls -lh build/app/outputs/flutter-apk/app-release.apk
+          else
+            echo "✗ Not found at: build/app/outputs/flutter-apk/app-release.apk"
+          fi
+          echo ""
+          echo "=== Checking gradle build location ==="
+          if [ -f "android/app/build/outputs/apk/release/app-release.apk" ]; then
+            echo "✓ Found: android/app/build/outputs/apk/release/app-release.apk"
+            ls -lh android/app/build/outputs/apk/release/app-release.apk
+          else
+            echo "✗ Not found at: android/app/build/outputs/apk/release/app-release.apk"
+          fi
+
       - name: Debug CMake logs if build fails
         if: failure()
         run: |
