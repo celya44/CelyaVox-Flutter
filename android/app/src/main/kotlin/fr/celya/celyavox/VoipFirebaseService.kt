@@ -62,22 +62,28 @@ class VoipFirebaseService : FirebaseMessagingService() {
             return
         }
         registerSipInBackground()
-        Log.i(TAG, "Delaying incoming call UI by ${FULL_SCREEN_DELAY_MS}ms to allow SIP register")
+        Log.i(TAG, "Delaying incoming call UI by ${FULL_SCREEN_DELAY_MS}ms to allow SIP register to complete")
         Handler(Looper.getMainLooper()).postDelayed(
             {
                 try {
+                    Log.d(TAG, "Showing full-screen incoming call UI after ${FULL_SCREEN_DELAY_MS}ms delay")
                     val registered = VoipConnectionService.registerSelfManaged(this)
+                    Log.i(TAG, "VoipConnectionService.registerSelfManaged() returned: $registered")
                     val ok = if (registered) {
+                        Log.d(TAG, "Starting incoming call through ConnectionService for callId=$callId")
                         VoipConnectionService.startIncomingCall(this, callId, callerId)
                     } else {
+                        Log.w(TAG, "ConnectionService registration failed, will try direct launch")
                         false
                     }
                     if (!ok) {
                         Log.w(TAG, "Telecom incoming call not available; launching CallActivity directly")
                         openIncomingCallActivity(callId, callerId)
+                    } else {
+                        Log.i(TAG, "Incoming call UI shown through ConnectionService")
                     }
                 } catch (e: Exception) {
-                    Log.w(TAG, "Failed to start ConnectionService incoming call", e)
+                    Log.e(TAG, "Failed to start ConnectionService incoming call, falling back to CallActivity", e)
                     openIncomingCallActivity(callId, callerId)
                 }
             },
@@ -171,7 +177,10 @@ class VoipFirebaseService : FirebaseMessagingService() {
     }
 
     private fun registerSipInBackground() {
+        val wakeLockManager = WakeLockManager(applicationContext)
         Thread {
+            wakeLockManager.acquire()
+            Log.i(TAG, "WakeLock acquired for SIP registration from push")
             try {
                 val manager = ProvisioningManager(applicationContext)
                 val username = manager.getSipUsername()
@@ -182,10 +191,21 @@ class VoipFirebaseService : FirebaseMessagingService() {
                     Log.w(TAG, "Skipping SIP register: missing provisioning data")
                     return@Thread
                 }
+                // Ensure PJSIP engine is initialized
+                if (!PjsipEngine.instance.init()) {
+                    Log.w(TAG, "Failed to initialize PJSIP engine")
+                    return@Thread
+                }
                 val ok = PjsipEngine.instance.register(username, password, domain, proxy)
                 Log.i(TAG, "SIP register triggered from push: $ok")
+                // Keep WakeLock for a reasonable time to allow registration to complete
+                Thread.sleep(2000)
+                Log.i(TAG, "Waited 2s for SIP registration to settle")
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to register SIP from push", e)
+            } finally {
+                wakeLockManager.release()
+                Log.i(TAG, "WakeLock released after SIP registration attempt")
             }
         }.start()
     }
@@ -204,6 +224,6 @@ class VoipFirebaseService : FirebaseMessagingService() {
         const val EXTRA_TOKEN = "token"
         private const val INCOMING_CALL_CHANNEL_ID = "voip_call_channel"
         private const val INCOMING_CALL_NOTIFICATION_ID = 2101
-        private const val FULL_SCREEN_DELAY_MS = 500L
+        private const val FULL_SCREEN_DELAY_MS = 2500L
     }
 }
