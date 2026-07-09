@@ -58,7 +58,6 @@ class _DialpadPageState extends State<DialpadPage> {
   @override
   void initState() {
     super.initState();
-    _ensureMicPermission();
     _loadUsername();
     _loadSavedContacts();
     _listenRegistration();
@@ -107,17 +106,19 @@ class _DialpadPageState extends State<DialpadPage> {
     }
   }
 
-  Future<void> _ensureMicPermission() async {
+  Future<bool> _ensureMicPermission() async {
     final status = await Permission.microphone.request();
-    if (!mounted) return;
+    if (!mounted) return false;
     if (!status.isGranted) {
-      _showMessage('Permission micro refusée. L’appel audio ne pourra pas démarrer.');
-      return;
+      _showMessage('Permission micro refusée.');
+      return false;
     }
     try {
       await widget.engine.refreshAudio();
+      return true;
     } catch (_) {
-      _showMessage('Audio non initialisé. Redémarrez l’application.');
+      _showMessage('Audio non initialisé.');
+      return false;
     }
   }
 
@@ -238,6 +239,11 @@ class _DialpadPageState extends State<DialpadPage> {
     }
     setState(() => _isCalling = true);
     try {
+      final ok = await _ensureMicPermission();
+      if (!ok) {
+        setState(() => _isCalling = false);
+        return;
+      }
       await widget.engine.makeCall(callee);
       if (!mounted) return;
       Navigator.of(context).push(
