@@ -43,12 +43,18 @@ class SecureStorage(context: Context) {
             _prefs = prefs
             prefs
         } catch (e: Exception) {
-            Log.e("SecureStorage", "Exception type: ${e::class.simpleName}", e)
+            // Vérifier le type d'exception EN PREMIER
+            val isAEADBadTag = e is javax.crypto.AEADBadTagException || 
+                               e.cause is javax.crypto.AEADBadTagException ||
+                               e.message?.contains("AEAD") == true ||
+                               e.message?.contains("Signature/MAC verification failed") == true
+            
+            Log.e("SecureStorage", "Exception type: ${e::class.simpleName}, isAEADBadTag=$isAEADBadTag")
             Log.e("SecureStorage", "Exception message: ${e.message}")
             
             // Problème spécifique S22 : le fichier de prefs existe mais ne peut pas être déchiffré
             // Solution : supprimer le fichier corrompu et réessayer
-            if (e is javax.crypto.AEADBadTagException) {
+            if (isAEADBadTag) {
                 Log.w("SecureStorage", "AEADBadTagException detected - corrupted prefs file. Attempting cleanup...")
                 try {
                     // Le bon chemin : shared_prefs est dans le répertoire parent de filesDir
@@ -79,11 +85,11 @@ class SecureStorage(context: Context) {
                     _prefs = prefs
                     return prefs
                 } catch (retryE: Exception) {
-                    Log.e("SecureStorage", "Retry after cleanup failed: ${retryE::class.simpleName}", retryE)
+                    Log.e("SecureStorage", "Retry after cleanup failed: ${retryE::class.simpleName} - ${retryE.message}")
                 }
             }
             
-            Log.w("SecureStorage", "EncryptedSharedPreferences failed, using fallback unencrypted storage", e)
+            Log.w("SecureStorage", "EncryptedSharedPreferences failed, using fallback unencrypted storage")
             // Fallback à SharedPreferences normal pour éviter la perte de données
             try {
                 Log.i("SecureStorage", "Creating fallback unencrypted SharedPreferences...")
@@ -97,7 +103,6 @@ class SecureStorage(context: Context) {
                 _initFailed = true
                 null
             }
-        }
     }
 
     fun saveSipPassword(value: String) {
