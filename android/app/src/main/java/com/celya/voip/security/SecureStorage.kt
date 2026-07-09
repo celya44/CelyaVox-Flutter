@@ -1,6 +1,7 @@
 package com.celya.voip.security
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
@@ -9,10 +10,10 @@ class SecureStorage(context: Context) {
     private val prefsName = "secure_prefs"
     private val appContext = context.applicationContext
     
-    private var _prefs: EncryptedSharedPreferences? = null
+    private var _prefs: SharedPreferences? = null
     private var _initFailed = false
     
-    private fun getPrefs(): EncryptedSharedPreferences? {
+    private fun getPrefs(): SharedPreferences? {
         if (_initFailed) return null
         if (_prefs != null) return _prefs
         
