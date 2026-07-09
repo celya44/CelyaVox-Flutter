@@ -15,14 +15,24 @@ class ProvisioningMethodChannel(
 
     private val appContext: Context = context.applicationContext
     private val channel = MethodChannel(messenger, "com.celya.voip/provisioning")
-    private val manager = ProvisioningManager(appContext)
+    private val manager: ProvisioningManager?
     private val mainHandler = Handler(Looper.getMainLooper())
 
     init {
         channel.setMethodCallHandler(this)
+        manager = try {
+            ProvisioningManager(appContext)
+        } catch (e: Exception) {
+            android.util.Log.e("ProvisioningMethodChannel", "Failed to initialize ProvisioningManager", e)
+            null
+        }
     }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
+        if (manager == null) {
+            result.error("PROVISIONING", "ProvisioningManager not available (KeyStore error - data cleared)", null)
+            return
+        }
         when (call.method) {
             "start" -> {
                 val url = requireArgument<String>(call, "url")
