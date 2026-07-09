@@ -44,10 +44,37 @@ class SecureStorage(context: Context) {
         } catch (e: Exception) {
             Log.e("SecureStorage", "Exception type: ${e::class.simpleName}", e)
             Log.e("SecureStorage", "Exception message: ${e.message}")
-            Log.e("SecureStorage", "Exception stacktrace: ${e.stackTraceToString()}")
             
-            if (e.cause != null) {
-                Log.e("SecureStorage", "Caused by: ${e.cause?.message}")
+            // Problème spécifique S22 : le fichier de prefs existe mais ne peut pas être déchiffré
+            // Solution : supprimer le fichier corrompu et réessayer
+            if (e is javax.crypto.AEADBadTagException) {
+                Log.w("SecureStorage", "AEADBadTagException detected - corrupted prefs file. Attempting cleanup...")
+                try {
+                    val prefsFile = appContext.getFileStreamPath("../shared_prefs/$prefsName.xml")
+                    if (prefsFile.exists()) {
+                        val deleted = prefsFile.delete()
+                        Log.i("SecureStorage", "Corrupted prefs file deleted: $deleted")
+                    }
+                    
+                    // Réessayer après nettoyage
+                    Log.i("SecureStorage", "Retrying EncryptedSharedPreferences creation after cleanup...")
+                    val keyAlias = MasterKey.Builder(appContext)
+                        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                        .build()
+                    val prefs = EncryptedSharedPreferences.create(
+                        appContext,
+                        prefsName,
+                        keyAlias,
+                        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                    )
+                    Log.i("SecureStorage", "EncryptedSharedPreferences created successfully after cleanup")
+                    _isEncrypted = true
+                    _prefs = prefs
+                    return prefs
+                } catch (retryE: Exception) {
+                    Log.e("SecureStorage", "Retry after cleanup failed", retryE)
+                }
             }
             
             Log.w("SecureStorage", "EncryptedSharedPreferences failed, using fallback unencrypted storage", e)
