@@ -933,7 +933,7 @@ class _DialpadPageState extends State<DialpadPage> {
                 ),
                 const SizedBox(height: 8),
                 _Dialpad(onDigit: _appendDigit, onBackspace: _backspace),
-                const Spacer(),
+                const SizedBox(height: 12),
                 Center(
                   child: Material(
                     color: Colors.transparent,

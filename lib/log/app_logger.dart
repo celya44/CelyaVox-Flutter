@@ -64,6 +64,18 @@ class AppLogger {
     return file;
   }
 
+  Future<void> clearLogs() async {
+    try {
+      await init();
+      if (_file != null && await _file!.exists()) {
+        await _file!.delete();
+        _file = null;
+      }
+    } catch (_) {
+      // Ignore errors silently
+    }
+  }
+
   Map<String, String> _maskParams(Map<String, String> params) {
     final masked = <String, String>{};
     params.forEach((key, value) {

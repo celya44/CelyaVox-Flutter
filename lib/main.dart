@@ -14,6 +14,7 @@ final VoipEngine voipEngine = const VoipEngine();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AppLogger.instance.clearLogs();
   await AppLogger.instance.init();
   await AppLogger.instance.log('App start');
   await FcmTokenManager.instance.init(voipEngine);
