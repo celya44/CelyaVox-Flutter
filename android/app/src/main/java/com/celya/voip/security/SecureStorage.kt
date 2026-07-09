@@ -15,6 +15,8 @@ class SecureStorage(context: Context) {
     private var _prefs: SharedPreferences? = null
     private var _isEncrypted = true
     private var _initFailed = false
+    private var _attemptCount = 0
+    private val MAX_RETRY_ATTEMPTS = 1  // Maximum 1 retry après le premier fail
     
     private fun getPrefs(): SharedPreferences? {
         if (_initFailed) return null
@@ -53,10 +55,11 @@ class SecureStorage(context: Context) {
             Log.e("SecureStorage", "Exception type: ${e::class.simpleName}, isAEADBadTag=$isAEADBadTag")
             Log.e("SecureStorage", "Exception message: ${e.message}")
             
-            // Problème spécifique S22 : le fichier de prefs existe mais ne peut pas être déchiffré
-            // Solution : supprimer le fichier corrompu ET nettoyer le KeyStore, puis réessayer
-            if (isAEADBadTag) {
-                Log.w("SecureStorage", "AEADBadTagException detected - corrupted prefs file and/or KeyStore. Attempting cleanup...")
+            // Problème spécifique S22 Android 16 : KeyStore2 cassé
+            // Ne réessayer qu'une fois - après ça, accepter le fallback définitif
+            if (isAEADBadTag && _attemptCount < MAX_RETRY_ATTEMPTS) {
+                _attemptCount++
+                Log.w("SecureStorage", "AEADBadTagException detected (attempt $_attemptCount/$MAX_RETRY_ATTEMPTS) - corrupted prefs file and/or KeyStore. Attempting cleanup...")
                 try {
                     // Nettoyer le fichier
                     val prefsFile = File(appContext.filesDir.parent, "shared_prefs/$prefsName.xml")
@@ -108,18 +111,21 @@ class SecureStorage(context: Context) {
                     _prefs = prefs
                     return prefs
                 } catch (retryE: Exception) {
-                    Log.e("SecureStorage", "Retry after cleanup failed: ${retryE::class.simpleName} - ${retryE.message}")
+                    Log.e("SecureStorage", "Retry attempt $_attemptCount failed: ${retryE::class.simpleName} - ${retryE.message}")
+                    Log.w("SecureStorage", "Encryption failed after cleanup attempt. This is likely a device-specific KeyStore bug (e.g., Samsung S22 on Android 16). Falling back to unencrypted storage.")
                 }
+            } else if (isAEADBadTag) {
+                Log.w("SecureStorage", "AEADBadTagException - max retry attempts reached. KeyStore appears to be permanently broken on this device. Using unencrypted fallback.")
             }
             
-            Log.w("SecureStorage", "EncryptedSharedPreferences failed, using fallback unencrypted storage")
+            Log.w("SecureStorage", "EncryptedSharedPreferences unavailable. Using unencrypted fallback storage.")
             // Fallback à SharedPreferences normal pour éviter la perte de données
             try {
                 Log.i("SecureStorage", "Creating fallback unencrypted SharedPreferences...")
                 val prefs = appContext.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
                 _isEncrypted = false
                 _prefs = prefs
-                Log.i("SecureStorage", "Fallback unencrypted SharedPreferences created successfully")
+                Log.w("SecureStorage", "⚠️  SECURITY: Using UNENCRYPTED storage (device limitation: ${android.os.Build.MODEL} Android ${android.os.Build.VERSION.RELEASE})")
                 prefs
             } catch (fallbackE: Exception) {
                 Log.e("SecureStorage", "Both encrypted and unencrypted storage failed", fallbackE)
