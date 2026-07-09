@@ -103,6 +103,7 @@ class SecureStorage(context: Context) {
                 _initFailed = true
                 null
             }
+        }
     }
 
     fun saveSipPassword(value: String) {
