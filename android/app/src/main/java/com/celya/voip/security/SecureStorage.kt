@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import java.io.File
+import java.security.KeyStore
 
 class SecureStorage(context: Context) {
     private val prefsName = "secure_prefs"
@@ -53,11 +54,11 @@ class SecureStorage(context: Context) {
             Log.e("SecureStorage", "Exception message: ${e.message}")
             
             // Problème spécifique S22 : le fichier de prefs existe mais ne peut pas être déchiffré
-            // Solution : supprimer le fichier corrompu et réessayer
+            // Solution : supprimer le fichier corrompu ET nettoyer le KeyStore, puis réessayer
             if (isAEADBadTag) {
-                Log.w("SecureStorage", "AEADBadTagException detected - corrupted prefs file. Attempting cleanup...")
+                Log.w("SecureStorage", "AEADBadTagException detected - corrupted prefs file and/or KeyStore. Attempting cleanup...")
                 try {
-                    // Le bon chemin : shared_prefs est dans le répertoire parent de filesDir
+                    // Nettoyer le fichier
                     val prefsFile = File(appContext.filesDir.parent, "shared_prefs/$prefsName.xml")
                     Log.i("SecureStorage", "Looking for corrupted file at: ${prefsFile.absolutePath}")
                     
@@ -66,6 +67,28 @@ class SecureStorage(context: Context) {
                         Log.i("SecureStorage", "Corrupted prefs file deleted: $deleted at ${prefsFile.absolutePath}")
                     } else {
                         Log.i("SecureStorage", "Corrupted prefs file not found at: ${prefsFile.absolutePath}")
+                    }
+                    
+                    // Nettoyer le KeyStore - bug S22 spécifique
+                    Log.i("SecureStorage", "Attempting to clear KeyStore entries...")
+                    try {
+                        val keyStore = KeyStore.getInstance("AndroidKeyStore")
+                        keyStore.load(null)
+                        val aliases = keyStore.aliases()
+                        var deletedCount = 0
+                        while (aliases.hasMoreElements()) {
+                            val alias = aliases.nextElement()
+                            try {
+                                keyStore.deleteEntry(alias)
+                                deletedCount++
+                                Log.i("SecureStorage", "Deleted KeyStore entry: $alias")
+                            } catch (e: Exception) {
+                                Log.w("SecureStorage", "Failed to delete KeyStore entry: $alias", e)
+                            }
+                        }
+                        Log.i("SecureStorage", "KeyStore cleanup complete - deleted $deletedCount entries")
+                    } catch (e: Exception) {
+                        Log.w("SecureStorage", "Failed to clear KeyStore", e)
                     }
                     
                     // Réessayer après nettoyage
