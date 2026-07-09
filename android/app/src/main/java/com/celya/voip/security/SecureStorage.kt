@@ -21,19 +21,27 @@ class SecureStorage(context: Context) {
         prefs.edit().putString(KEY_SIP_PASSWORD, value).apply()
     }
 
-    fun getSipPassword(): String? = prefs.getString(KEY_SIP_PASSWORD, null)
+    fun getSipPassword(): String? = safeGetString(KEY_SIP_PASSWORD)
 
     fun saveApiKey(value: String) {
         prefs.edit().putString(KEY_API_KEY, value).apply()
     }
 
-    fun getApiKey(): String? = prefs.getString(KEY_API_KEY, null)
+    fun getApiKey(): String? = safeGetString(KEY_API_KEY)
 
     fun saveLdapPassword(value: String) {
         prefs.edit().putString(KEY_LDAP_PASSWORD, value).apply()
     }
 
-    fun getLdapPassword(): String? = prefs.getString(KEY_LDAP_PASSWORD, null)
+    fun getLdapPassword(): String? = safeGetString(KEY_LDAP_PASSWORD)
+
+    private fun safeGetString(key: String): String? = try {
+        prefs.getString(key, null)
+    } catch (e: Exception) {
+        // KeyStore décryption failed - clear corrupted data
+        clearAll()
+        null
+    }
 
     fun clearAll() {
         prefs.edit()

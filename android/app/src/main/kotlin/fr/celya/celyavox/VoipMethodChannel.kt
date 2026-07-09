@@ -17,10 +17,16 @@ class VoipMethodChannel(
 
     private val appContext: Context = context.applicationContext
     private val channel = MethodChannel(messenger, "voip_engine")
-    private val provisioningManager = com.celya.voip.provisioning.ProvisioningManager(appContext)
-
+    private val provisioningManager: com.celya.voip.provisioning.ProvisioningManager?
+    
     init {
         channel.setMethodCallHandler(this)
+        provisioningManager = try {
+            com.celya.voip.provisioning.ProvisioningManager(appContext)
+        } catch (e: Exception) {
+            android.util.Log.e("VoipMethodChannel", "Failed to initialize ProvisioningManager", e)
+            null
+        }
     }
 
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
@@ -39,6 +45,10 @@ class VoipMethodChannel(
                     result.success(null)
                 }
                 "registerProvisioned" -> {
+                    if (provisioningManager == null) {
+                        result.error("PROVISIONING", "ProvisioningManager not available (KeyStore error - data cleared)", null)
+                        return
+                    }
                     val username = provisioningManager.getSipUsername()
                     val password = provisioningManager.getSipPassword()
                     val domain = provisioningManager.getSipDomain()
