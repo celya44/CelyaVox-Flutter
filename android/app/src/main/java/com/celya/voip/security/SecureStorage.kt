@@ -11,6 +11,7 @@ class SecureStorage(context: Context) {
     private val appContext = context.applicationContext
     
     private var _prefs: SharedPreferences? = null
+    private var _isEncrypted = true
     private var _initFailed = false
     
     private fun getPrefs(): SharedPreferences? {
@@ -18,9 +19,15 @@ class SecureStorage(context: Context) {
         if (_prefs != null) return _prefs
         
         return try {
+            Log.i("SecureStorage", "Starting encrypted storage initialization...")
+            
+            Log.i("SecureStorage", "Building MasterKey...")
             val keyAlias = MasterKey.Builder(appContext)
                 .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
                 .build()
+            Log.i("SecureStorage", "MasterKey built successfully")
+            
+            Log.i("SecureStorage", "Creating EncryptedSharedPreferences...")
             val prefs = EncryptedSharedPreferences.create(
                 appContext,
                 prefsName,
@@ -28,12 +35,35 @@ class SecureStorage(context: Context) {
                 EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
                 EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
             )
+            Log.i("SecureStorage", "EncryptedSharedPreferences created successfully")
+            
+            _isEncrypted = true
+            Log.i("SecureStorage", "Using encrypted SharedPreferences")
             _prefs = prefs
             prefs
         } catch (e: Exception) {
-            Log.e("SecureStorage", "Failed to initialize EncryptedSharedPreferences", e)
-            _initFailed = true
-            null
+            Log.e("SecureStorage", "Exception type: ${e::class.simpleName}", e)
+            Log.e("SecureStorage", "Exception message: ${e.message}")
+            Log.e("SecureStorage", "Exception stacktrace: ${e.stackTraceToString()}")
+            
+            if (e.cause != null) {
+                Log.e("SecureStorage", "Caused by: ${e.cause?.message}")
+            }
+            
+            Log.w("SecureStorage", "EncryptedSharedPreferences failed, using fallback unencrypted storage", e)
+            // Fallback à SharedPreferences normal pour éviter la perte de données
+            try {
+                Log.i("SecureStorage", "Creating fallback unencrypted SharedPreferences...")
+                val prefs = appContext.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
+                _isEncrypted = false
+                _prefs = prefs
+                Log.i("SecureStorage", "Fallback unencrypted SharedPreferences created successfully")
+                prefs
+            } catch (fallbackE: Exception) {
+                Log.e("SecureStorage", "Both encrypted and unencrypted storage failed", fallbackE)
+                _initFailed = true
+                null
+            }
         }
     }
 
@@ -58,8 +88,7 @@ class SecureStorage(context: Context) {
     private fun safeGetString(key: String): String? = try {
         getPrefs()?.getString(key, null)
     } catch (e: Exception) {
-        Log.e("SecureStorage", "Failed to read $key from secure storage", e)
-        clearAll()
+        Log.e("SecureStorage", "Failed to read $key from storage", e)
         null
     }
 
@@ -71,9 +100,11 @@ class SecureStorage(context: Context) {
                 ?.remove(KEY_LDAP_PASSWORD)
                 ?.apply()
         } catch (e: Exception) {
-            Log.e("SecureStorage", "Failed to clear secure storage", e)
+            Log.e("SecureStorage", "Failed to clear storage", e)
         }
     }
+
+    fun isEncrypted(): Boolean = _isEncrypted
 
     companion object {
         private const val KEY_SIP_PASSWORD = "sip_password"
