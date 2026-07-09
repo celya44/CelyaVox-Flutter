@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
+import java.io.File
 
 class SecureStorage(context: Context) {
     private val prefsName = "secure_prefs"
@@ -50,10 +51,15 @@ class SecureStorage(context: Context) {
             if (e is javax.crypto.AEADBadTagException) {
                 Log.w("SecureStorage", "AEADBadTagException detected - corrupted prefs file. Attempting cleanup...")
                 try {
-                    val prefsFile = appContext.getFileStreamPath("../shared_prefs/$prefsName.xml")
+                    // Le bon chemin : shared_prefs est dans le répertoire parent de filesDir
+                    val prefsFile = File(appContext.filesDir.parent, "shared_prefs/$prefsName.xml")
+                    Log.i("SecureStorage", "Looking for corrupted file at: ${prefsFile.absolutePath}")
+                    
                     if (prefsFile.exists()) {
                         val deleted = prefsFile.delete()
-                        Log.i("SecureStorage", "Corrupted prefs file deleted: $deleted")
+                        Log.i("SecureStorage", "Corrupted prefs file deleted: $deleted at ${prefsFile.absolutePath}")
+                    } else {
+                        Log.i("SecureStorage", "Corrupted prefs file not found at: ${prefsFile.absolutePath}")
                     }
                     
                     // Réessayer après nettoyage
@@ -73,7 +79,7 @@ class SecureStorage(context: Context) {
                     _prefs = prefs
                     return prefs
                 } catch (retryE: Exception) {
-                    Log.e("SecureStorage", "Retry after cleanup failed", retryE)
+                    Log.e("SecureStorage", "Retry after cleanup failed: ${retryE::class.simpleName}", retryE)
                 }
             }
             
