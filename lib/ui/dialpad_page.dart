@@ -902,26 +902,58 @@ class _DialpadPageState extends State<DialpadPage> {
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                TextField(
-                  controller: _controller,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                    hintText: 'saisir numéro ou click pour recherche.',
-                  ),
-                  keyboardType: TextInputType.text,
-                ),
-                const SizedBox(height: 16),
-                _Dialpad(onDigit: _appendDigit, onBackspace: _backspace),
-                const Spacer(),
-                ElevatedButton.icon(
-                  onPressed: _isCalling ? null : _makeCall,
-                  icon: const Icon(Icons.phone),
-                  label: Text(_isCalling ? 'Appel...' : 'Appeler'),
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size.fromHeight(48),
-                  ),
+                ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: _controller,
+                  builder: (context, value, child) {
+                    return TextField(
+                      controller: _controller,
+                      decoration: InputDecoration(
+                        border: InputBorder.none,
+                        suffixIcon: value.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.backspace_outlined),
+                                onPressed: _backspace,
+                                tooltip: 'Supprimer le dernier caractère',
+                              )
+                            : null,
+                      ),
+                      keyboardType: TextInputType.text,
+                    );
+                  },
                 ),
                 const SizedBox(height: 8),
+                _Dialpad(onDigit: _appendDigit, onBackspace: _backspace),
+                const Spacer(),
+                Center(
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: _isCalling ? null : _makeCall,
+                      borderRadius: BorderRadius.circular(60),
+                      child: Container(
+                        width: 120,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: _isCalling ? Colors.grey : Colors.green,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.green.withOpacity(0.4),
+                              blurRadius: 12,
+                              spreadRadius: 2,
+                            ),
+                          ],
+                        ),
+                        child: Icon(
+                          Icons.phone,
+                          size: 56,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
               ],
             ),
           ),

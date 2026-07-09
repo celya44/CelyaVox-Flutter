@@ -88,6 +88,10 @@ class VoipEngine(
     }
 
     fun startCall(callee: String): Boolean {
+        // Initialize audio for outgoing calls (similar to incoming calls in VoipConnection.startAudio())
+        initCallAudio()
+        // Activate real audio devices in PJSIP (was using null audio at app startup)
+        refreshAudio()
         return sipEngine.makeCall(callee)
     }
 
@@ -127,6 +131,37 @@ class VoipEngine(
 
     fun refreshAudio(): Boolean {
         return sipEngine.refreshAudio()
+    }
+
+    private fun initCallAudio() {
+        val ctx = appContext ?: return
+        val audioManager = ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        
+        // Set audio mode to communication and unmute microphone
+        audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
+        audioManager.isMicrophoneMute = false
+        
+        // Request audio focus for voice call
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val attrs = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                .build()
+            val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+                .setAudioAttributes(attrs)
+                .setAcceptsDelayedFocusGain(false)
+                .setOnAudioFocusChangeListener { }
+                .build()
+            audioManager.requestAudioFocus(request)
+        } else {
+            @Suppress("DEPRECATION")
+            audioManager.requestAudioFocus(
+                null,
+                AudioManager.STREAM_VOICE_CALL,
+                AudioManager.AUDIOFOCUS_GAIN_TRANSIENT
+            )
+        }
+        Log.i(TAG, "VoipEngine.initCallAudio() initialized audio for call")
     }
 
     fun setSpeakerphone(enabled: Boolean) {

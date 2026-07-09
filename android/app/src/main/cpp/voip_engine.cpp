@@ -193,17 +193,13 @@ static bool ensure_endpoint() {
         return false;
     }
 
-    // Try to bind default audio devices; if unavailable, fall back to null audio
-    status = pjsua_set_snd_dev(PJMEDIA_AUD_DEFAULT_CAPTURE_DEV, PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV);
-    if (status != PJ_SUCCESS) {
+    // Initialize with null audio device to avoid showing microphone indicator at app startup
+    // Real audio devices will be set later via refreshAudio() when a call is actually made
+    pj_status_t null_status = pjsua_set_null_snd_dev();
+    if (null_status != PJ_SUCCESS) {
         char errbuf[128];
-        pj_strerror(status, errbuf, sizeof(errbuf));
-        LOGE("set_snd_dev failed: %d (%s). Falling back to null sound device.", status, errbuf);
-        pj_status_t null_status = pjsua_set_null_snd_dev();
-        if (null_status != PJ_SUCCESS) {
-            pj_strerror(null_status, errbuf, sizeof(errbuf));
-            LOGE("set_null_snd_dev failed: %d (%s)", null_status, errbuf);
-        }
+        pj_strerror(null_status, errbuf, sizeof(errbuf));
+        LOGW("set_null_snd_dev failed: %d (%s)", null_status, errbuf);
     }
     g_audio_ready = true;
 

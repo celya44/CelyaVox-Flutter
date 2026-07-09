@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../contacts/saved_contacts_store.dart';
 import '../voip/voip_engine.dart';
 import '../voip/voip_events.dart';
 import 'in_call_page.dart';
@@ -20,12 +21,14 @@ class IncomingCallPage extends StatefulWidget {
 
 class _IncomingCallPageState extends State<IncomingCallPage> {
   bool _isProcessing = false;
+  String? _savedContactName;
   StreamSubscription<VoipEvent>? _eventsSub;
 
   @override
   void initState() {
     super.initState();
     _startRinging();
+    _loadSavedContact();
     _listenCallEvents();
   }
 
@@ -42,6 +45,31 @@ class _IncomingCallPageState extends State<IncomingCallPage> {
 
   void _stopRinging() {
     widget.engine.stopInAppRinging();
+  }
+
+  String _displayNumber(String raw) {
+    final value = raw.trim();
+    if (value.isEmpty) return '';
+    final atIndex = value.indexOf('@');
+    return atIndex > 0 ? value.substring(0, atIndex) : value;
+  }
+
+  Future<void> _loadSavedContact() async {
+    final number = _displayNumber(widget.callerId);
+    if (number.isEmpty) return;
+    try {
+      final saved = await SavedContactsStore.load();
+      if (!mounted) return;
+      final match = saved.firstWhere(
+        (contact) => contact.number.trim() == number,
+        orElse: () => const SavedContact(name: '', number: '', ou: ''),
+      );
+      if (match.number.isNotEmpty) {
+        setState(() => _savedContactName = match.name.trim().isEmpty ? null : match.name.trim());
+      }
+    } catch (_) {
+      // Ignore lookup errors.
+    }
   }
 
   void _listenCallEvents() {
@@ -128,9 +156,17 @@ class _IncomingCallPageState extends State<IncomingCallPage> {
             const Icon(Icons.ring_volume, size: 64),
             const SizedBox(height: 16),
             Text(
-              widget.callerId,
+              _displayNumber(widget.callerId),
               style: Theme.of(context).textTheme.headlineSmall,
             ),
+            if (_savedContactName != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  _savedContactName!,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
             const SizedBox(height: 24),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
