@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 
 import 'package:flutter/services.dart';
 
@@ -12,9 +13,12 @@ sealed class VoipEvent {
     final type = map['type'] as String?;
     switch (type) {
       case 'incoming_call':
+        final callId = map['callId'] as String? ?? '';
+        final callerId = map['callerId'] as String? ?? '';
+        developer.log('INCOMING_CALL: callId=$callId, callerId=$callerId', name: 'VoipEvents');
         return IncomingCallEvent(
-          callId: map['callId'] as String? ?? '',
-          callerId: map['callerId'] as String? ?? '',
+          callId: callId,
+          callerId: callerId,
         );
       case 'registration':
         return RegistrationEvent(

@@ -8,6 +8,7 @@ import '../api/celyavox_api.dart';
 import '../contacts/saved_contacts_store.dart';
 import '../provisioning/provisioning_channel.dart';
 import '../theme/theme_controller.dart';
+import '../log/app_logger.dart';
 import '../voip/voip_events.dart';
 import '../voip/voip_engine.dart';
 import 'in_call_page.dart';
@@ -141,6 +142,7 @@ class _DialpadPageState extends State<DialpadPage> {
         });
       } else if (event is IncomingCallEvent) {
         if (!mounted) return;
+        AppLogger.instance.log('INCOMING_CALL_EVENT received: callId=${event.callId}, callerId=${event.callerId}');
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => IncomingCallPage(
@@ -918,6 +920,8 @@ class _DialpadPageState extends State<DialpadPage> {
                             : null,
                       ),
                       keyboardType: TextInputType.text,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
                     );
                   },
                 ),
@@ -929,10 +933,10 @@ class _DialpadPageState extends State<DialpadPage> {
                     color: Colors.transparent,
                     child: InkWell(
                       onTap: _isCalling ? null : _makeCall,
-                      borderRadius: BorderRadius.circular(60),
+                      borderRadius: BorderRadius.circular(48),
                       child: Container(
-                        width: 120,
-                        height: 120,
+                        width: 72,
+                        height: 72,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           color: _isCalling ? Colors.grey : Colors.green,
@@ -946,7 +950,7 @@ class _DialpadPageState extends State<DialpadPage> {
                         ),
                         child: Icon(
                           Icons.phone,
-                          size: 56,
+                          size: 36,
                           color: Colors.white,
                         ),
                       ),
@@ -1064,15 +1068,6 @@ class _Dialpad extends StatelessWidget {
               ],
             ),
           ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            IconButton(
-              onPressed: onBackspace,
-              icon: const Icon(Icons.backspace_outlined),
-            ),
-          ],
-        ),
       ],
     );
   }

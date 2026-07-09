@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../contacts/saved_contacts_store.dart';
+import '../log/app_logger.dart';
 import '../voip/voip_engine.dart';
 import '../voip/voip_events.dart';
 import 'in_call_page.dart';
@@ -27,6 +28,7 @@ class _IncomingCallPageState extends State<IncomingCallPage> {
   @override
   void initState() {
     super.initState();
+    AppLogger.instance.log('IncomingCallPage.initState: callId=${widget.callId}, callerId=${widget.callerId}');
     _startRinging();
     _loadSavedContact();
     _listenCallEvents();
@@ -147,6 +149,8 @@ class _IncomingCallPageState extends State<IncomingCallPage> {
 
   @override
   Widget build(BuildContext context) {
+    final displayNumber = _displayNumber(widget.callerId);
+    AppLogger.instance.log('IncomingCallPage.build: callerId=${widget.callerId}, displayNumber=$displayNumber');
     return Scaffold(
       appBar: AppBar(title: const Text('Appel entrant')),
       body: Center(
@@ -156,7 +160,7 @@ class _IncomingCallPageState extends State<IncomingCallPage> {
             const Icon(Icons.ring_volume, size: 64),
             const SizedBox(height: 16),
             Text(
-              _displayNumber(widget.callerId),
+              displayNumber,
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             if (_savedContactName != null)
