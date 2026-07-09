@@ -773,7 +773,7 @@ class _DialpadPageState extends State<DialpadPage> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 subtitle: Text(
-                  '${_formatHistoryDate(entry)} • ${entry.sens} • ${entry.disposition} • ${_formatBillsec(entry.billsec)}',
+                  '${_formatHistoryDate(entry)} • ${entry.displayDisposition} • ${_formatBillsec(entry.billsec)}',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -1144,5 +1144,26 @@ class _CallHistoryEntry {
       return disposition.toUpperCase() == 'ANSWERED' ? Colors.blue : Colors.red;
     }
     return Colors.grey;
+  }
+
+  String get displayDisposition {
+    final d = disposition.toUpperCase();
+    switch (d) {
+      case 'ANSWERED':
+        return 'Répondu';
+      case 'NO ANSWER':
+      case 'NOANSWER':
+        return 'Pas de réponse';
+      case 'BUSY':
+        return 'Occupé';
+      case 'FAILED':
+        return 'Échoué';
+      case 'CANCELLED':
+        return 'Annulé';
+      case 'CONGESTION':
+        return 'Congestion';
+      default:
+        return d;
+    }
   }
 }

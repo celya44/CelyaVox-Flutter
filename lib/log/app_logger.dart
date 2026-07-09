@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:developer' as developer;
 
 import 'package:path_provider/path_provider.dart';
 
@@ -39,12 +40,16 @@ class AppLogger {
   }
 
   Future<void> logApiRequest(String url, Map<String, String> params) async {
-    await log('API REQUEST: $url params=${_maskParams(params)}');
+    final logMsg = 'API REQUEST: $url params=${_maskParams(params)}';
+    developer.log(logMsg, name: 'CelyaVoxApi');
+    await log(logMsg);
   }
 
   Future<void> logApiResponse(String url, int statusCode, String body) async {
     final safeBody = body.length > 512 ? '${body.substring(0, 512)}…' : body;
-    await log('API RESPONSE: $url status=$statusCode body=$safeBody');
+    final logMsg = 'API RESPONSE: $url status=$statusCode body=$safeBody';
+    developer.log(logMsg, name: 'CelyaVoxApi');
+    await log(logMsg);
   }
 
   Future<File> getLogFile() async {

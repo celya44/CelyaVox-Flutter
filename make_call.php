@@ -249,7 +249,7 @@ function isContactRegistered($contactAor) {
 }
 
 // Attend qu'un contact soit enregistré avec tentatives limitées
-function waitForRegisteredContact($contactAor, $maxAttempts = 10, $sleepMicroseconds = 500000) {
+function waitForRegisteredContact($contactAor, $maxAttempts = 25, $sleepMicroseconds = 200000) {
     for ($attempt = 0; $attempt < $maxAttempts; $attempt++) {
         if (isContactRegistered($contactAor)) {
             return true;

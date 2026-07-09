@@ -13,6 +13,8 @@ import android.media.RingtoneManager
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.Gravity
 import android.view.View
@@ -37,6 +39,8 @@ class CallActivity : AppCompatActivity() {
     private var currentCallId: String = ""
     private var currentCallerId: String = ""
     private var waitingNativeCallIdForAccept = false
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var nativeCallIdTimeoutRunnable: Runnable? = null
     private val callEndedReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             when (intent?.action) {
@@ -64,6 +68,10 @@ class CallActivity : AppCompatActivity() {
         applyLockScreenFlags()
         setContentView(buildContentView())
         startRinging()
+        // Start timeout if we have a placeholder callId (waiting for native SIP call)
+        if (isPushPlaceholderCallId(currentCallId)) {
+            startNativeCallIdTimeout()
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -82,6 +90,10 @@ class CallActivity : AppCompatActivity() {
         Log.i(TAG, "onNewIntent switching callId=$nextCallId")
         if (nextCallId.isNotEmpty()) currentCallId = nextCallId
         if (nextCallerId.isNotEmpty()) currentCallerId = nextCallerId
+        // Cancel timeout when we receive the native callId
+        if (!isPushPlaceholderCallId(nextCallId)) {
+            cancelNativeCallIdTimeout()
+        }
         acceptButton?.visibility = View.VISIBLE
         declineButton?.text = "Raccrocher"
         titleView?.text = if (currentCallerId.isNotEmpty()) currentCallerId else "Appel entrant"
@@ -117,6 +129,7 @@ class CallActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         stopRinging()
+        cancelNativeCallIdTimeout()
         unregisterCallEndedReceiver()
         super.onDestroy()
     }
@@ -371,8 +384,28 @@ class CallActivity : AppCompatActivity() {
         Log.i(TAG, "Accept enabled with native callId=$currentCallId")
     }
 
+    private fun startNativeCallIdTimeout() {
+        cancelNativeCallIdTimeout()
+        nativeCallIdTimeoutRunnable = Runnable {
+            Log.w(TAG, "Native callId timeout reached (5s) with placeholder callId=$currentCallId; closing CallActivity")
+            stopRinging()
+            finish()
+        }
+        mainHandler.postDelayed(nativeCallIdTimeoutRunnable!!, NATIVE_CALL_ID_TIMEOUT_MS)
+        Log.i(TAG, "Started native callId timeout (${NATIVE_CALL_ID_TIMEOUT_MS}ms)")
+    }
+
+    private fun cancelNativeCallIdTimeout() {
+        nativeCallIdTimeoutRunnable?.let { runnable ->
+            mainHandler.removeCallbacks(runnable)
+            Log.i(TAG, "Cancelled native callId timeout")
+        }
+        nativeCallIdTimeoutRunnable = null
+    }
+
     companion object {
         private const val TAG = "CallActivity"
+        private const val NATIVE_CALL_ID_TIMEOUT_MS = 5000L  // 5 seconds
         @Volatile
         var isVisible: Boolean = false
         @Volatile
