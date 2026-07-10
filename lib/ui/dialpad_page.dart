@@ -909,6 +909,7 @@ class _DialpadPageState extends State<DialpadPage> {
         2 => Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
+              mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 ValueListenableBuilder<TextEditingValue>(
                   valueListenable: _controller,

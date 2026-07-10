@@ -22,27 +22,44 @@ private const val TAG = "VoipFirebaseService"
 class VoipFirebaseService : FirebaseMessagingService() {
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
-        val data = remoteMessage.data
-        if (data.isEmpty()) {
-            Log.w(TAG, "Received FCM message without data")
-            return
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        val wakeLock = powerManager.newWakeLock(
+            PowerManager.PARTIAL_WAKE_LOCK,
+            "voip:fcm_message_wake_lock"
+        ).apply {
+            setReferenceCounted(false)
+            acquire(10000) // 10s max pour traiter le message
         }
 
-        val type = data["type"] ?: "unknown"
-        val callId = data["callId"] ?: ""
-        val callerId = data["callerId"] ?: ""
-        Log.i(
-            TAG,
-            "Data push received: type=$type priority=${remoteMessage.priority} callId=$callId callerId=$callerId"
-        )
-
-        if (type == "incoming_call") {
-            Log.i(TAG, "Incoming call push received (callId=$callId, callerId=$callerId)")
-            if (isAppInForeground()) {
-                Log.i(TAG, "App in foreground; ignoring incoming_call push and waiting for SIP invite")
+        try {
+            val data = remoteMessage.data
+            if (data.isEmpty()) {
+                Log.w(TAG, "Received FCM message without data")
                 return
             }
-            handleIncomingCallPush(callId, callerId)
+
+            val type = data["type"] ?: "unknown"
+            val callId = data["callId"] ?: ""
+            val callerId = data["callerId"] ?: ""
+            Log.i(
+                TAG,
+                "Data push received: type=$type priority=${remoteMessage.priority} callId=$callId callerId=$callerId"
+            )
+
+            if (type == "incoming_call") {
+                Log.i(TAG, "Incoming call push received (callId=$callId, callerId=$callerId)")
+                if (isAppInForeground()) {
+                    Log.i(TAG, "App in foreground; ignoring incoming_call push and waiting for SIP invite")
+                    return
+                }
+                handleIncomingCallPush(callId, callerId)
+            }
+        } finally {
+            try {
+                wakeLock.release()
+            } catch (e: Exception) {
+                Log.w(TAG, "Error releasing FCM wake lock", e)
+            }
         }
     }
 
@@ -205,5 +222,6 @@ class VoipFirebaseService : FirebaseMessagingService() {
         private const val INCOMING_CALL_CHANNEL_ID = "voip_call_channel"
         private const val INCOMING_CALL_NOTIFICATION_ID = 2101
         private const val FULL_SCREEN_DELAY_MS = 500L
+        private const val TAG = "VoipFirebaseService"
     }
 }
