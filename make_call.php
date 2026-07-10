@@ -305,6 +305,7 @@ echo "Token: " . substr($token, 0, 20) . "...\n\n";
 
 // Envoi de la notification
 $result = sendWakeUpNotification($token);
+var_dump($result);
  
 if ($result['success']) {
     echo "✅ Notification envoyée avec succès!\n\n";

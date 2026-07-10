@@ -10,6 +10,7 @@ import android.net.Uri
 import android.app.NotificationManager
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
 import android.content.Context
 import android.provider.Settings
 import android.util.Log
@@ -119,6 +120,7 @@ class MainActivity : FlutterActivity() {
         engine.initialize(this)
         requestSelfManagedRoleIfNeeded()
         requestStartupPermissionsIfNeeded()
+        requestBatteryOptimizationExemptionIfNeeded()
         notifyAcceptedCallToFlutter(intent)
     }
 
@@ -416,6 +418,36 @@ class MainActivity : FlutterActivity() {
                 startActivity(intent)
             }
             .setOnDismissListener { isOverlayDialogVisible = false }
+            .show()
+    }
+
+    private fun requestBatteryOptimizationExemptionIfNeeded() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        val isIgnoringOptimizations = powerManager.isIgnoringBatteryOptimizations(packageName)
+        if (isIgnoringOptimizations) {
+            Log.i(TAG, "Already exempted from battery optimizations")
+            return
+        }
+        Log.i(TAG, "Device applying battery optimizations; requesting exemption")
+        AlertDialog.Builder(this)
+            .setTitle("Optimisation de batterie")
+            .setMessage(
+                "Pour garantir la réception rapide des appels entrants, nous devons désactiver " +
+                    "les optimisations de batterie pour CelyaVox. Veuillez autorisez ceci dans les réglages."
+            )
+            .setCancelable(true)
+            .setPositiveButton("Autoriser") { _, _ ->
+                val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                    data = Uri.fromParts("package", packageName, null)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                try {
+                    startActivity(intent)
+                } catch (e: Exception) {
+                    Log.w(TAG, "Failed to start battery optimization exemption request", e)
+                }
+            }
             .show()
     }
 
