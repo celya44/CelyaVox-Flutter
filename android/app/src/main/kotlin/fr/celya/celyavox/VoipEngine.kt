@@ -414,9 +414,6 @@ class VoipEngine(
                     VoipFirebaseService.cancelSimpleIncomingNotification(ctx)
                 }
                 
-                // Reset FCM wakeup flag since we received a normal SIP invite
-                VoipFirebaseService.setFcmWakeup(false)
-                
                 // Check if SIP account is registered before processing incoming call
                 val isRegistered = sipEngine.isRegistered()
                 if (!isRegistered) {
@@ -478,6 +475,8 @@ class VoipEngine(
             }
             "call_connected" -> {
                 VoipConnectionService.markCallActive(message)
+                // Reset FCM wakeup flag since call is now accepted and active
+                VoipFirebaseService.setFcmWakeup(false)
                 callConnected(message)
             }
             "call_ended" -> {
@@ -537,6 +536,8 @@ class VoipEngine(
             VoipForegroundService.stop(ctx)
             VoipFirebaseService.cancelInviteWaitFallback()
             VoipFirebaseService.cancelSimpleIncomingNotification(ctx)
+            // Reset FCM wakeup flag since call is now fully terminated
+            VoipFirebaseService.setFcmWakeup(false)
             try {
                 ctx.sendBroadcast(Intent(ACTION_CALL_ENDED).setPackage(ctx.packageName))
                 Log.i(TAG, "Broadcasted ACTION_CALL_ENDED")
@@ -585,23 +586,16 @@ class VoipEngine(
             return
         }
         
-        // Only show notification if app is not in foreground
-        if (!isAppInForeground(context)) {
-            Log.i(TAG, "App not in foreground; showing cancel notification")
-            VoipFirebaseService.showCancelledCallNotification(context, message)
-        }
+        // Always show notification for call cancellation after FCM wakeup
+        Log.i(TAG, "App was woken by FCM; showing cancel notification")
+        VoipFirebaseService.showCancelledCallNotification(context, message)
         
-        // Minimize the app by sending it to background
-        try {
-            val intent = Intent(Intent.ACTION_MAIN).apply {
-                addCategory(Intent.CATEGORY_HOME)
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            }
-            context.startActivity(intent)
-            Log.i(TAG, "App minimized to background")
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to minimize app", e)
+        // Minimize the app to background
+        Log.i(TAG, "Minimizing app to background")
+        val intent = Intent(ACTION_MINIMIZE_APP).apply {
+            setPackage(context.packageName)
         }
+        context.sendBroadcast(intent)
     }
 
     private fun startIncomingCallActivity(context: Context, callId: String, callerId: String?): Boolean {
@@ -655,6 +649,7 @@ class VoipEngine(
 
     companion object {
         private const val TAG = "VoipEngine"
+        const val ACTION_MINIMIZE_APP = "fr.celya.celyavox.MINIMIZE_APP"
         const val ACTION_CALL_ENDED = "fr.celya.celyavox.ACTION_CALL_ENDED"
         const val ACTION_CALL_TERMINATE_REQUESTED = "fr.celya.celyavox.ACTION_CALL_TERMINATE_REQUESTED"
     }

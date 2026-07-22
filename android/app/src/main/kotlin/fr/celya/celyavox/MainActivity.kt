@@ -57,6 +57,16 @@ class MainActivity : FlutterActivity() {
             }
         }
     }
+    private val minimizeAppReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            when (intent?.action) {
+                VoipEngine.ACTION_MINIMIZE_APP -> {
+                    Log.i(TAG, "Received ACTION_MINIMIZE_APP; moving task to back")
+                    moveTaskToBack(true)
+                }
+            }
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -73,6 +83,13 @@ class MainActivity : FlutterActivity() {
                 },
                 Context.RECEIVER_NOT_EXPORTED
             )
+            registerReceiver(
+                minimizeAppReceiver,
+                IntentFilter().apply {
+                    addAction(VoipEngine.ACTION_MINIMIZE_APP)
+                },
+                Context.RECEIVER_NOT_EXPORTED
+            )
         } else {
             @Suppress("DEPRECATION")
             registerReceiver(
@@ -80,6 +97,13 @@ class MainActivity : FlutterActivity() {
                 IntentFilter().apply {
                     addAction(VoipEngine.ACTION_CALL_ENDED)
                     addAction(VoipEngine.ACTION_CALL_TERMINATE_REQUESTED)
+                }
+            )
+            @Suppress("DEPRECATION")
+            registerReceiver(
+                minimizeAppReceiver,
+                IntentFilter().apply {
+                    addAction(VoipEngine.ACTION_MINIMIZE_APP)
                 }
             )
         }
@@ -171,6 +195,7 @@ class MainActivity : FlutterActivity() {
     override fun onDestroy() {
         requestSipUnregister("onDestroy")
         unregisterReceiver(callEndedReceiver)
+        unregisterReceiver(minimizeAppReceiver)
         unregisterScreenStateReceiver()
         provisioningChannel?.dispose()
         methodChannel?.dispose()
