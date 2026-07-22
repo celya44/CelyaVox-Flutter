@@ -408,6 +408,16 @@ class VoipEngine(
                 emit(mapOf("type" to "registration", "message" to message))
             }
             "incoming_call" -> {
+                // Cancel fallback timeout since invite arrived
+                VoipFirebaseService.cancelInviteWaitFallback()
+                
+                // Check if SIP account is registered before processing incoming call
+                val isRegistered = sipEngine.isRegistered()
+                if (!isRegistered) {
+                    Log.w(TAG, "Incoming call received but SIP account not registered; ignoring")
+                    return
+                }
+                
                 VoipForegroundService.cancelNoInviteTimeout()
                 val ctx = appContext
                 if (ctx != null) {

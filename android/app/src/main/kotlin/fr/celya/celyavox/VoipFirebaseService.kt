@@ -83,63 +83,35 @@ class VoipFirebaseService : FirebaseMessagingService() {
         Handler(Looper.getMainLooper()).postDelayed(
             {
                 try {
-                    // Check if SIP account is registered before showing full-screen notification
+                    // Check if SIP account is registered before proceeding
                     val sipEngine = PjsipEngine.instance
                     val isRegistered = sipEngine.isRegistered()
                     Log.i(TAG, "After SIP register delay: SIP account registered=$isRegistered")
                     
                     if (!isRegistered) {
-                        Log.w(TAG, "SIP account not registered; waiting additional ${SIP_REGISTRATION_CHECK_DELAY_MS}ms")
-                        Handler(Looper.getMainLooper()).postDelayed(
-                            {
-                                proceedWithIncomingCallIfRegistered(callId, callerId)
-                            },
-                            SIP_REGISTRATION_CHECK_DELAY_MS
-                        )
+                        Log.w(TAG, "SIP account not registered; showing simple notification and waiting for invite")
+                        showSimpleIncomingCallNotification(callId, callerId)
                         return@postDelayed
                     }
                     
-                    proceedWithIncomingCallIfRegistered(callId, callerId)
+                    Log.i(TAG, "SIP account is registered; waiting for SIP invite with timeout")
+                    scheduleIncomingCallFallback(callId, callerId)
                 } catch (e: Exception) {
                     Log.w(TAG, "Failed to process incoming call push", e)
-                    openIncomingCallActivity(callId, callerId)
+                    showSimpleIncomingCallNotification(callId, callerId)
                 }
             },
             FULL_SCREEN_DELAY_MS
         )
     }
 
-    private fun proceedWithIncomingCallIfRegistered(callId: String, callerId: String) {
-        try {
-            val sipEngine = PjsipEngine.instance
-            val isRegistered = sipEngine.isRegistered()
-            
-            if (!isRegistered) {
-                Log.w(TAG, "SIP account still not registered after wait; showing simple notification instead")
-                showSimpleIncomingCallNotification(callId, callerId)
-                return
-            }
-            
-            Log.i(TAG, "SIP account is registered; launching full-screen notification and waiting for SIP invite")
-            // Launch foreground service with full-screen notification
-            // It will timeout if no SIP invite arrives within NO_INVITE_TIMEOUT_MS
-            VoipForegroundService.start(this, callId, callerId)
-            
-            // Also attempt to register with ConnectionService for proper telecom integration
-            val registered = VoipConnectionService.registerSelfManaged(this)
-            if (registered) {
-                Log.i(TAG, "ConnectionService registered; attempting to add incoming call")
-                val ok = VoipConnectionService.startIncomingCall(this, callId, callerId)
-                if (!ok) {
-                    Log.w(TAG, "Telecom incoming call not available; relying on foreground service notification")
-                }
-            } else {
-                Log.w(TAG, "Could not register ConnectionService; relying on foreground service notification")
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to process incoming call push", e)
-            openIncomingCallActivity(callId, callerId)
+    private fun scheduleIncomingCallFallback(callId: String, callerId: String) {
+        // If no SIP invite arrives within INVITE_WAIT_TIMEOUT_MS, show simple notification
+        val runnable = Runnable {
+            Log.w(TAG, "No SIP invite received after ${INVITE_WAIT_TIMEOUT_MS}ms; showing simple notification")
+            showSimpleIncomingCallNotification(callId, callerId)
         }
+        VoipFirebaseService.scheduleInviteWaitFallback(runnable)
     }
 
     private fun shouldShowSimpleNotificationOnPush(): Boolean {
@@ -262,7 +234,22 @@ class VoipFirebaseService : FirebaseMessagingService() {
         private const val INCOMING_CALL_CHANNEL_ID = "voip_call_channel"
         private const val INCOMING_CALL_NOTIFICATION_ID = 2101
         private const val FULL_SCREEN_DELAY_MS = 500L
-        private const val SIP_REGISTRATION_CHECK_DELAY_MS = 2000L
+        private const val INVITE_WAIT_TIMEOUT_MS = 3000L  // 3 secondes pour recevoir l'invite SIP
         private const val TAG = "VoipFirebaseService"
+        private val fallbackHandler = Handler(Looper.getMainLooper())
+        @Volatile private var fallbackRunnable: Runnable? = null
+
+        @JvmStatic
+        fun cancelInviteWaitFallback() {
+            fallbackRunnable?.let { fallbackHandler.removeCallbacks(it) }
+            fallbackRunnable = null
+        }
+
+        @JvmStatic
+        fun scheduleInviteWaitFallback(runnable: Runnable) {
+            cancelInviteWaitFallback()
+            fallbackRunnable = runnable
+            fallbackHandler.postDelayed(runnable, INVITE_WAIT_TIMEOUT_MS)
+        }
     }
 }
