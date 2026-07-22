@@ -423,7 +423,6 @@ class VoipEngine(
                 }
                 
                 VoipForegroundService.cancelNoInviteTimeout()
-                val ctx = appContext
                 if (ctx != null) {
                     val ok = VoipConnectionService.startIncomingCall(ctx, message, null)
                     if (!ok) {
