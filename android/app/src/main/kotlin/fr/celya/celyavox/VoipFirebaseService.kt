@@ -45,6 +45,7 @@ class VoipFirebaseService : FirebaseMessagingService() {
 
             // Mark that app was woken up by FCM push
             VoipFirebaseService.setFcmWakeup(true)
+            Log.i(TAG, ">>> FCM: FCM wakeup flag set to true")
 
             if (type == "incoming_call") {
                 if (isAppInForeground()) {
@@ -204,12 +205,14 @@ class VoipFirebaseService : FirebaseMessagingService() {
 
         @JvmStatic
         fun setFcmWakeup(value: Boolean) {
+            Log.i(TAG, ">>> FCM_FLAG: setFcmWakeup($value)")
             isWakeupFromFcmPush = value
         }
 
         @JvmStatic
         fun consumeFcmWakeup(): Boolean {
             val value = isWakeupFromFcmPush
+            Log.i(TAG, ">>> FCM_FLAG: consumeFcmWakeup() reading=$value, resetting to false")
             isWakeupFromFcmPush = false
             return value
         }

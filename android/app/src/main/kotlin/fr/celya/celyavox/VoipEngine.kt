@@ -490,7 +490,10 @@ class VoipEngine(
                 Log.i(TAG, ">>> CALL CANCELLED EVENT: message=$message")
                 val ctx = appContext
                 if (ctx != null) {
+                    Log.i(TAG, ">>> CALL CANCELLED: appContext available, calling handleCallCancelled")
                     handleCallCancelled(ctx, message)
+                } else {
+                    Log.w(TAG, ">>> CALL CANCELLED: appContext is null, cannot handle cancellation")
                 }
             }
             else -> emit(mapOf("type" to type, "message" to message))
@@ -577,25 +580,28 @@ class VoipEngine(
     }
 
     private fun handleCallCancelled(context: Context, message: String) {
-        Log.i(TAG, "Call cancelled: $message")
+        Log.i(TAG, ">>> CANCEL: Call cancelled event received: $message")
         
         // Only handle cancellation if app was woken up by FCM push
         val wasWokenByFcm = VoipFirebaseService.consumeFcmWakeup()
+        Log.i(TAG, ">>> CANCEL: wasWokenByFcm=$wasWokenByFcm")
         if (!wasWokenByFcm) {
-            Log.i(TAG, "App was not woken by FCM push; ignoring call cancellation")
+            Log.i(TAG, ">>> CANCEL: App was not woken by FCM push; ignoring call cancellation")
             return
         }
         
         // Always show notification for call cancellation after FCM wakeup
-        Log.i(TAG, "App was woken by FCM; showing cancel notification")
+        Log.i(TAG, ">>> CANCEL: App was woken by FCM; showing cancel notification")
         VoipFirebaseService.showCancelledCallNotification(context, message)
         
         // Minimize the app to background
-        Log.i(TAG, "Minimizing app to background")
+        Log.i(TAG, ">>> CANCEL: About to send ACTION_MINIMIZE_APP broadcast")
         val intent = Intent(ACTION_MINIMIZE_APP).apply {
             setPackage(context.packageName)
         }
+        Log.i(TAG, ">>> CANCEL: Broadcasting intent with action=${intent.action} package=${intent.`package`}")
         context.sendBroadcast(intent)
+        Log.i(TAG, ">>> CANCEL: Broadcast sent successfully")
     }
 
     private fun startIncomingCallActivity(context: Context, callId: String, callerId: String?): Boolean {

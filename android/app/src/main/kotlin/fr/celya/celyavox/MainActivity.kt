@@ -59,10 +59,15 @@ class MainActivity : FlutterActivity() {
     }
     private val minimizeAppReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
+            Log.i(TAG, ">>> MINIMIZE RX: Broadcast received: action=${intent?.action} package=${intent?.`package`}")
             when (intent?.action) {
                 VoipEngine.ACTION_MINIMIZE_APP -> {
-                    Log.i(TAG, "Received ACTION_MINIMIZE_APP; moving task to back")
+                    Log.i(TAG, ">>> MINIMIZE RX: Matched ACTION_MINIMIZE_APP; calling moveTaskToBack(true)")
                     moveTaskToBack(true)
+                    Log.i(TAG, ">>> MINIMIZE RX: moveTaskToBack completed")
+                }
+                else -> {
+                    Log.w(TAG, ">>> MINIMIZE RX: Unknown action: ${intent?.action}")
                 }
             }
         }
