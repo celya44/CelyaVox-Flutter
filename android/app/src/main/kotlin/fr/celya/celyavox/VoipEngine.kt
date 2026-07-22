@@ -526,6 +526,9 @@ class VoipEngine(
         appContext?.let { ctx ->
             stopInAppRinging()
             VoipForegroundService.stop(ctx)
+            // Cancel pending fallback timeout and simple notification when call ends
+            VoipFirebaseService.cancelInviteWaitFallback()
+            VoipFirebaseService.cancelSimpleIncomingNotification(ctx)
             try {
                 ctx.sendBroadcast(Intent(ACTION_CALL_ENDED).setPackage(ctx.packageName))
                 Log.i(TAG, "Broadcasted ACTION_CALL_ENDED")

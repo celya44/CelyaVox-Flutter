@@ -153,6 +153,11 @@ class _DialpadPageState extends State<DialpadPage> {
             ),
           ),
         );
+      } else if (event is NavigateToCallHistoryEvent) {
+        if (!mounted) return;
+        AppLogger.instance.log('NAVIGATE_TO_CALL_HISTORY event received');
+        setState(() => _selectedIndex = 1);
+        _loadCallHistory();
       }
     }, onError: (_) {
       if (mounted) setState(() => _isRegistered = false);

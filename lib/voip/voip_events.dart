@@ -47,6 +47,8 @@ sealed class VoipEvent {
           token: map['token'] as String? ?? '',
           updatedAt: map['updatedAt'] as int? ?? 0,
         );
+      case 'navigate_to_call_history':
+        return NavigateToCallHistoryEvent();
       default:
         throw PlatformException(
           code: 'UNKNOWN_EVENT',
@@ -100,6 +102,10 @@ class FcmTokenEvent extends VoipEvent {
   final int updatedAt;
 
   const FcmTokenEvent({required this.token, required this.updatedAt});
+}
+
+class NavigateToCallHistoryEvent extends VoipEvent {
+  const NavigateToCallHistoryEvent();
 }
 
 /// Exposes a broadcast stream of platform VoIP events.
