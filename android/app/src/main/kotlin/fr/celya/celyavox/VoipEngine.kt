@@ -408,11 +408,13 @@ class VoipEngine(
                 emit(mapOf("type" to "registration", "message" to message))
             }
             "incoming_call" -> {
+                Log.i(TAG, ">>> INCOMING_CALL EVENT: callId=$message, cancelling fallback")
                 // Mark that we received the SIP invite (stop waiting for fallback)
                 VoipFirebaseService.cancelInviteWaitFallback()
                 // Cancel the simple notification since invite arrived
                 val ctx = appContext
                 if (ctx != null) {
+                    Log.i(TAG, ">>> CANCELLING SIMPLE NOTIFICATION for callId=$message")
                     VoipFirebaseService.cancelSimpleIncomingNotification(ctx)
                 }
                 
@@ -524,10 +526,12 @@ class VoipEngine(
     }
 
     fun callEnded(callId: String, reason: String? = null) {
+        Log.i(TAG, ">>> CALL ENDED: callId=$callId, reason=$reason, cleaning up")
         appContext?.let { ctx ->
             stopInAppRinging()
             VoipForegroundService.stop(ctx)
             // Cancel pending fallback timeout and cleanup when call ends
+            Log.i(TAG, ">>> CALL ENDED CLEANUP: cancelling fallback & notification")
             VoipFirebaseService.cancelInviteWaitFallback()
             VoipFirebaseService.cancelSimpleIncomingNotification(ctx)
             try {
