@@ -548,8 +548,34 @@ class VoipEngine(
             VoipForegroundService.stop(ctx)
             VoipFirebaseService.cancelInviteWaitFallback()
             VoipFirebaseService.cancelSimpleIncomingNotification(ctx)
-            // Reset FCM wakeup flag since call is now fully terminated
-            VoipFirebaseService.setFcmWakeup(false)
+            
+            // Check if this is a call cancellation (487 Request Terminated) and app was woken by FCM
+            val isRequestTerminated = reason?.contains("487") == true
+            Log.i(TAG, ">>> CALL_ENDED: isRequestTerminated=$isRequestTerminated reason=$reason")
+            
+            if (isRequestTerminated) {
+                val wasWokenByFcm = VoipFirebaseService.consumeFcmWakeup()
+                Log.i(TAG, ">>> CALL_ENDED: Detected 487 termination, wasWokenByFcm=$wasWokenByFcm")
+                if (wasWokenByFcm) {
+                    Log.i(TAG, ">>> CALL_ENDED: Treating as cancel notification since app was woken by FCM")
+                    VoipFirebaseService.showCancelledCallNotification(ctx, reason ?: "Appel annulé")
+                    // Send minimize app broadcast
+                    try {
+                        val intent = Intent(ACTION_MINIMIZE_APP).apply {
+                            setPackage(ctx.packageName)
+                        }
+                        Log.i(TAG, ">>> CALL_ENDED: Sending ACTION_MINIMIZE_APP broadcast")
+                        ctx.sendBroadcast(intent)
+                    } catch (e: Exception) {
+                        Log.w(TAG, ">>> CALL_ENDED: Failed to send minimize broadcast", e)
+                    }
+                }
+            } else {
+                // Reset FCM wakeup flag for normal call termination
+                Log.i(TAG, ">>> CALL_ENDED: Normal termination, resetting FCM flag")
+                VoipFirebaseService.setFcmWakeup(false)
+            }
+            
             try {
                 ctx.sendBroadcast(Intent(ACTION_CALL_ENDED).setPackage(ctx.packageName))
                 Log.i(TAG, "Broadcasted ACTION_CALL_ENDED")
