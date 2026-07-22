@@ -43,15 +43,16 @@ class VoipFirebaseService : FirebaseMessagingService() {
             val callerId = data["callerId"] ?: ""
             Log.i(
                 TAG,
-                "Data push received: type=$type priority=${remoteMessage.priority} callId=$callId callerId=$callerId"
+                "=== FCM MESSAGE RECEIVED ===: type=$type, callId=$callId, callerId=$callerId, priority=${remoteMessage.priority}"
             )
 
             if (type == "incoming_call") {
-                Log.i(TAG, "Incoming call push received (callId=$callId, callerId=$callerId)")
+                Log.i(TAG, ">>> FCM PUSH: Incoming call push received (callId=$callId, callerId=$callerId)")
                 if (isAppInForeground()) {
-                    Log.i(TAG, "App in foreground; ignoring incoming_call push and waiting for SIP invite")
+                    Log.i(TAG, ">>> FCM PUSH: App in foreground; ignoring incoming_call push and waiting for SIP invite")
                     return
                 }
+                Log.i(TAG, ">>> FCM PUSH: App NOT in foreground; handling push")
                 handleIncomingCallPush(callId, callerId)
             }
         } finally {
@@ -95,6 +96,12 @@ class VoipFirebaseService : FirebaseMessagingService() {
                         return@postDelayed
                     }
                     
+                    // Check if we already have a pending fallback to avoid duplicates
+                    if (VoipFirebaseService.fallbackRunnable != null) {
+                        Log.i(TAG, "Fallback already scheduled; skipping duplicate scheduling for callId=$callId")
+                        return@postDelayed
+                    }
+                    
                     Log.i(TAG, "SIP account is registered; waiting for SIP invite with timeout - callId=$callId")
                     scheduleIncomingCallFallback(callId, callerId)
                 } catch (e: Exception) {
@@ -109,6 +116,7 @@ class VoipFirebaseService : FirebaseMessagingService() {
     private fun scheduleIncomingCallFallback(callId: String, callerId: String) {
         // If no SIP invite arrives within INVITE_WAIT_TIMEOUT_MS, show simple notification
         Log.i(TAG, ">>> FALLBACK SCHEDULED: callId=$callId, will timeout in ${INVITE_WAIT_TIMEOUT_MS}ms, isWaitingForInvite=true")
+        Log.i(TAG, ">>> STACK TRACE: ${Thread.currentThread().name} / ${Exception().stackTraceToString().split("\n").take(5).joinToString("\n")}")
         val runnable = Runnable {
             Log.w(TAG, ">>> FALLBACK TIMEOUT EXECUTED: callId=$callId, isWaitingForInvite=${VoipFirebaseService.isWaitingForInvite}")
             // Only show notification if we're still waiting for invite (not received yet)
@@ -246,7 +254,7 @@ class VoipFirebaseService : FirebaseMessagingService() {
         private const val INVITE_WAIT_TIMEOUT_MS = 3000L  // 3 secondes pour recevoir l'invite SIP
         private const val TAG = "VoipFirebaseService"
         private val fallbackHandler = Handler(Looper.getMainLooper())
-        @Volatile private var fallbackRunnable: Runnable? = null
+        @Volatile var fallbackRunnable: Runnable? = null // Made public to check if already scheduled
         @Volatile private var isWaitingForInvite = false // Flag global to track if we're waiting for SIP invite
 
         @JvmStatic
