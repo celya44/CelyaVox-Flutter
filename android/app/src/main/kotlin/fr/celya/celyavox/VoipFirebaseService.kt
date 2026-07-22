@@ -215,6 +215,28 @@ class VoipFirebaseService : FirebaseMessagingService() {
         }
 
         @JvmStatic
+        fun cancelInviteWaitFallback() {
+            fallbackRunnable?.let { fallbackHandler.removeCallbacks(it) }
+            fallbackRunnable = null
+            isWaitingForInvite = false
+        }
+
+        @JvmStatic
+        fun scheduleInviteWaitFallback(runnable: Runnable) {
+            cancelInviteWaitFallback()
+            isWaitingForInvite = true
+            fallbackRunnable = runnable
+            fallbackHandler.postDelayed(runnable, INVITE_WAIT_TIMEOUT_MS)
+        }
+
+        @JvmStatic
+        fun cancelSimpleIncomingNotification(context: Context) {
+            val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            manager.cancel(INCOMING_CALL_NOTIFICATION_ID)
+            Log.i(TAG, "Simple incoming call notification cancelled")
+        }
+
+        @JvmStatic
         fun showCancelledCallNotification(context: Context, message: String) {
             Log.i(TAG, ">>> NOTIFY SHOW CANCELLED: message=$message, notificationId=$CANCELLED_CALL_NOTIFICATION_ID")
             
