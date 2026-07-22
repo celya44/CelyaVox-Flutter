@@ -85,6 +85,12 @@ class VoipFirebaseService : FirebaseMessagingService() {
         Handler(Looper.getMainLooper()).postDelayed(
             {
                 try {
+                    // Check if we already cancelled the fallback (invite arrived while we were delaying)
+                    if (!VoipFirebaseService.isWaitingForInvite) {
+                        Log.i(TAG, "isWaitingForInvite already false (invite arrived); skipping fallback schedule - callId=$callId")
+                        return@postDelayed
+                    }
+                    
                     // Check if SIP account is registered before proceeding
                     val sipEngine = PjsipEngine.instance
                     val isRegistered = sipEngine.isRegistered()
