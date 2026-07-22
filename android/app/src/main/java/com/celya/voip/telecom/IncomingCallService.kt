@@ -14,6 +14,7 @@ import android.os.PowerManager
 import android.telecom.TelecomManager
 import android.net.wifi.WifiManager
 import fr.celya.celyavox.MainActivity
+import fr.celya.celyavox.VoipFirebaseService
 
 class IncomingCallService : Service() {
     private var wakeLock: PowerManager.WakeLock? = null
@@ -21,6 +22,8 @@ class IncomingCallService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        // Cancel simple incoming notification from FCM push
+        VoipFirebaseService.cancelSimpleIncomingNotification(this)
         acquireLocks()
         startForeground(NOTIFICATION_ID, buildNotification())
     }

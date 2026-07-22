@@ -21,6 +21,10 @@ class VoipForegroundService : Service() {
         val callId = intent?.getStringExtra(EXTRA_CALL_ID).orEmpty()
         val callerId = intent?.getStringExtra(EXTRA_CALLER_ID).orEmpty()
         Log.i(TAG, "onStartCommand callId=$callId callerId=$callerId")
+        
+        // Cancel simple incoming notification from FCM push
+        VoipFirebaseService.cancelSimpleIncomingNotification(this)
+        
         startForeground(NOTIFICATION_ID, buildNotification(callId, callerId))
         scheduleNoInviteTimeout()
         return START_NOT_STICKY
