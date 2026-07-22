@@ -408,15 +408,14 @@ class VoipEngine(
                 emit(mapOf("type" to "registration", "message" to message))
             }
             "incoming_call" -> {
-                Log.i(TAG, ">>> INCOMING_CALL EVENT: callId=$message, cancelling fallback")
-                // Mark that we received the SIP invite (stop waiting for fallback)
                 VoipFirebaseService.cancelInviteWaitFallback()
-                // Cancel the simple notification since invite arrived
                 val ctx = appContext
                 if (ctx != null) {
-                    Log.i(TAG, ">>> CANCELLING SIMPLE NOTIFICATION for callId=$message")
                     VoipFirebaseService.cancelSimpleIncomingNotification(ctx)
                 }
+                
+                // Reset FCM wakeup flag since we received a normal SIP invite
+                VoipFirebaseService.setFcmWakeup(false)
                 
                 // Check if SIP account is registered before processing incoming call
                 val isRegistered = sipEngine.isRegistered()
@@ -488,6 +487,13 @@ class VoipEngine(
                 VoipConnectionService.markCallEnded(callId)
                 callEnded(callId, reason)
             }
+            "call_cancelled" -> {
+                Log.i(TAG, ">>> CALL CANCELLED EVENT: message=$message")
+                val ctx = appContext
+                if (ctx != null) {
+                    handleCallCancelled(ctx, message)
+                }
+            }
             else -> emit(mapOf("type" to type, "message" to message))
         }
     }
@@ -526,12 +532,9 @@ class VoipEngine(
     }
 
     fun callEnded(callId: String, reason: String? = null) {
-        Log.i(TAG, ">>> CALL ENDED: callId=$callId, reason=$reason, cleaning up")
         appContext?.let { ctx ->
             stopInAppRinging()
             VoipForegroundService.stop(ctx)
-            // Cancel pending fallback timeout and cleanup when call ends
-            Log.i(TAG, ">>> CALL ENDED CLEANUP: cancelling fallback & notification")
             VoipFirebaseService.cancelInviteWaitFallback()
             VoipFirebaseService.cancelSimpleIncomingNotification(ctx)
             try {
@@ -570,6 +573,35 @@ class VoipEngine(
                 "type" to "navigate_to_call_history",
             )
         )
+    }
+
+    private fun handleCallCancelled(context: Context, message: String) {
+        Log.i(TAG, "Call cancelled: $message")
+        
+        // Only handle cancellation if app was woken up by FCM push
+        val wasWokenByFcm = VoipFirebaseService.consumeFcmWakeup()
+        if (!wasWokenByFcm) {
+            Log.i(TAG, "App was not woken by FCM push; ignoring call cancellation")
+            return
+        }
+        
+        // Only show notification if app is not in foreground
+        if (!isAppInForeground(context)) {
+            Log.i(TAG, "App not in foreground; showing cancel notification")
+            VoipFirebaseService.showCancelledCallNotification(context, message)
+        }
+        
+        // Minimize the app by sending it to background
+        try {
+            val intent = Intent(Intent.ACTION_MAIN).apply {
+                addCategory(Intent.CATEGORY_HOME)
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            context.startActivity(intent)
+            Log.i(TAG, "App minimized to background")
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to minimize app", e)
+        }
     }
 
     private fun startIncomingCallActivity(context: Context, callId: String, callerId: String?): Boolean {

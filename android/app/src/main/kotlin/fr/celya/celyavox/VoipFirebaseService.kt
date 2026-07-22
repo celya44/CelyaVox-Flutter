@@ -41,18 +41,16 @@ class VoipFirebaseService : FirebaseMessagingService() {
             val type = data["type"] ?: "unknown"
             val callId = data["callId"] ?: ""
             val callerId = data["callerId"] ?: ""
-            Log.i(
-                TAG,
-                "=== FCM MESSAGE RECEIVED ===: type=$type, callId=$callId, callerId=$callerId, priority=${remoteMessage.priority}"
-            )
+            Log.i(TAG, "FCM push received: type=$type callId=$callId callerId=$callerId")
+
+            // Mark that app was woken up by FCM push
+            VoipFirebaseService.setFcmWakeup(true)
 
             if (type == "incoming_call") {
-                Log.i(TAG, ">>> FCM PUSH: Incoming call push received (callId=$callId, callerId=$callerId)")
                 if (isAppInForeground()) {
-                    Log.i(TAG, ">>> FCM PUSH: App in foreground; ignoring incoming_call push and waiting for SIP invite")
+                    Log.i(TAG, "App in foreground; ignoring incoming_call push and waiting for SIP invite")
                     return
                 }
-                Log.i(TAG, ">>> FCM PUSH: App NOT in foreground; handling push")
                 handleIncomingCallPush(callId, callerId)
             }
         } finally {
@@ -73,45 +71,40 @@ class VoipFirebaseService : FirebaseMessagingService() {
     }
 
     private fun handleIncomingCallPush(callId: String, callerId: String) {
-        Log.i(TAG, "=== handleIncomingCallPush START: callId=$callId, callerId=$callerId ===")
         if (shouldShowSimpleNotificationOnPush()) {
-            Log.i(TAG, "Device idle and app not in recents; showing simple incoming call notification immediately")
+            Log.i(TAG, "Device idle; showing simple notification immediately")
             showSimpleIncomingCallNotification(callId, callerId)
             registerSipInBackground()
             return
         }
         registerSipInBackground()
-        Log.i(TAG, "Delaying incoming call UI by ${FULL_SCREEN_DELAY_MS}ms to allow SIP register")
         Handler(Looper.getMainLooper()).postDelayed(
             {
                 try {
-                    // Check if we already cancelled the fallback (invite arrived while we were delaying)
+                    // Check if invite already arrived (race condition protection)
                     if (!VoipFirebaseService.isWaitingForInvite) {
-                        Log.i(TAG, "isWaitingForInvite already false (invite arrived); skipping fallback schedule - callId=$callId")
+                        Log.i(TAG, "Invite already received; skipping fallback")
                         return@postDelayed
                     }
                     
-                    // Check if SIP account is registered before proceeding
                     val sipEngine = PjsipEngine.instance
                     val isRegistered = sipEngine.isRegistered()
-                    Log.i(TAG, "After SIP register delay: SIP account registered=$isRegistered, callId=$callId")
                     
                     if (!isRegistered) {
-                        Log.w(TAG, "SIP account not registered; showing simple notification and waiting for invite - callId=$callId")
+                        Log.w(TAG, "SIP not registered; showing simple notification")
                         showSimpleIncomingCallNotification(callId, callerId)
                         return@postDelayed
                     }
                     
-                    // Check if we already have a pending fallback to avoid duplicates
                     if (VoipFirebaseService.fallbackRunnable != null) {
-                        Log.i(TAG, "Fallback already scheduled; skipping duplicate scheduling for callId=$callId")
+                        Log.i(TAG, "Fallback already scheduled; skipping duplicate")
                         return@postDelayed
                     }
                     
-                    Log.i(TAG, "SIP account is registered; waiting for SIP invite with timeout - callId=$callId")
+                    Log.i(TAG, "SIP registered; scheduling 3s fallback timeout")
                     scheduleIncomingCallFallback(callId, callerId)
                 } catch (e: Exception) {
-                    Log.w(TAG, "Failed to process incoming call push - callId=$callId", e)
+                    Log.w(TAG, "Error processing push", e)
                     showSimpleIncomingCallNotification(callId, callerId)
                 }
             },
@@ -120,17 +113,12 @@ class VoipFirebaseService : FirebaseMessagingService() {
     }
 
     private fun scheduleIncomingCallFallback(callId: String, callerId: String) {
-        // If no SIP invite arrives within INVITE_WAIT_TIMEOUT_MS, show simple notification
-        Log.i(TAG, ">>> FALLBACK SCHEDULED: callId=$callId, will timeout in ${INVITE_WAIT_TIMEOUT_MS}ms, isWaitingForInvite=true")
-        Log.i(TAG, ">>> STACK TRACE: ${Thread.currentThread().name} / ${Exception().stackTraceToString().split("\n").take(5).joinToString("\n")}")
         val runnable = Runnable {
-            Log.w(TAG, ">>> FALLBACK TIMEOUT EXECUTED: callId=$callId, isWaitingForInvite=${VoipFirebaseService.isWaitingForInvite}")
-            // Only show notification if we're still waiting for invite (not received yet)
             if (VoipFirebaseService.isWaitingForInvite) {
-                Log.w(TAG, ">>> SHOWING FALLBACK NOTIFICATION: callId=$callId, callerId=$callerId")
+                Log.w(TAG, "Fallback timeout: showing simple notification")
                 showSimpleIncomingCallNotification(callId, callerId)
             } else {
-                Log.i(TAG, ">>> SKIPPING FALLBACK: isWaitingForInvite=false (invite received or call ended)")
+                Log.i(TAG, "Fallback timeout: invite already received, skipping")
             }
         }
         VoipFirebaseService.scheduleInviteWaitFallback(runnable)
@@ -152,7 +140,6 @@ class VoipFirebaseService : FirebaseMessagingService() {
     }
 
     private fun showSimpleIncomingCallNotification(callId: String, callerId: String) {
-        Log.i(TAG, ">>> NOTIFY SHOW: callId=$callId, callerId=$callerId, notificationId=$INCOMING_CALL_NOTIFICATION_ID")
         ensureIncomingCallChannel()
         val contentIntent = PendingIntent.getActivity(
             this,
@@ -180,7 +167,7 @@ class VoipFirebaseService : FirebaseMessagingService() {
 
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.notify(INCOMING_CALL_NOTIFICATION_ID, notification)
-        Log.i(TAG, ">>> NOTIFY DISPLAYED: notificationId=$INCOMING_CALL_NOTIFICATION_ID, callId=$callId")
+        Log.i(TAG, "Incoming call notification displayed")
     }
 
     private fun ensureIncomingCallChannel() {
@@ -199,6 +186,76 @@ class VoipFirebaseService : FirebaseMessagingService() {
 
     private fun pendingIntentImmutableFlag(): Int {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0
+    }
+
+    companion object {
+        const val ACTION_FCM_TOKEN = "fr.celya.celyavox.FCM_TOKEN"
+        const val EXTRA_TOKEN = "token"
+        private const val INCOMING_CALL_CHANNEL_ID = "voip_call_channel"
+        private const val INCOMING_CALL_NOTIFICATION_ID = 2101
+        private const val CANCELLED_CALL_NOTIFICATION_ID = 2102
+        private const val FULL_SCREEN_DELAY_MS = 500L
+        private const val INVITE_WAIT_TIMEOUT_MS = 3000L
+        private const val TAG = "VoipFirebaseService"
+        private val fallbackHandler = Handler(Looper.getMainLooper())
+        @Volatile var fallbackRunnable: Runnable? = null
+        @Volatile private var isWaitingForInvite = false
+        @Volatile private var isWakeupFromFcmPush = false
+
+        @JvmStatic
+        fun setFcmWakeup(value: Boolean) {
+            isWakeupFromFcmPush = value
+        }
+
+        @JvmStatic
+        fun consumeFcmWakeup(): Boolean {
+            val value = isWakeupFromFcmPush
+            isWakeupFromFcmPush = false
+            return value
+        }
+
+        @JvmStatic
+        fun showCancelledCallNotification(context: Context, message: String) {
+            Log.i(TAG, ">>> NOTIFY SHOW CANCELLED: message=$message, notificationId=$CANCELLED_CALL_NOTIFICATION_ID")
+            
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+            val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val channel = NotificationChannel(
+                INCOMING_CALL_CHANNEL_ID,
+                "VoIP Calls",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Incoming VoIP calls"
+                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+            }
+            manager.createNotificationChannel(channel)
+            
+            val contentIntent = PendingIntent.getActivity(
+                context,
+                0,
+                Intent(context, MainActivity::class.java).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                        Intent.FLAG_ACTIVITY_SINGLE_TOP
+                    putExtra("navigate_to_call_history", true)
+                },
+                PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
+            )
+
+            val notification = NotificationCompat.Builder(context, INCOMING_CALL_CHANNEL_ID)
+                .setContentTitle("Appel annulé")
+                .setContentText("L'appel a été annulé")
+                .setSmallIcon(android.R.drawable.sym_call_missed)
+                .setContentIntent(contentIntent)
+                .setAutoCancel(true)
+                .setCategory(Notification.CATEGORY_CALL)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .build()
+
+            manager.notify(CANCELLED_CALL_NOTIFICATION_ID, notification)
+            Log.i(TAG, ">>> NOTIFY DISPLAYED CANCELLED: notificationId=$CANCELLED_CALL_NOTIFICATION_ID")
+        }
     }
 
     private fun openIncomingCallActivity(callId: String, callerId: String) {
@@ -249,44 +306,5 @@ class VoipFirebaseService : FirebaseMessagingService() {
             putExtra(EXTRA_TOKEN, token)
         }
         sendBroadcast(intent)
-    }
-
-    companion object {
-        const val ACTION_FCM_TOKEN = "fr.celya.celyavox.FCM_TOKEN"
-        const val EXTRA_TOKEN = "token"
-        private const val INCOMING_CALL_CHANNEL_ID = "voip_call_channel"
-        private const val INCOMING_CALL_NOTIFICATION_ID = 2101
-        private const val FULL_SCREEN_DELAY_MS = 500L
-        private const val INVITE_WAIT_TIMEOUT_MS = 3000L  // 3 secondes pour recevoir l'invite SIP
-        private const val TAG = "VoipFirebaseService"
-        private val fallbackHandler = Handler(Looper.getMainLooper())
-        @Volatile var fallbackRunnable: Runnable? = null // Made public to check if already scheduled
-        @Volatile private var isWaitingForInvite = false // Flag global to track if we're waiting for SIP invite
-
-        @JvmStatic
-        fun cancelInviteWaitFallback() {
-            Log.i(TAG, ">>> CANCEL FALLBACK: isWaitingForInvite=true->false, removing ${if (fallbackRunnable != null) "runnable" else "no runnable"}")
-            fallbackRunnable?.let { fallbackHandler.removeCallbacks(it) }
-            fallbackRunnable = null
-            isWaitingForInvite = false
-        }
-
-        @JvmStatic
-        fun scheduleInviteWaitFallback(runnable: Runnable) {
-            Log.i(TAG, ">>> SCHEDULE FALLBACK: cancelling previous, setting isWaitingForInvite=true")
-            cancelInviteWaitFallback()
-            isWaitingForInvite = true
-            fallbackRunnable = runnable
-            fallbackHandler.postDelayed(runnable, INVITE_WAIT_TIMEOUT_MS)
-            Log.i(TAG, ">>> FALLBACK QUEUED: will execute in ${INVITE_WAIT_TIMEOUT_MS}ms")
-        }
-
-        @JvmStatic
-        fun cancelSimpleIncomingNotification(context: Context) {
-            Log.i(TAG, ">>> NOTIFY CANCEL: cancelling notificationId=$INCOMING_CALL_NOTIFICATION_ID")
-            val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            manager.cancel(INCOMING_CALL_NOTIFICATION_ID)
-            Log.i(TAG, ">>> NOTIFY CANCELLED: notificationId=$INCOMING_CALL_NOTIFICATION_ID")
-        }
     }
 }
