@@ -408,10 +408,9 @@ class VoipEngine(
                 emit(mapOf("type" to "registration", "message" to message))
             }
             "incoming_call" -> {
-                // Mark this call as having received the invite
-                VoipFirebaseService.markInviteReceived(message)
-                // Cancel fallback timeout and simple notification since invite arrived
+                // Mark that we received the SIP invite (stop waiting for fallback)
                 VoipFirebaseService.cancelInviteWaitFallback()
+                // Cancel the simple notification since invite arrived
                 val ctx = appContext
                 if (ctx != null) {
                     VoipFirebaseService.cancelSimpleIncomingNotification(ctx)
@@ -528,9 +527,8 @@ class VoipEngine(
         appContext?.let { ctx ->
             stopInAppRinging()
             VoipForegroundService.stop(ctx)
-            // Cancel pending fallback timeout and simple notification when call ends
+            // Cancel pending fallback timeout and cleanup when call ends
             VoipFirebaseService.cancelInviteWaitFallback()
-            VoipFirebaseService.clearPendingCall(callId)
             VoipFirebaseService.cancelSimpleIncomingNotification(ctx)
             try {
                 ctx.sendBroadcast(Intent(ACTION_CALL_ENDED).setPackage(ctx.packageName))

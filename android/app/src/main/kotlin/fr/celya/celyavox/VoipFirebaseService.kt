@@ -106,16 +106,14 @@ class VoipFirebaseService : FirebaseMessagingService() {
     }
 
     private fun scheduleIncomingCallFallback(callId: String, callerId: String) {
-        // Mark this call as pending invite
-        VoipFirebaseService.markCallPending(callId)
         // If no SIP invite arrives within INVITE_WAIT_TIMEOUT_MS, show simple notification
         val runnable = Runnable {
-            Log.w(TAG, "No SIP invite received after ${INVITE_WAIT_TIMEOUT_MS}ms for callId=$callId; showing simple notification")
-            // Only show notification if call is still pending (invite not received)
-            if (VoipFirebaseService.isCallPending(callId)) {
+            Log.w(TAG, "No SIP invite received after ${INVITE_WAIT_TIMEOUT_MS}ms; showing simple notification")
+            // Only show notification if we're still waiting for invite (not received yet)
+            if (VoipFirebaseService.isWaitingForInvite) {
                 showSimpleIncomingCallNotification(callId, callerId)
             } else {
-                Log.i(TAG, "Call $callId is no longer pending; skipping fallback notification")
+                Log.i(TAG, "Invite already received or call ended; skipping fallback notification")
             }
         }
         VoipFirebaseService.scheduleInviteWaitFallback(runnable)
@@ -244,40 +242,21 @@ class VoipFirebaseService : FirebaseMessagingService() {
         private const val TAG = "VoipFirebaseService"
         private val fallbackHandler = Handler(Looper.getMainLooper())
         @Volatile private var fallbackRunnable: Runnable? = null
-        private val pendingInviteCalls = mutableSetOf<String>() // Track callIds waiting for invite
+        @Volatile private var isWaitingForInvite = false // Flag global to track if we're waiting for SIP invite
 
         @JvmStatic
         fun cancelInviteWaitFallback() {
             fallbackRunnable?.let { fallbackHandler.removeCallbacks(it) }
             fallbackRunnable = null
+            isWaitingForInvite = false
         }
 
         @JvmStatic
         fun scheduleInviteWaitFallback(runnable: Runnable) {
             cancelInviteWaitFallback()
+            isWaitingForInvite = true
             fallbackRunnable = runnable
             fallbackHandler.postDelayed(runnable, INVITE_WAIT_TIMEOUT_MS)
-        }
-
-        @JvmStatic
-        fun markInviteReceived(callId: String) {
-            pendingInviteCalls.remove(callId)
-            Log.i(TAG, "Invite received for callId=$callId, removing from pending")
-        }
-
-        @JvmStatic
-        fun isCallPending(callId: String): Boolean = pendingInviteCalls.contains(callId)
-
-        @JvmStatic
-        fun markCallPending(callId: String) {
-            pendingInviteCalls.add(callId)
-            Log.i(TAG, "Marked callId=$callId as pending invite")
-        }
-
-        @JvmStatic
-        fun clearPendingCall(callId: String) {
-            pendingInviteCalls.remove(callId)
-            Log.i(TAG, "Cleared pending callId=$callId")
         }
 
         @JvmStatic
