@@ -83,23 +83,63 @@ class VoipFirebaseService : FirebaseMessagingService() {
         Handler(Looper.getMainLooper()).postDelayed(
             {
                 try {
-                    val registered = VoipConnectionService.registerSelfManaged(this)
-                    val ok = if (registered) {
-                        VoipConnectionService.startIncomingCall(this, callId, callerId)
-                    } else {
-                        false
+                    // Check if SIP account is registered before showing full-screen notification
+                    val sipEngine = PjsipEngine.instance
+                    val isRegistered = sipEngine.isRegistered()
+                    Log.i(TAG, "After SIP register delay: SIP account registered=$isRegistered")
+                    
+                    if (!isRegistered) {
+                        Log.w(TAG, "SIP account not registered; waiting additional ${SIP_REGISTRATION_CHECK_DELAY_MS}ms")
+                        Handler(Looper.getMainLooper()).postDelayed(
+                            {
+                                proceedWithIncomingCallIfRegistered(callId, callerId)
+                            },
+                            SIP_REGISTRATION_CHECK_DELAY_MS
+                        )
+                        return@postDelayed
                     }
-                    if (!ok) {
-                        Log.w(TAG, "Telecom incoming call not available; launching CallActivity directly")
-                        openIncomingCallActivity(callId, callerId)
-                    }
+                    
+                    proceedWithIncomingCallIfRegistered(callId, callerId)
                 } catch (e: Exception) {
-                    Log.w(TAG, "Failed to start ConnectionService incoming call", e)
+                    Log.w(TAG, "Failed to process incoming call push", e)
                     openIncomingCallActivity(callId, callerId)
                 }
             },
             FULL_SCREEN_DELAY_MS
         )
+    }
+
+    private fun proceedWithIncomingCallIfRegistered(callId: String, callerId: String) {
+        try {
+            val sipEngine = PjsipEngine.instance
+            val isRegistered = sipEngine.isRegistered()
+            
+            if (!isRegistered) {
+                Log.w(TAG, "SIP account still not registered after wait; showing simple notification instead")
+                showSimpleIncomingCallNotification(callId, callerId)
+                return
+            }
+            
+            Log.i(TAG, "SIP account is registered; launching full-screen notification and waiting for SIP invite")
+            // Launch foreground service with full-screen notification
+            // It will timeout if no SIP invite arrives within NO_INVITE_TIMEOUT_MS
+            VoipForegroundService.start(this, callId, callerId)
+            
+            // Also attempt to register with ConnectionService for proper telecom integration
+            val registered = VoipConnectionService.registerSelfManaged(this)
+            if (registered) {
+                Log.i(TAG, "ConnectionService registered; attempting to add incoming call")
+                val ok = VoipConnectionService.startIncomingCall(this, callId, callerId)
+                if (!ok) {
+                    Log.w(TAG, "Telecom incoming call not available; relying on foreground service notification")
+                }
+            } else {
+                Log.w(TAG, "Could not register ConnectionService; relying on foreground service notification")
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to process incoming call push", e)
+            openIncomingCallActivity(callId, callerId)
+        }
     }
 
     private fun shouldShowSimpleNotificationOnPush(): Boolean {
@@ -222,6 +262,7 @@ class VoipFirebaseService : FirebaseMessagingService() {
         private const val INCOMING_CALL_CHANNEL_ID = "voip_call_channel"
         private const val INCOMING_CALL_NOTIFICATION_ID = 2101
         private const val FULL_SCREEN_DELAY_MS = 500L
+        private const val SIP_REGISTRATION_CHECK_DELAY_MS = 2000L
         private const val TAG = "VoipFirebaseService"
     }
 }

@@ -400,6 +400,13 @@ class VoipEngine(
     override fun onEvent(type: String, message: String) {
         Log.d(TAG, "Native event $type | $message")
         when (type) {
+            "registration" -> {
+                // Update SIP registration status based on status code
+                val isRegistered = message.startsWith("200")
+                sipEngine.setRegistered(isRegistered)
+                Log.i(TAG, "SIP registration status updated: registered=$isRegistered ($message)")
+                emit(mapOf("type" to "registration", "message" to message))
+            }
             "incoming_call" -> {
                 VoipForegroundService.cancelNoInviteTimeout()
                 val ctx = appContext

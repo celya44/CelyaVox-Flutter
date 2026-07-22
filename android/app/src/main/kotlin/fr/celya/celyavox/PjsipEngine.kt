@@ -40,9 +40,16 @@ class PjsipEngine private constructor() {
     }
 
     private val initialized = AtomicBoolean(false)
+    private val registered = AtomicBoolean(false)
 
     fun setCallback(cb: Callback?) {
         callback = cb
+    }
+
+    fun isRegistered(): Boolean = registered.get()
+
+    fun setRegistered(value: Boolean) {
+        registered.set(value)
     }
 
     @Synchronized
