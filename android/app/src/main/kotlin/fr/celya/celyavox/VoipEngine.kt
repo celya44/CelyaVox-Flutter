@@ -399,6 +399,7 @@ class VoipEngine(
 
     override fun onEvent(type: String, message: String) {
         Log.d(TAG, "Native event $type | $message")
+        Log.i(TAG, ">>> PJSIP_CALLBACK: type=$type message=$message")
         when (type) {
             "registration" -> {
                 // Update SIP registration status based on status code
@@ -474,15 +475,20 @@ class VoipEngine(
                 )
             }
             "call_connected" -> {
+                Log.i(TAG, ">>> CALL_CONNECTED: Event received, callId=$message")
                 VoipConnectionService.markCallActive(message)
                 // Reset FCM wakeup flag since call is now accepted and active
+                Log.i(TAG, ">>> CALL_CONNECTED: About to reset FCM flag to false")
                 VoipFirebaseService.setFcmWakeup(false)
+                Log.i(TAG, ">>> CALL_CONNECTED: FCM flag reset, calling callConnected()")
                 callConnected(message)
             }
             "call_ended" -> {
+                Log.i(TAG, ">>> CALL_ENDED EVENT: message=$message")
                 val parts = message.split("|", limit = 2)
                 val callId = parts.firstOrNull().orEmpty()
                 val reason = parts.getOrNull(1)
+                Log.i(TAG, ">>> CALL_ENDED: callId=$callId reason=$reason")
                 VoipConnectionService.markCallEnded(callId)
                 callEnded(callId, reason)
             }
@@ -496,7 +502,10 @@ class VoipEngine(
                     Log.w(TAG, ">>> CALL CANCELLED: appContext is null, cannot handle cancellation")
                 }
             }
-            else -> emit(mapOf("type" to type, "message" to message))
+            else -> {
+                Log.i(TAG, ">>> PJSIP EVENT: type=$type message=$message")
+                emit(mapOf("type" to type, "message" to message))
+            }
         }
     }
 
