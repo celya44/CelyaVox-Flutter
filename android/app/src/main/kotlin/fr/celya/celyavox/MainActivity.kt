@@ -62,6 +62,7 @@ class MainActivity : FlutterActivity() {
         super.onCreate(savedInstanceState)
         Log.i(TAG, "onCreate keepOverLockscreenForCall=$keepOverLockscreenForCall")
         handleBackgroundLaunchIntent(intent)
+        handleNavigationIntent(intent)
         registerScreenStateReceiver()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(
@@ -94,6 +95,7 @@ class MainActivity : FlutterActivity() {
         handleCallLifecycleIntent(intent)
         updateCallUnlockMode(intent)
         notifyAcceptedCallToFlutter(intent)
+        handleNavigationIntent(intent)
     }
     @Deprecated("Deprecated in Java")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: android.content.Intent?) {
@@ -380,6 +382,16 @@ class MainActivity : FlutterActivity() {
                 onCallEndedFromNative("ACTION_CALL_TERMINATE_REQUESTED_INTENT")
                 sourceIntent.action = null
             }
+        }
+    }
+
+    private fun handleNavigationIntent(sourceIntent: Intent?) {
+        if (sourceIntent == null) return
+        val navigateToCallHistory = sourceIntent.getBooleanExtra("navigate_to_call_history", false)
+        if (navigateToCallHistory) {
+            Log.i(TAG, "Navigation to call history requested")
+            voipEngine?.navigateToCallHistory()
+            sourceIntent.removeExtra("navigate_to_call_history")
         }
     }
 

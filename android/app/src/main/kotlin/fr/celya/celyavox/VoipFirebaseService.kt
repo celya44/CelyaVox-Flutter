@@ -138,8 +138,6 @@ class VoipFirebaseService : FirebaseMessagingService() {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or
                     Intent.FLAG_ACTIVITY_CLEAR_TOP or
                     Intent.FLAG_ACTIVITY_SINGLE_TOP
-                putExtra(CallActivity.EXTRA_CALL_ID, callId)
-                putExtra(CallActivity.EXTRA_CALLER_ID, callerId)
             },
             PendingIntent.FLAG_UPDATE_CURRENT or pendingIntentImmutableFlag()
         )
@@ -250,6 +248,13 @@ class VoipFirebaseService : FirebaseMessagingService() {
             cancelInviteWaitFallback()
             fallbackRunnable = runnable
             fallbackHandler.postDelayed(runnable, INVITE_WAIT_TIMEOUT_MS)
+        }
+
+        @JvmStatic
+        fun cancelSimpleIncomingNotification(context: Context) {
+            val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            manager.cancel(INCOMING_CALL_NOTIFICATION_ID)
+            Log.i(TAG, "Cancelled simple incoming call notification")
         }
     }
 }

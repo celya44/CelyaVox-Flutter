@@ -408,8 +408,12 @@ class VoipEngine(
                 emit(mapOf("type" to "registration", "message" to message))
             }
             "incoming_call" -> {
-                // Cancel fallback timeout since invite arrived
+                // Cancel fallback timeout and simple notification since invite arrived
                 VoipFirebaseService.cancelInviteWaitFallback()
+                val ctx = appContext
+                if (ctx != null) {
+                    VoipFirebaseService.cancelSimpleIncomingNotification(ctx)
+                }
                 
                 // Check if SIP account is registered before processing incoming call
                 val isRegistered = sipEngine.isRegistered()
@@ -548,6 +552,15 @@ class VoipEngine(
                 "type" to "call_ended",
                 "callId" to callId,
                 "reason" to reason,
+            )
+        )
+    }
+
+    fun navigateToCallHistory() {
+        Log.i(TAG, "Emitting navigate_to_call_history event to Flutter")
+        emit(
+            mapOf(
+                "type" to "navigate_to_call_history",
             )
         )
     }
