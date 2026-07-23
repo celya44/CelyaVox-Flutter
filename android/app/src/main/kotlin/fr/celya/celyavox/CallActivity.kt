@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
+import android.media.MediaPlayer
 import android.media.Ringtone
 import android.media.RingtoneManager
 import android.os.VibrationEffect
@@ -32,6 +33,7 @@ import androidx.appcompat.app.AppCompatActivity
 class CallActivity : AppCompatActivity() {
 
     private var ringtone: Ringtone? = null
+    private var mediaPlayer: MediaPlayer? = null
     private var ringFocusRequest: AudioFocusRequest? = null
     private var vibrator: Vibrator? = null
     private var titleView: TextView? = null
@@ -288,95 +290,132 @@ class CallActivity : AppCompatActivity() {
             return
         }
 
-        if (ringerMode == AudioManager.RINGER_MODE_NORMAL) {
-            Log.i(TAG, ">>> CALLACTIVITY_RING: Attempting to play ringtone")
-            val uri = RingtoneManager.getActualDefaultRingtoneUri(
-                this,
-                RingtoneManager.TYPE_RINGTONE
+        // Set audio mode for incoming call (use NORMAL to allow speaker)
+        Log.i(TAG, ">>> CALLACTIVITY_RING: Setting audio mode to NORMAL for incoming call")
+        audioManager.mode = AudioManager.MODE_NORMAL
+        
+        // Ensure stream volume is at maximum
+        Log.i(TAG, ">>> CALLACTIVITY_RING: Setting STREAM_RING volume to maximum")
+        val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_RING)
+        audioManager.setStreamVolume(AudioManager.STREAM_RING, maxVolume, 0)
+        
+        // Request audio focus before playing
+        Log.i(TAG, ">>> CALLACTIVITY_RING: Requesting audio focus on STREAM_RING")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val attrs = AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                .build()
+            val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+                .setAudioAttributes(attrs)
+                .setAcceptsDelayedFocusGain(false)
+                .setOnAudioFocusChangeListener { }
+                .build()
+            ringFocusRequest = request
+            audioManager.requestAudioFocus(request)
+            Log.i(TAG, ">>> CALLACTIVITY_RING: Audio focus requested (O+)")
+        } else {
+            @Suppress("DEPRECATION")
+            audioManager.requestAudioFocus(
+                null,
+                AudioManager.STREAM_RING,
+                AudioManager.AUDIOFOCUS_GAIN_TRANSIENT
             )
-            Log.i(TAG, ">>> CALLACTIVITY_RING: Ringtone URI=$uri")
-            val ring = RingtoneManager.getRingtone(this, uri)
-            if (ring == null) {
-                Log.w(TAG, ">>> CALLACTIVITY_RING: RingtoneManager.getRingtone() returned null, returning")
-                return
-            }
-            Log.i(TAG, ">>> CALLACTIVITY_RING: Ringtone created successfully")
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                ring.audioAttributes = AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                    .build()
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                ring.isLooping = true
-            }
-            
-            // Set audio mode and ensure volume is audible
-            Log.i(TAG, ">>> CALLACTIVITY_RING: Setting audio mode to RINGTONE")
-            audioManager.mode = AudioManager.MODE_RINGTONE
-            Log.i(TAG, ">>> CALLACTIVITY_RING: Setting stream volume to maximum")
-            val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_RING)
-            audioManager.setStreamVolume(AudioManager.STREAM_RING, maxVolume, 0)
-            
-            // Request audio focus before playing
-            Log.i(TAG, ">>> CALLACTIVITY_RING: Requesting audio focus on STREAM_RING")
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val attrs = AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                    .build()
-                val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
-                    .setAudioAttributes(attrs)
-                    .setAcceptsDelayedFocusGain(false)
-                    .setOnAudioFocusChangeListener { }
-                    .build()
-                ringFocusRequest = request
-                audioManager.requestAudioFocus(request)
-                Log.i(TAG, ">>> CALLACTIVITY_RING: Audio focus requested (O+)")
-            } else {
-                @Suppress("DEPRECATION")
-                audioManager.requestAudioFocus(
-                    null,
-                    AudioManager.STREAM_RING,
-                    AudioManager.AUDIOFOCUS_GAIN_TRANSIENT
-                )
-                Log.i(TAG, ">>> CALLACTIVITY_RING: Audio focus requested (pre-O)")
-            }
-            
-            ringtone = ring
-            Log.i(TAG, ">>> CALLACTIVITY_RING: Starting ringtone playback")
-            ring.play()
-            Log.i(TAG, ">>> CALLACTIVITY_RING: Ringtone playback started")
-            
-            // Always vibrate on incoming call for better UX
-            Log.i(TAG, ">>> CALLACTIVITY_RING: Starting vibration pattern")
-            val vib = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                val manager = getSystemService(VibratorManager::class.java)
-                manager?.defaultVibrator
-            } else {
-                @Suppress("DEPRECATION")
-                getSystemService(VIBRATOR_SERVICE) as Vibrator
-            }
-            vibrator = vib
-            if (vib != null && vib.hasVibrator()) {
-                val pattern = longArrayOf(0, 500, 500)
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    vib.vibrate(VibrationEffect.createWaveform(pattern, 0))
-                } else {
-                    @Suppress("DEPRECATION")
-                    vib.vibrate(pattern, 0)
-                }
-                Log.i(TAG, ">>> CALLACTIVITY_RING: Vibration started")
-            }
-            return
+            Log.i(TAG, ">>> CALLACTIVITY_RING: Audio focus requested (pre-O)")
         }
 
-        if (ringerMode == AudioManager.RINGER_MODE_VIBRATE) {
-            Log.i(TAG, ">>> CALLACTIVITY_RING: Phone in VIBRATE mode (vibration already activated above)")
+        // Try MediaPlayer first
+        try {
+            Log.i(TAG, ">>> CALLACTIVITY_RING: Attempting MediaPlayer approach")
+            val uri = RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_RINGTONE)
+            Log.i(TAG, ">>> CALLACTIVITY_RING: Ringtone URI=$uri")
+            
+            val player = MediaPlayer()
+            player.setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                    .build()
+            )
+            player.setDataSource(this, uri)
+            player.isLooping = true
+            player.setOnErrorListener { mp, what, extra ->
+                Log.e(TAG, ">>> CALLACTIVITY_RING: MediaPlayer error what=$what extra=$extra")
+                false
+            }
+            player.setOnPreparedListener {
+                Log.i(TAG, ">>> CALLACTIVITY_RING: MediaPlayer prepared, starting playback")
+                it.start()
+            }
+            player.prepareAsync()
+            mediaPlayer = player
+            Log.i(TAG, ">>> CALLACTIVITY_RING: MediaPlayer started asynchronously")
+        } catch (e: Exception) {
+            Log.e(TAG, ">>> CALLACTIVITY_RING: MediaPlayer failed: ${e.message}", e)
+            // Fallback to Ringtone if MediaPlayer fails
+            try {
+                Log.i(TAG, ">>> CALLACTIVITY_RING: Falling back to Ringtone")
+                val uri = RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_RINGTONE)
+                Log.i(TAG, ">>> CALLACTIVITY_RING: Ringtone URI=$uri")
+                val ring = RingtoneManager.getRingtone(this, uri)
+                if (ring != null) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        ring.audioAttributes = AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                            .build()
+                    }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                        ring.isLooping = true
+                    }
+                    ringtone = ring
+                    Log.i(TAG, ">>> CALLACTIVITY_RING: Starting Ringtone playback (fallback)")
+                    ring.play()
+                    Log.i(TAG, ">>> CALLACTIVITY_RING: Ringtone playback started")
+                }
+            } catch (e2: Exception) {
+                Log.e(TAG, ">>> CALLACTIVITY_RING: Fallback Ringtone also failed: ${e2.message}", e2)
+            }
+        }
+        
+        // Always vibrate on incoming call for better UX
+        Log.i(TAG, ">>> CALLACTIVITY_RING: Starting vibration pattern")
+        val vib = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val manager = getSystemService(VibratorManager::class.java)
+            manager?.defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            getSystemService(VIBRATOR_SERVICE) as Vibrator
+        }
+        vibrator = vib
+        if (vib != null && vib.hasVibrator()) {
+            val pattern = longArrayOf(0, 500, 500)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                vib.vibrate(VibrationEffect.createWaveform(pattern, 0))
+            } else {
+                @Suppress("DEPRECATION")
+                vib.vibrate(pattern, 0)
+            }
+            Log.i(TAG, ">>> CALLACTIVITY_RING: Vibration started")
         }
     }
 
     private fun stopRinging() {
+        // Stop MediaPlayer
+        if (mediaPlayer != null) {
+            try {
+                if (mediaPlayer!!.isPlaying) {
+                    mediaPlayer!!.stop()
+                }
+                mediaPlayer!!.release()
+                mediaPlayer = null
+                Log.i(TAG, ">>> CALLACTIVITY_RING: MediaPlayer stopped and released")
+            } catch (e: Exception) {
+                Log.w(TAG, ">>> CALLACTIVITY_RING: Error stopping MediaPlayer: ${e.message}")
+            }
+        }
+        
+        // Stop Ringtone
         ringtone?.stop()
         ringtone = null
         vibrator?.cancel()
