@@ -91,16 +91,6 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e) {
     pjsua_call_info ci;
     if (pjsua_call_get_info(call_id, &ci) != PJ_SUCCESS) return;
     if (ci.state == PJSIP_INV_STATE_CONFIRMED) {
-        // When call is confirmed, reduce TX level (microphone) to 50% (64/128)
-        // and RX level (speaker) to 60% (77/128) for balanced volume
-        for (unsigned i = 0; i < ci.media_cnt; ++i) {
-            if (ci.media[i].type == PJMEDIA_TYPE_AUDIO && ci.media[i].status == PJSUA_CALL_MEDIA_ACTIVE) {
-                const pjsua_conf_port_id slot = ci.media[i].stream.aud.conf_slot;
-                pjsua_conf_adjust_tx_level(slot, 64);  // 50% for microphone
-                pjsua_conf_adjust_rx_level(slot, 77);  // 60% for speaker
-                LOGI("Call confirmed, set TX (mic) to 50%% (64/128) and RX (speaker) to 60%% (77/128) for call %d", call_id);
-            }
-        }
         emit_event("call_connected", std::to_string(call_id).c_str());
     } else if (ci.state == PJSIP_INV_STATE_DISCONNECTED) {
         std::string reason;
@@ -122,13 +112,7 @@ static void on_call_media_state(pjsua_call_id call_id) {
                 const pjsua_conf_port_id slot = ci.media[i].stream.aud.conf_slot;
                 pjsua_conf_connect(slot, 0);
                 pjsua_conf_connect(0, slot);
-                
-                // Reduce microphone and speaker volume for comfortable levels
-                // TX level 64 (50%) for microphone - prevents AGC while reducing volume
-                // RX level 77 (60%) for speaker output
-                pjsua_conf_adjust_tx_level(slot, 64);  // Microphone at 50%
-                pjsua_conf_adjust_rx_level(slot, 77);  // Speaker at 60%
-                LOGI("Media active on call %d, connected to sound device, TX (mic) 50%% RX (speaker) 60%%", call_id);
+                LOGI("Media active on call %d, connected to sound device", call_id);
             } else if (ci.media[i].status == PJSUA_CALL_MEDIA_ERROR) {
                 LOGE("Media error on call %d", call_id);
             } else {

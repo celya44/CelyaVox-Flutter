@@ -144,12 +144,6 @@ class VoipEngine(
         audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
         audioManager.isMicrophoneMute = false
         
-        // Set VOICE_CALL stream volume to 50% to reduce microphone and speaker volume
-        // This combines with PJSIP TX/RX level adjustments for proper volume control
-        val maxVoiceCallVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL)
-        val targetVolume = maxVoiceCallVolume / 2  // 50% of maximum
-        audioManager.setStreamVolume(AudioManager.STREAM_VOICE_CALL, targetVolume, 0)
-        
         // Request audio focus for voice call
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val attrs = AudioAttributes.Builder()
@@ -170,7 +164,7 @@ class VoipEngine(
                 AudioManager.AUDIOFOCUS_GAIN_TRANSIENT
             )
         }
-        Log.i(TAG, "VoipEngine.initCallAudio() initialized audio for call with max VOICE_CALL volume")
+        Log.i(TAG, "VoipEngine.initCallAudio() initialized audio for call")
     }
 
     fun setSpeakerphone(enabled: Boolean) {
