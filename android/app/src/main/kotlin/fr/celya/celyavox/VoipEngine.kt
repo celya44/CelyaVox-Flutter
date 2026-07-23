@@ -502,10 +502,6 @@ class VoipEngine(
                 } else {
                     Log.w(TAG, ">>> INCOMING_CALL: appContext is null, cannot process incoming call")
                 }
-                    }
-                } else {
-                    incomingCall(message, null)
-                }
             }
             "outgoing_call" -> {
                 emit(
