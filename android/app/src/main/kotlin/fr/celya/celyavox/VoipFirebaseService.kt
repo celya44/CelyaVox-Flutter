@@ -46,7 +46,6 @@ class VoipFirebaseService : FirebaseMessagingService() {
             // Mark that app was woken up by FCM push and store callerId
             VoipFirebaseService.setFcmWakeup(true)
             VoipFirebaseService.setFcmCallerId(callerId)
-            Log.i(TAG, ">>> FCM: FCM wakeup flag set to true")
 
             if (type == "incoming_call") {
                 if (isAppInForeground()) {
@@ -207,21 +206,18 @@ class VoipFirebaseService : FirebaseMessagingService() {
 
         @JvmStatic
         fun setFcmWakeup(value: Boolean) {
-            Log.i(TAG, ">>> FCM_FLAG: setFcmWakeup($value)")
             isWakeupFromFcmPush = value
         }
 
         @JvmStatic
         fun consumeFcmWakeup(): Boolean {
             val value = isWakeupFromFcmPush
-            Log.i(TAG, ">>> FCM_FLAG: consumeFcmWakeup() reading=$value, resetting to false")
             isWakeupFromFcmPush = false
             return value
         }
 
         @JvmStatic
         fun setFcmCallerId(callerId: String) {
-            Log.i(TAG, ">>> FCM_FLAG: setFcmCallerId($callerId)")
             fcmCallerId = callerId
         }
 
@@ -254,7 +250,6 @@ class VoipFirebaseService : FirebaseMessagingService() {
 
         @JvmStatic
         fun showCancelledCallNotification(context: Context, message: String, callerId: String = "") {
-            Log.i(TAG, ">>> NOTIFY SHOW CANCELLED: message=$message callerId=$callerId, notificationId=$CANCELLED_CALL_NOTIFICATION_ID")
             
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
             val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -293,7 +288,6 @@ class VoipFirebaseService : FirebaseMessagingService() {
                 .build()
 
             manager.notify(CANCELLED_CALL_NOTIFICATION_ID, notification)
-            Log.i(TAG, ">>> NOTIFY DISPLAYED CANCELLED: notificationId=$CANCELLED_CALL_NOTIFICATION_ID")
         }
     }
 

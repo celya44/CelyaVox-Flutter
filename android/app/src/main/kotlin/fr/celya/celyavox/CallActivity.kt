@@ -102,7 +102,7 @@ class CallActivity : AppCompatActivity() {
         acceptButton?.visibility = View.VISIBLE
         declineButton?.text = "Raccrocher"
         titleView?.text = if (currentCallerId.isNotEmpty()) currentCallerId else "Appel entrant"
-        subtitleView?.text = if (currentCallId.isNotEmpty()) "Call ID: $currentCallId" else ""
+        subtitleView?.text = ""  // No subtitle needed - CallerID in title
         updateAcceptButtonState()
         startRinging()
         if (waitingNativeCallIdForAccept && !isPushPlaceholderCallId(currentCallId)) {
@@ -208,7 +208,7 @@ class CallActivity : AppCompatActivity() {
         titleView = title
 
         val subtitle = TextView(this).apply {
-            text = if (callId.isNotEmpty()) "ID: $callId" else ""
+            text = ""  // Empty subtitle - CallerID already shown in title
             textSize = 14f
             gravity = Gravity.CENTER
             layoutParams = LinearLayout.LayoutParams(
@@ -290,30 +290,23 @@ class CallActivity : AppCompatActivity() {
 
     private fun startRinging() {
         if (isRinging) {
-            Log.i(TAG, ">>> CALLACTIVITY_RING: startRinging() called but already ringing, skipping")
             return
         }
-        Log.i(TAG, ">>> CALLACTIVITY_RING: startRinging() called")
         isRinging = true
         val audioManager = getSystemService(AudioManager::class.java)
         val ringerMode = audioManager.ringerMode
-        Log.i(TAG, ">>> CALLACTIVITY_RING: ringerMode=$ringerMode (0=SILENT, 1=VIBRATE, 2=NORMAL)")
         if (ringerMode == AudioManager.RINGER_MODE_SILENT) {
-            Log.i(TAG, ">>> CALLACTIVITY_RING: Phone in SILENT mode, returning")
             return
         }
 
         // Set audio mode for incoming call (use NORMAL to allow speaker)
-        Log.i(TAG, ">>> CALLACTIVITY_RING: Setting audio mode to NORMAL for incoming call")
         audioManager.mode = AudioManager.MODE_NORMAL
         
         // Ensure stream volume is at maximum
-        Log.i(TAG, ">>> CALLACTIVITY_RING: Setting STREAM_RING volume to maximum")
         val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_RING)
         audioManager.setStreamVolume(AudioManager.STREAM_RING, maxVolume, 0)
         
         // Request audio focus before playing
-        Log.i(TAG, ">>> CALLACTIVITY_RING: Requesting audio focus on STREAM_RING")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val attrs = AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
@@ -326,7 +319,6 @@ class CallActivity : AppCompatActivity() {
                 .build()
             ringFocusRequest = request
             audioManager.requestAudioFocus(request)
-            Log.i(TAG, ">>> CALLACTIVITY_RING: Audio focus requested (O+)")
         } else {
             @Suppress("DEPRECATION")
             audioManager.requestAudioFocus(
@@ -334,14 +326,11 @@ class CallActivity : AppCompatActivity() {
                 AudioManager.STREAM_RING,
                 AudioManager.AUDIOFOCUS_GAIN_TRANSIENT
             )
-            Log.i(TAG, ">>> CALLACTIVITY_RING: Audio focus requested (pre-O)")
         }
 
         // Try MediaPlayer first
         try {
-            Log.i(TAG, ">>> CALLACTIVITY_RING: Attempting MediaPlayer approach")
             val uri = RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_RINGTONE)
-            Log.i(TAG, ">>> CALLACTIVITY_RING: Ringtone URI=$uri")
             
             val player = MediaPlayer()
             player.setAudioAttributes(
@@ -353,23 +342,17 @@ class CallActivity : AppCompatActivity() {
             player.setDataSource(this, uri)
             player.isLooping = true
             player.setOnErrorListener { mp, what, extra ->
-                Log.e(TAG, ">>> CALLACTIVITY_RING: MediaPlayer error what=$what extra=$extra")
                 false
             }
             player.setOnPreparedListener {
-                Log.i(TAG, ">>> CALLACTIVITY_RING: MediaPlayer prepared, starting playback")
                 it.start()
             }
             player.prepareAsync()
             mediaPlayer = player
-            Log.i(TAG, ">>> CALLACTIVITY_RING: MediaPlayer started asynchronously")
         } catch (e: Exception) {
-            Log.e(TAG, ">>> CALLACTIVITY_RING: MediaPlayer failed: ${e.message}", e)
             // Fallback to Ringtone if MediaPlayer fails
             try {
-                Log.i(TAG, ">>> CALLACTIVITY_RING: Falling back to Ringtone")
                 val uri = RingtoneManager.getActualDefaultRingtoneUri(this, RingtoneManager.TYPE_RINGTONE)
-                Log.i(TAG, ">>> CALLACTIVITY_RING: Ringtone URI=$uri")
                 val ring = RingtoneManager.getRingtone(this, uri)
                 if (ring != null) {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -382,17 +365,14 @@ class CallActivity : AppCompatActivity() {
                         ring.isLooping = true
                     }
                     ringtone = ring
-                    Log.i(TAG, ">>> CALLACTIVITY_RING: Starting Ringtone playback (fallback)")
                     ring.play()
-                    Log.i(TAG, ">>> CALLACTIVITY_RING: Ringtone playback started")
                 }
             } catch (e2: Exception) {
-                Log.e(TAG, ">>> CALLACTIVITY_RING: Fallback Ringtone also failed: ${e2.message}", e2)
+                Log.e(TAG, "Fallback Ringtone failed: ${e2.message}", e2)
             }
         }
         
         // Always vibrate on incoming call for better UX
-        Log.i(TAG, ">>> CALLACTIVITY_RING: Starting vibration pattern")
         val vib = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val manager = getSystemService(VibratorManager::class.java)
             manager?.defaultVibrator
@@ -409,14 +389,11 @@ class CallActivity : AppCompatActivity() {
                 @Suppress("DEPRECATION")
                 vib.vibrate(pattern, 0)
             }
-            Log.i(TAG, ">>> CALLACTIVITY_RING: Vibration started")
         }
     }
 
     private fun stopRinging() {
-        Log.i(TAG, ">>> CALLACTIVITY_RING: stopRinging() called, isRinging=$isRinging")
         if (!isRinging) {
-            Log.i(TAG, ">>> CALLACTIVITY_RING: stopRinging() called but not currently ringing, skipping")
             return
         }
         isRinging = false
@@ -429,9 +406,8 @@ class CallActivity : AppCompatActivity() {
                 }
                 mediaPlayer!!.release()
                 mediaPlayer = null
-                Log.i(TAG, ">>> CALLACTIVITY_RING: MediaPlayer stopped and released")
             } catch (e: Exception) {
-                Log.w(TAG, ">>> CALLACTIVITY_RING: Error stopping MediaPlayer: ${e.message}")
+                Log.w(TAG, "Error stopping MediaPlayer: ${e.message}")
             }
         }
         

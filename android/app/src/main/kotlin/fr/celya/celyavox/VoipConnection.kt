@@ -131,7 +131,6 @@ open class VoipConnection(
     }
 
     fun markRinging() {
-        Log.i("VoipConnection", ">>> VOIP_CONN_RING: markRinging() called, callId=$callId")
         setRinging()
         startRinging()
     }
@@ -142,29 +141,22 @@ open class VoipConnection(
 
     private fun startRinging() {
         if (isRinging) {
-            Log.i("VoipConnection", ">>> VOIP_CONN_RING: startRinging() called but already ringing, skipping")
             return
         }
-        Log.i("VoipConnection", ">>> VOIP_CONN_RING: startRinging() called, callId=$callId")
         isRinging = true
         val ringerMode = audioManager.ringerMode
-        Log.i("VoipConnection", ">>> VOIP_CONN_RING: ringerMode=$ringerMode (0=SILENT, 1=VIBRATE, 2=NORMAL)")
         if (ringerMode == AudioManager.RINGER_MODE_SILENT) {
-            Log.i("VoipConnection", ">>> VOIP_CONN_RING: Phone is in SILENT mode")
             return
         }
 
         // Set audio mode for incoming call (use NORMAL to allow speaker)
-        Log.i("VoipConnection", ">>> VOIP_CONN_RING: Setting audio mode to NORMAL for incoming call")
         audioManager.mode = AudioManager.MODE_NORMAL
         
         // Ensure stream volume is at maximum
-        Log.i("VoipConnection", ">>> VOIP_CONN_RING: Setting STREAM_RING volume to maximum")
         val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_RING)
         audioManager.setStreamVolume(AudioManager.STREAM_RING, maxVolume, 0)
         
         // Request audio focus before playing
-        Log.i("VoipConnection", ">>> VOIP_CONN_RING: Requesting audio focus on STREAM_RING")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val attrs = AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
@@ -177,7 +169,6 @@ open class VoipConnection(
                 .build()
             ringFocusRequest = request
             audioManager.requestAudioFocus(request)
-            Log.i("VoipConnection", ">>> VOIP_CONN_RING: Audio focus requested (O+)")
         } else {
             @Suppress("DEPRECATION")
             audioManager.requestAudioFocus(
@@ -185,14 +176,11 @@ open class VoipConnection(
                 AudioManager.STREAM_RING,
                 AudioManager.AUDIOFOCUS_GAIN_TRANSIENT
             )
-            Log.i("VoipConnection", ">>> VOIP_CONN_RING: Audio focus requested (pre-O)")
         }
 
         // Try MediaPlayer first
         try {
-            Log.i("VoipConnection", ">>> VOIP_CONN_RING: Attempting MediaPlayer approach")
             val uri = RingtoneManager.getActualDefaultRingtoneUri(context, RingtoneManager.TYPE_RINGTONE)
-            Log.i("VoipConnection", ">>> VOIP_CONN_RING: Ringtone URI=$uri")
             
             val player = MediaPlayer()
             player.setAudioAttributes(
@@ -204,23 +192,17 @@ open class VoipConnection(
             player.setDataSource(context, uri)
             player.isLooping = true
             player.setOnErrorListener { mp, what, extra ->
-                Log.e("VoipConnection", ">>> VOIP_CONN_RING: MediaPlayer error what=$what extra=$extra")
                 false
             }
             player.setOnPreparedListener {
-                Log.i("VoipConnection", ">>> VOIP_CONN_RING: MediaPlayer prepared, starting playback")
                 it.start()
             }
             player.prepareAsync()
             mediaPlayer = player
-            Log.i("VoipConnection", ">>> VOIP_CONN_RING: MediaPlayer started asynchronously")
         } catch (e: Exception) {
-            Log.e("VoipConnection", ">>> VOIP_CONN_RING: MediaPlayer failed: ${e.message}", e)
             // Fallback to Ringtone if MediaPlayer fails
             try {
-                Log.i("VoipConnection", ">>> VOIP_CONN_RING: Falling back to Ringtone")
                 val uri = RingtoneManager.getActualDefaultRingtoneUri(context, RingtoneManager.TYPE_RINGTONE)
-                Log.i("VoipConnection", ">>> VOIP_CONN_RING: Ringtone URI=$uri")
                 val ring = RingtoneManager.getRingtone(context, uri)
                 if (ring != null) {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -233,17 +215,14 @@ open class VoipConnection(
                         ring.isLooping = true
                     }
                     ringtone = ring
-                    Log.i("VoipConnection", ">>> VOIP_CONN_RING: Starting Ringtone playback (fallback)")
                     ring.play()
-                    Log.i("VoipConnection", ">>> VOIP_CONN_RING: Ringtone playback started")
                 }
             } catch (e2: Exception) {
-                Log.e("VoipConnection", ">>> VOIP_CONN_RING: Fallback Ringtone also failed: ${e2.message}", e2)
+                Log.e("VoipConnection", "Fallback Ringtone failed: ${e2.message}", e2)
             }
         }
         
         // Always vibrate on incoming call for better UX
-        Log.i("VoipConnection", ">>> VOIP_CONN_RING: Starting vibration pattern")
         val vib = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val manager = context.getSystemService(VibratorManager::class.java)
             manager?.defaultVibrator
@@ -260,14 +239,11 @@ open class VoipConnection(
                 @Suppress("DEPRECATION")
                 vib.vibrate(pattern, 0)
             }
-            Log.i("VoipConnection", ">>> VOIP_CONN_RING: Vibration started")
         }
     }
 
     private fun stopRinging() {
-        Log.i("VoipConnection", ">>> VOIP_CONN_RING: stopRinging() called, isRinging=$isRinging")
         if (!isRinging) {
-            Log.i("VoipConnection", ">>> VOIP_CONN_RING: stopRinging() called but not currently ringing, skipping")
             return
         }
         isRinging = false
@@ -280,9 +256,8 @@ open class VoipConnection(
                 }
                 mediaPlayer!!.release()
                 mediaPlayer = null
-                Log.i("VoipConnection", ">>> VOIP_CONN_RING: MediaPlayer stopped and released")
             } catch (e: Exception) {
-                Log.w("VoipConnection", ">>> VOIP_CONN_RING: Error stopping MediaPlayer: ${e.message}")
+                Log.w("VoipConnection", "Error stopping MediaPlayer: ${e.message}")
             }
         }
         

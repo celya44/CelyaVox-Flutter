@@ -338,34 +338,26 @@ class VoipEngine(
     }
 
     fun startInAppRinging() {
-        Log.i(TAG, ">>> RINGING: startInAppRinging() called")
         val ctx = appContext
         if (ctx == null) {
-            Log.w(TAG, ">>> RINGING: appContext is null, cannot start ringing")
             return
         }
         if (incomingRingtone != null || incomingVibrator != null) {
-            Log.i(TAG, ">>> RINGING: Ringing already active, skipping")
             return
         }
         val audioManager = ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         val ringerMode = audioManager.ringerMode
-        Log.i(TAG, ">>> RINGING: ringerMode=$ringerMode (0=SILENT, 1=VIBRATE, 2=NORMAL)")
         if (ringerMode == AudioManager.RINGER_MODE_SILENT) {
-            Log.i(TAG, ">>> RINGING: Phone is in SILENT mode, not ringing")
             return
         }
 
         if (ringerMode == AudioManager.RINGER_MODE_NORMAL) {
-            Log.i(TAG, ">>> RINGING: Attempting to play ringtone")
             val uri = RingtoneManager.getActualDefaultRingtoneUri(
                 ctx,
                 RingtoneManager.TYPE_RINGTONE
             )
-            Log.i(TAG, ">>> RINGING: Ringtone URI=$uri")
             val ring = RingtoneManager.getRingtone(ctx, uri)
             if (ring != null) {
-                Log.i(TAG, ">>> RINGING: Ringtone object created successfully")
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                     ring.audioAttributes = AudioAttributes.Builder()
                         .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
@@ -376,16 +368,11 @@ class VoipEngine(
                     ring.isLooping = true
                 }
                 incomingRingtone = ring
-                Log.i(TAG, ">>> RINGING: Starting ringtone playback")
                 ring.play()
-                Log.i(TAG, ">>> RINGING: Ringtone playback started")
-            } else {
-                Log.w(TAG, ">>> RINGING: Failed to create ringtone object")
             }
         }
 
         if (ringerMode == AudioManager.RINGER_MODE_VIBRATE) {
-            Log.i(TAG, ">>> RINGING: Phone in VIBRATE mode, activating vibration")
             val vib = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 val manager = ctx.getSystemService(VibratorManager::class.java)
                 manager?.defaultVibrator
@@ -395,7 +382,6 @@ class VoipEngine(
             }
             incomingVibrator = vib
             if (vib != null && vib.hasVibrator()) {
-                Log.i(TAG, ">>> RINGING: Starting vibration pattern")
                 val pattern = longArrayOf(0, 500, 500)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     vib.vibrate(VibrationEffect.createWaveform(pattern, 0))
@@ -403,20 +389,15 @@ class VoipEngine(
                     @Suppress("DEPRECATION")
                     vib.vibrate(pattern, 0)
                 }
-                Log.i(TAG, ">>> RINGING: Vibration pattern started")
-            } else {
-                Log.w(TAG, ">>> RINGING: Vibrator not available or device doesn't have vibrator")
             }
         }
     }
 
     fun stopInAppRinging() {
-        Log.i(TAG, ">>> RINGING: stopInAppRinging() called")
         incomingRingtone?.stop()
         incomingRingtone = null
         incomingVibrator?.cancel()
         incomingVibrator = null
-        Log.i(TAG, ">>> RINGING: Ringing stopped")
     }
 
     private fun emit(event: Map<String, Any?>) {
@@ -426,7 +407,6 @@ class VoipEngine(
 
     override fun onEvent(type: String, message: String) {
         Log.d(TAG, "Native event $type | $message")
-        Log.i(TAG, ">>> PJSIP_CALLBACK: type=$type message=$message")
         when (type) {
             "registration" -> {
                 // Update SIP registration status based on status code
@@ -436,7 +416,6 @@ class VoipEngine(
                 emit(mapOf("type" to "registration", "message" to message))
             }
             "incoming_call" -> {
-                Log.i(TAG, ">>> INCOMING_CALL: Event received, callId=$message")
                 VoipFirebaseService.cancelInviteWaitFallback()
                 val ctx = appContext
                 if (ctx != null) {
@@ -445,62 +424,44 @@ class VoipEngine(
                 
                 // Check if SIP account is registered before processing incoming call
                 val isRegistered = sipEngine.isRegistered()
-                Log.i(TAG, ">>> INCOMING_CALL: SIP registered=$isRegistered")
                 if (!isRegistered) {
-                    Log.w(TAG, ">>> INCOMING_CALL: SIP account not registered; ignoring")
+                    Log.w(TAG, "SIP account not registered; ignoring incoming call")
                     return
                 }
                 
                 VoipForegroundService.cancelNoInviteTimeout()
                 if (ctx != null) {
-                    Log.i(TAG, ">>> INCOMING_CALL: Calling VoipConnectionService.startIncomingCall()")
-                    val ok = VoipConnectionService.startIncomingCall(ctx, message, null)
-                    Log.i(TAG, ">>> INCOMING_CALL: VoipConnectionService.startIncomingCall() returned ok=$ok")
+                    // Get CallerID from SIP INVITE (message = callId)
+                    val callerId = sipEngine.getCallerInfo(message)
+                    val ok = VoipConnectionService.startIncomingCall(ctx, message, callerId)
                     if (!ok) {
-                        Log.w(TAG, ">>> INCOMING_CALL: startIncomingCall failed, checking fallback paths")
                         val now = System.currentTimeMillis()
                         val recentLaunch = now - CallActivity.lastLaunchAtMs < 10000L
-                        Log.i(TAG, ">>> INCOMING_CALL: CallActivity.isVisible=${CallActivity.isVisible}, recentLaunch=$recentLaunch")
                         if (CallActivity.isVisible) {
                             if (message.isNotBlank() && CallActivity.visibleCallId != message) {
-                                Log.i(
-                                    TAG,
-                                    ">>> INCOMING_CALL: CallActivity visible with callId=${CallActivity.visibleCallId}; updating to native callId=$message"
-                                )
-                                startIncomingCallActivity(ctx, message, null)
-                            } else {
-                                Log.i(
-                                    TAG,
-                                    ">>> INCOMING_CALL: CallActivity already visible for callId=${CallActivity.visibleCallId}; no update needed"
-                                )
+                                startIncomingCallActivity(ctx, message, callerId)
                             }
                             return
                         }
                         if (recentLaunch) {
-                            Log.i(TAG, ">>> INCOMING_CALL: Recent CallActivity launch detected; updating with native callId=$message")
-                            startIncomingCallActivity(ctx, message, null)
+                            startIncomingCallActivity(ctx, message, callerId)
                             return
                         }
                         if (isAppInForeground(ctx) && !CallActivity.isVisible) {
-                            Log.i(TAG, ">>> INCOMING_CALL: App in foreground; routing incoming call to Flutter UI")
-                            incomingCall(message, null)
+                            incomingCall(message, callerId)
                             return
                         }
                         if (CallActivity.isVisible) {
-                            Log.i(TAG, ">>> INCOMING_CALL: CallActivity already visible for callId=${CallActivity.visibleCallId}; skip relaunch")
                             return
                         }
-                        Log.i(TAG, ">>> INCOMING_CALL: Attempting to start CallActivity")
-                        val launched = startIncomingCallActivity(ctx, message, null)
+                        val launched = startIncomingCallActivity(ctx, message, callerId)
                         if (!launched) {
-                            Log.i(TAG, ">>> INCOMING_CALL: CallActivity launch failed, routing to Flutter UI")
-                            incomingCall(message, null)
+                            incomingCall(message, callerId)
                         }
                     } else {
-                        Log.i(TAG, ">>> INCOMING_CALL: VoipConnectionService.startIncomingCall() succeeded, Telecom handling the call")
                     }
                 } else {
-                    Log.w(TAG, ">>> INCOMING_CALL: appContext is null, cannot process incoming call")
+                    Log.w(TAG, "appContext is null, cannot process incoming call")
                 }
             }
             "outgoing_call" -> {
@@ -512,35 +473,27 @@ class VoipEngine(
                 )
             }
             "call_connected" -> {
-                Log.i(TAG, ">>> CALL_CONNECTED: Event received, callId=$message")
                 VoipConnectionService.markCallActive(message)
                 // Reset FCM wakeup flag since call is now accepted and active
-                Log.i(TAG, ">>> CALL_CONNECTED: About to reset FCM flag to false")
                 VoipFirebaseService.setFcmWakeup(false)
-                Log.i(TAG, ">>> CALL_CONNECTED: FCM flag reset, calling callConnected()")
                 callConnected(message)
             }
             "call_ended" -> {
-                Log.i(TAG, ">>> CALL_ENDED EVENT: message=$message")
                 val parts = message.split("|", limit = 2)
                 val callId = parts.firstOrNull().orEmpty()
                 val reason = parts.getOrNull(1)
-                Log.i(TAG, ">>> CALL_ENDED: callId=$callId reason=$reason")
                 VoipConnectionService.markCallEnded(callId)
                 callEnded(callId, reason)
             }
             "call_cancelled" -> {
-                Log.i(TAG, ">>> CALL CANCELLED EVENT: message=$message")
                 val ctx = appContext
                 if (ctx != null) {
-                    Log.i(TAG, ">>> CALL CANCELLED: appContext available, calling handleCallCancelled")
                     handleCallCancelled(ctx, message)
                 } else {
-                    Log.w(TAG, ">>> CALL CANCELLED: appContext is null, cannot handle cancellation")
+                    Log.w(TAG, "appContext is null, cannot handle call cancellation")
                 }
             }
             else -> {
-                Log.i(TAG, ">>> PJSIP EVENT: type=$type message=$message")
                 emit(mapOf("type" to type, "message" to message))
             }
         }
@@ -588,14 +541,12 @@ class VoipEngine(
             
             // Check if this is a call cancellation (487 Request Terminated) and app was woken by FCM
             val isRequestTerminated = reason?.contains("487") == true
-            Log.i(TAG, ">>> CALL_ENDED: isRequestTerminated=$isRequestTerminated reason=$reason")
             
             if (isRequestTerminated) {
                 val wasWokenByFcm = VoipFirebaseService.consumeFcmWakeup()
-                Log.i(TAG, ">>> CALL_ENDED: Detected 487 termination, wasWokenByFcm=$wasWokenByFcm")
                 if (wasWokenByFcm) {
-                    val callerId = VoipFirebaseService.getFcmCallerId()
-                    Log.i(TAG, ">>> CALL_ENDED: Treating as cancel notification since app was woken by FCM, callerId=$callerId")
+                    // Get CallerID from SIP call info
+                    val callerId = sipEngine.getCallerInfo(callId)
                     VoipFirebaseService.showCancelledCallNotification(ctx, reason ?: "Appel annulé", callerId)
                     
                     // Send minimize app broadcast after a delay to allow CallActivity to close first
@@ -605,10 +556,9 @@ class VoipEngine(
                                 val intent = Intent(ACTION_MINIMIZE_APP).apply {
                                     setPackage(ctx.packageName)
                                 }
-                                Log.i(TAG, ">>> CALL_ENDED: Sending ACTION_MINIMIZE_APP broadcast (after delay)")
                                 ctx.sendBroadcast(intent)
                             } catch (e: Exception) {
-                                Log.w(TAG, ">>> CALL_ENDED: Failed to send minimize broadcast", e)
+                                Log.w(TAG, "Failed to send minimize broadcast", e)
                             }
                         },
                         500L // Wait 500ms for CallActivity to close
@@ -616,7 +566,6 @@ class VoipEngine(
                 }
             } else {
                 // Reset FCM wakeup flag for normal call termination
-                Log.i(TAG, ">>> CALL_ENDED: Normal termination, resetting FCM flag")
                 VoipFirebaseService.setFcmWakeup(false)
             }
             
@@ -659,32 +608,24 @@ class VoipEngine(
     }
 
     private fun handleCallCancelled(context: Context, message: String) {
-        Log.i(TAG, ">>> CANCEL: Call cancelled event received: $message")
         
         // Only handle cancellation if app was woken up by FCM push
         val wasWokenByFcm = VoipFirebaseService.consumeFcmWakeup()
-        Log.i(TAG, ">>> CANCEL: wasWokenByFcm=$wasWokenByFcm")
         if (!wasWokenByFcm) {
-            Log.i(TAG, ">>> CANCEL: App was not woken by FCM push; ignoring call cancellation")
             return
         }
         
         // Always show notification for call cancellation after FCM wakeup
-        Log.i(TAG, ">>> CANCEL: App was woken by FCM; showing cancel notification")
         VoipFirebaseService.showCancelledCallNotification(context, message)
         
         // Minimize the app to background
-        Log.i(TAG, ">>> CANCEL: About to send ACTION_MINIMIZE_APP broadcast")
         val intent = Intent(ACTION_MINIMIZE_APP).apply {
             setPackage(context.packageName)
         }
-        Log.i(TAG, ">>> CANCEL: Broadcasting intent with action=${intent.action} package=${intent.`package`}")
         context.sendBroadcast(intent)
-        Log.i(TAG, ">>> CANCEL: Broadcast sent successfully")
     }
 
     private fun startIncomingCallActivity(context: Context, callId: String, callerId: String?): Boolean {
-        Log.i(TAG, ">>> CALL_ACTIVITY: startIncomingCallActivity() callId=$callId callerId=$callerId")
         val intent = Intent(context, CallActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or
                 Intent.FLAG_ACTIVITY_CLEAR_TOP or
@@ -694,10 +635,9 @@ class VoipEngine(
         }
         return try {
             context.startActivity(intent)
-            Log.i(TAG, ">>> CALL_ACTIVITY: CallActivity launched successfully")
             true
         } catch (e: Exception) {
-            Log.w(TAG, ">>> CALL_ACTIVITY: Failed to launch CallActivity", e)
+            Log.w(TAG, "Failed to launch CallActivity", e)
             false
         }
     }
@@ -747,13 +687,11 @@ class VoipEngine(
 
         @JvmStatic
         fun startRinging() {
-            Log.i(TAG, ">>> RINGING_STATIC: startRinging() called, instance=$instance")
             instance?.startInAppRinging()
         }
 
         @JvmStatic
         fun stopRinging() {
-            Log.i(TAG, ">>> RINGING_STATIC: stopRinging() called")
             instance?.stopInAppRinging()
         }
     }

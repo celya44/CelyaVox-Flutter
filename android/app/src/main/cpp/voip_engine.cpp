@@ -399,3 +399,29 @@ Java_fr_celya_celyavox_PjsipEngine_nativeSendDtmf(JNIEnv *env, jobject, jstring 
     return JNI_TRUE;
 }
 
+extern "C" JNIEXPORT jstring JNICALL
+Java_fr_celya_celyavox_PjsipEngine_nativeGetCallerInfo(JNIEnv *env, jobject, jstring jcallId) {
+    ensure_pj_thread_registered("jni");
+    if (!ensure_endpoint()) return nullptr;
+    
+    const char *cid = env->GetStringUTFChars(jcallId, nullptr);
+    int call_id = atoi(cid);
+    env->ReleaseStringUTFChars(jcallId, cid);
+    
+    pjsua_call_info ci;
+    std::lock_guard<std::mutex> lock(g_mutex);
+    
+    if (pjsua_call_get_info(call_id, &ci) != PJ_SUCCESS) {
+        LOGE("Failed to get call info for call_id=%d", call_id);
+        return nullptr;
+    }
+    
+    // Extract From header which contains the caller info
+    if (ci.remote_info.slen > 0) {
+        std::string remote_info(ci.remote_info.ptr, ci.remote_info.slen);
+        jstring jresult = env->NewStringUTF(remote_info.c_str());
+        return jresult;
+    }
+    
+    return nullptr;
+}

@@ -20,7 +20,6 @@ class VoipForegroundService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val callId = intent?.getStringExtra(EXTRA_CALL_ID).orEmpty()
         val callerId = intent?.getStringExtra(EXTRA_CALLER_ID).orEmpty()
-        Log.i(TAG, ">>> FOREGROUND: onStartCommand callId=$callId callerId=$callerId")
         
         // Cancel simple incoming notification from FCM push
         VoipFirebaseService.cancelSimpleIncomingNotification(this)
@@ -29,9 +28,7 @@ class VoipForegroundService : Service() {
         scheduleNoInviteTimeout()
         
         // Start ringing according to phone settings
-        Log.i(TAG, ">>> FOREGROUND: About to call VoipEngine.startRinging()")
         VoipEngine.startRinging()
-        Log.i(TAG, ">>> FOREGROUND: VoipEngine.startRinging() returned")
         
         return START_NOT_STICKY
     }
@@ -106,7 +103,6 @@ class VoipForegroundService : Service() {
             lockscreenVisibility = Notification.VISIBILITY_PUBLIC
         }
         manager.createNotificationChannel(channel)
-        Log.d(TAG, "Notification channel ensured: $CHANNEL_ID")
     }
 
     override fun onDestroy() {

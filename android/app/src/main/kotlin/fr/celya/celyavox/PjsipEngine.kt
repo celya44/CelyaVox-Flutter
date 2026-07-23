@@ -143,6 +143,21 @@ class PjsipEngine private constructor() {
         return nativeSendDtmf(callId, digits)
     }
 
+    @Synchronized
+    fun getCallerInfo(callId: String): String? {
+        if (!initialized.get()) {
+            Log.w(TAG, "getCallerInfo ignored: engine not initialized")
+            return null
+        }
+        return try {
+            val info = nativeGetCallerInfo(callId)
+            if (info.isNullOrBlank()) null else info
+        } catch (t: Throwable) {
+            Log.w(TAG, "getCallerInfo failed for callId=$callId", t)
+            null
+        }
+    }
+
     private external fun nativeInit(): Boolean
     private external fun nativeRegister(username: String, password: String, domain: String, proxy: String): Boolean
     private external fun nativeUnregister()
@@ -151,4 +166,5 @@ class PjsipEngine private constructor() {
     private external fun nativeHangupCall(callId: String): Boolean
     private external fun nativeRefreshAudio(): Boolean
     private external fun nativeSendDtmf(callId: String, digits: String): Boolean
+    private external fun nativeGetCallerInfo(callId: String): String?
 }
