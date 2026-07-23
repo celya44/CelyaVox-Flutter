@@ -31,6 +31,7 @@ open class VoipConnection(
     private var ringtone: Ringtone? = null
     private var mediaPlayer: MediaPlayer? = null
     private var ringFocusRequest: AudioFocusRequest? = null
+    private var isRinging = false
     private var vibrator: Vibrator? = null
 
     init {
@@ -140,7 +141,12 @@ open class VoipConnection(
     }
 
     private fun startRinging() {
+        if (isRinging) {
+            Log.i("VoipConnection", ">>> VOIP_CONN_RING: startRinging() called but already ringing, skipping")
+            return
+        }
         Log.i("VoipConnection", ">>> VOIP_CONN_RING: startRinging() called, callId=$callId")
+        isRinging = true
         val ringerMode = audioManager.ringerMode
         Log.i("VoipConnection", ">>> VOIP_CONN_RING: ringerMode=$ringerMode (0=SILENT, 1=VIBRATE, 2=NORMAL)")
         if (ringerMode == AudioManager.RINGER_MODE_SILENT) {
@@ -259,6 +265,13 @@ open class VoipConnection(
     }
 
     private fun stopRinging() {
+        Log.i("VoipConnection", ">>> VOIP_CONN_RING: stopRinging() called, isRinging=$isRinging")
+        if (!isRinging) {
+            Log.i("VoipConnection", ">>> VOIP_CONN_RING: stopRinging() called but not currently ringing, skipping")
+            return
+        }
+        isRinging = false
+        
         // Stop MediaPlayer
         if (mediaPlayer != null) {
             try {

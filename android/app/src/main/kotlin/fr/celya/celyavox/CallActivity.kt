@@ -36,6 +36,7 @@ class CallActivity : AppCompatActivity() {
     private var mediaPlayer: MediaPlayer? = null
     private var ringFocusRequest: AudioFocusRequest? = null
     private var vibrator: Vibrator? = null
+    private var isRinging = false
     private var titleView: TextView? = null
     private var subtitleView: TextView? = null
     private var acceptButton: Button? = null
@@ -122,17 +123,21 @@ class CallActivity : AppCompatActivity() {
         super.onStop()
         isVisible = false
         visibleCallId = null
-        stopRinging()
+        // Don't stop ringing on stop - let it continue in background
+        // Only stop when the activity is destroyed
         Log.d(TAG, "onStop")
     }
 
     override fun onPause() {
-        stopRinging()
+        // Don't stop ringing on pause - only on destroy
+        // The activity may go to background but we want the ringing to continue
         super.onPause()
     }
 
     override fun onDestroy() {
+        Log.i(TAG, "onDestroy called, stopping ringing")
         stopRinging()
+        isRinging = false
         cancelNativeCallIdTimeout()
         unregisterCallEndedReceiver()
         super.onDestroy()
@@ -241,6 +246,7 @@ class CallActivity : AppCompatActivity() {
                     Log.w(TAG, "Accept clicked with placeholder callId=$callId; waiting for native callId")
                     return@setOnClickListener
                 }
+                stopRinging()
                 tryAcceptAndOpenMain(callId)
             }
         }
@@ -254,6 +260,7 @@ class CallActivity : AppCompatActivity() {
                 val hasNativeCallId = callId.isNotEmpty() && !isPushPlaceholderCallId(callId)
                 if (hasNativeCallId) {
                     Log.i(TAG, "Hangup clicked, ending callId=$callId")
+                    stopRinging()
                     val ok = PjsipEngine.instance.hangupCall(callId)
                     Log.i(TAG, "Hangup action result callId=$callId ok=$ok")
                     sendBroadcast(
@@ -263,6 +270,7 @@ class CallActivity : AppCompatActivity() {
                     Log.i(TAG, "Broadcasted ACTION_CALL_TERMINATE_REQUESTED from CallActivity")
                 } else {
                     Log.i(TAG, "Hangup clicked before native callId; closing CallActivity only")
+                    stopRinging()
                     launchMainActivityInBackground()
                 }
                 finish()
@@ -281,7 +289,12 @@ class CallActivity : AppCompatActivity() {
     }
 
     private fun startRinging() {
+        if (isRinging) {
+            Log.i(TAG, ">>> CALLACTIVITY_RING: startRinging() called but already ringing, skipping")
+            return
+        }
         Log.i(TAG, ">>> CALLACTIVITY_RING: startRinging() called")
+        isRinging = true
         val audioManager = getSystemService(AudioManager::class.java)
         val ringerMode = audioManager.ringerMode
         Log.i(TAG, ">>> CALLACTIVITY_RING: ringerMode=$ringerMode (0=SILENT, 1=VIBRATE, 2=NORMAL)")
@@ -401,6 +414,13 @@ class CallActivity : AppCompatActivity() {
     }
 
     private fun stopRinging() {
+        Log.i(TAG, ">>> CALLACTIVITY_RING: stopRinging() called, isRinging=$isRinging")
+        if (!isRinging) {
+            Log.i(TAG, ">>> CALLACTIVITY_RING: stopRinging() called but not currently ringing, skipping")
+            return
+        }
+        isRinging = false
+        
         // Stop MediaPlayer
         if (mediaPlayer != null) {
             try {
@@ -440,6 +460,8 @@ class CallActivity : AppCompatActivity() {
         Log.i(TAG, "Accept action result callId=$callId ok=$ok")
         if (!ok) {
             Log.w(TAG, "Accept failed; keeping CallActivity open for retry")
+            // Restart ringing if accept failed
+            startRinging()
             updateAcceptButtonState()
             return
         }
