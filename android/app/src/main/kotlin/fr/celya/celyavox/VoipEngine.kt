@@ -546,7 +546,7 @@ class VoipEngine(
                 val wasWokenByFcm = VoipFirebaseService.consumeFcmWakeup()
                 if (wasWokenByFcm) {
                     // Get CallerID from SIP call info
-                    val callerId = sipEngine.getCallerInfo(callId)
+                    val callerId = sipEngine.getCallerInfo(callId) ?: ""
                     VoipFirebaseService.showCancelledCallNotification(ctx, reason ?: "Appel annulé", callerId)
                     
                     // Send minimize app broadcast after a delay to allow CallActivity to close first
