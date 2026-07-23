@@ -143,6 +143,11 @@ class VoipEngine(
         audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
         audioManager.isMicrophoneMute = false
         
+        // Set VOICE_CALL stream volume to maximum to prevent AGC from reducing microphone level
+        // This is a key mitigation for Android's aggressive AGC that reduces gain after a few seconds
+        val maxVoiceCallVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL)
+        audioManager.setStreamVolume(AudioManager.STREAM_VOICE_CALL, maxVoiceCallVolume, 0)
+        
         // Request audio focus for voice call
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val attrs = AudioAttributes.Builder()
@@ -163,7 +168,7 @@ class VoipEngine(
                 AudioManager.AUDIOFOCUS_GAIN_TRANSIENT
             )
         }
-        Log.i(TAG, "VoipEngine.initCallAudio() initialized audio for call")
+        Log.i(TAG, "VoipEngine.initCallAudio() initialized audio for call with max VOICE_CALL volume")
     }
 
     fun setSpeakerphone(enabled: Boolean) {
@@ -432,7 +437,8 @@ class VoipEngine(
                 VoipForegroundService.cancelNoInviteTimeout()
                 if (ctx != null) {
                     // Get CallerID from SIP INVITE (message = callId)
-                    val callerId = sipEngine.getCallerInfo(message)
+                    val rawCallerInfo = sipEngine.getCallerInfo(message)
+                    val callerId = parseCallerInfo(rawCallerInfo)
                     val ok = VoipConnectionService.startIncomingCall(ctx, message, callerId)
                     if (!ok) {
                         val now = System.currentTimeMillis()
@@ -545,8 +551,9 @@ class VoipEngine(
             if (isRequestTerminated) {
                 val wasWokenByFcm = VoipFirebaseService.consumeFcmWakeup()
                 if (wasWokenByFcm) {
-                    // Get CallerID from SIP call info
-                    val callerId = sipEngine.getCallerInfo(callId) ?: ""
+                    // Get CallerID from SIP call info and parse it
+                    val rawCallerInfo = sipEngine.getCallerInfo(callId) ?: ""
+                    val callerId = parseCallerInfo(rawCallerInfo)
                     VoipFirebaseService.showCancelledCallNotification(ctx, reason ?: "Appel annulé", callerId)
                     
                     // Send minimize app broadcast after a delay to allow CallActivity to close first
@@ -671,6 +678,47 @@ class VoipEngine(
 
     override fun onCancel(arguments: Any?) {
         eventSink = null
+    }
+
+    /**
+     * Extrait le nom et le numéro du CallerID SIP brut.
+     * Format SIP: "Display Name" <sip:number@domain> ou sip:number@domain
+     * Retourne une string formatée: "Display Name" ou "Number" ou "Display Name (Number)"
+     */
+    private fun parseCallerInfo(rawCallerInfo: String?): String {
+        if (rawCallerInfo.isNullOrBlank()) return ""
+        
+        val info = rawCallerInfo.trim()
+        
+        // Extraire le Display Name (avant <)
+        val displayName = if (info.contains("<")) {
+            val before = info.substringBefore("<").trim()
+            // Supprimer les guillemets
+            before.replace("\"", "").replace("'", "")
+        } else {
+            ""
+        }
+        
+        // Extraire le numéro (entre <...> ou après sip:/tel:)
+        val number = when {
+            info.contains("tel:") -> {
+                // Format: tel:+33612345678 ou <tel:+33612345678>
+                info.substringAfter("tel:").substringBefore(">").substringBefore(";")
+            }
+            info.contains("sip:") -> {
+                // Format: sip:0612345678@example.com ou <sip:0612345678@example.com>
+                info.substringAfter("sip:").substringBefore("@").substringBefore(";")
+            }
+            else -> ""
+        }
+        
+        // Retourner le résultat formaté
+        return when {
+            displayName.isNotBlank() && number.isNotBlank() -> "$displayName ($number)"
+            displayName.isNotBlank() -> displayName
+            number.isNotBlank() -> number
+            else -> info
+        }
     }
 
     companion object {

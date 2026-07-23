@@ -52,6 +52,11 @@
 #define PJMEDIA_HAS_ANDROID_MEDIACODEC    0
 #define PJMEDIA_SOUND_BUFFER_COUNT        4
 
+/* Disable AGC/NS to prevent automatic microphone gain reduction on Android OpenSL ES */
+/* AGC causes the microphone gain to drop significantly after a few seconds of call */
+#define PJMEDIA_HAS_ILBC_CODEC            0
+#define PJMEDIA_HAS_G729_CODEC            0
+
 /* Avoid duplicate JNI_OnLoad (PJSIP provides its own when enabled) */
 #define PJ_ANDROID_JNI                     0
 

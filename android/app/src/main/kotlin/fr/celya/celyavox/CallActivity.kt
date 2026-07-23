@@ -101,7 +101,7 @@ class CallActivity : AppCompatActivity() {
         }
         acceptButton?.visibility = View.VISIBLE
         declineButton?.text = "Raccrocher"
-        titleView?.text = if (currentCallerId.isNotEmpty()) currentCallerId else "Appel entrant"
+        titleView?.text = if (currentCallerId.isNotEmpty()) parseCallerInfo(currentCallerId) else "Appel entrant"
         subtitleView?.text = ""  // No subtitle needed - CallerID in title
         updateAcceptButtonState()
         startRinging()
@@ -177,6 +177,47 @@ class CallActivity : AppCompatActivity() {
         }
     }
 
+    /**
+     * Extrait le nom et le numéro du CallerID SIP brut.
+     * Format SIP: "Display Name" <sip:number@domain> ou sip:number@domain
+     * Retourne une string formatée: "Display Name" ou "Number" ou "Display Name (Number)"
+     */
+    private fun parseCallerInfo(rawCallerInfo: String?): String {
+        if (rawCallerInfo.isNullOrBlank()) return ""
+        
+        val info = rawCallerInfo.trim()
+        
+        // Extraire le Display Name (avant <)
+        val displayName = if (info.contains("<")) {
+            val before = info.substringBefore("<").trim()
+            // Supprimer les guillemets
+            before.replace("\"", "").replace("'", "")
+        } else {
+            ""
+        }
+        
+        // Extraire le numéro (entre <...> ou après sip:/tel:)
+        val number = when {
+            info.contains("tel:") -> {
+                // Format: tel:+33612345678 ou <tel:+33612345678>
+                info.substringAfter("tel:").substringBefore(">").substringBefore(";")
+            }
+            info.contains("sip:") -> {
+                // Format: sip:0612345678@example.com ou <sip:0612345678@example.com>
+                info.substringAfter("sip:").substringBefore("@").substringBefore(";")
+            }
+            else -> ""
+        }
+        
+        // Retourner le résultat formaté
+        return when {
+            displayName.isNotBlank() && number.isNotBlank() -> "$displayName ($number)"
+            displayName.isNotBlank() -> displayName
+            number.isNotBlank() -> number
+            else -> info
+        }
+    }
+
     private fun buildContentView(): View {
         val callId = currentCallId
         val callerId = currentCallerId
@@ -195,7 +236,7 @@ class CallActivity : AppCompatActivity() {
         }
 
         val title = TextView(this).apply {
-            text = if (callerId.isNotEmpty()) callerId else "Appel entrant"
+            text = if (callerId.isNotEmpty()) parseCallerInfo(callerId) else "Appel entrant"
             textSize = 22f
             gravity = Gravity.CENTER
             layoutParams = LinearLayout.LayoutParams(
