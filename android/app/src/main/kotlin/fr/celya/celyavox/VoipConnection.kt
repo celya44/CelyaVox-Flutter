@@ -13,6 +13,7 @@ import android.os.VibratorManager
 import android.telecom.Connection
 import android.telecom.DisconnectCause
 import android.telecom.TelecomManager
+import android.util.Log
 
 open class VoipConnection(
     private val context: Context,
