@@ -27,6 +27,7 @@ class _InCallPageState extends State<InCallPage> {
   bool _bluetoothAvailable = false;
   String _bluetoothName = '';
   String _activeCallId = '';
+  String _activeCallerId = '';
   String? _savedContactName;
   StreamSubscription<VoipEvent>? _eventsSub;
 
@@ -34,6 +35,7 @@ class _InCallPageState extends State<InCallPage> {
   void initState() {
     super.initState();
     _activeCallId = widget.callId;
+    _activeCallerId = '';
     _ensureMicPermission();
     _loadBluetoothAvailability();
     _loadSavedContact();
@@ -94,11 +96,48 @@ class _InCallPageState extends State<InCallPage> {
     return atIndex > 0 ? value.substring(0, atIndex) : value;
   }
 
+  /// Formate le CallerID SIP brut en affichant nom et numéro.
+  /// Exemples:
+  /// - "John Doe" <sip:0612345678@example.com> → "John Doe (0612345678)"
+  /// - sip:0612345678@example.com → "0612345678"
+  String _parseCallerInfo(String raw) {
+    if (raw.isEmpty) return '';
+    
+    final info = raw.trim();
+    
+    // Extraire le Display Name (avant <)
+    final displayName = info.contains('<')
+        ? info.substring(0, info.indexOf('<')).trim().replaceAll('"', '').replaceAll("'", '')
+        : '';
+    
+    // Extraire le numéro
+    final number = info.contains('tel:')
+        ? info.substring(info.indexOf('tel:') + 4).replaceAll(RegExp(r'[>;\s].*'), '')
+        : info.contains('sip:')
+            ? info.substring(info.indexOf('sip:') + 4)
+                .replaceAll('@.*', '')
+                .replaceAll(';.*', '')
+            : '';
+    
+    // Retourner le résultat formaté
+    if (displayName.isNotEmpty && number.isNotEmpty) {
+      return '$displayName ($number)';
+    } else if (displayName.isNotEmpty) {
+      return displayName;
+    } else if (number.isNotEmpty) {
+      return number;
+    }
+    return info;
+  }
+
   void _listenCallUpdates() {
     _eventsSub = VoipEvents.stream.listen((event) {
       if (event is CallConnectedEvent) {
         if (mounted && event.callId.isNotEmpty) {
-          setState(() => _activeCallId = event.callId);
+          setState(() {
+            _activeCallId = event.callId;
+            _activeCallerId = event.callerId;
+          });
         }
       } else if (event is OutgoingCallEvent) {
         if (mounted && event.callId.isNotEmpty) {
@@ -216,7 +255,9 @@ class _InCallPageState extends State<InCallPage> {
               const Icon(Icons.call, size: 48),
               const SizedBox(height: 12),
               Text(
-                _displayNumber(widget.callId),
+                _activeCallerId.isNotEmpty 
+                  ? _parseCallerInfo(_activeCallerId)
+                  : _displayNumber(widget.callId),
                 style: Theme.of(context).textTheme.titleLarge,
               ),
               if (_savedContactName != null)

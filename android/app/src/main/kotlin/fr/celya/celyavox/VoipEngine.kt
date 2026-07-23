@@ -44,6 +44,7 @@ class VoipEngine(
     private var pendingConnectedCallId: String? = null
     private var incomingRingtone: Ringtone? = null
     private var incomingVibrator: Vibrator? = null
+    private val callerIdMap = mutableMapOf<String, String>()
 
     init {
         messenger?.let { bindEventChannel(it) }
@@ -356,6 +357,13 @@ class VoipEngine(
             return
         }
 
+        // Set audio mode for incoming call (use NORMAL to allow speaker)
+        audioManager.mode = AudioManager.MODE_NORMAL
+        
+        // Ensure STREAM_RING volume is at maximum
+        val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_RING)
+        audioManager.setStreamVolume(AudioManager.STREAM_RING, maxVolume, 0)
+
         if (ringerMode == AudioManager.RINGER_MODE_NORMAL) {
             val uri = RingtoneManager.getActualDefaultRingtoneUri(
                 ctx,
@@ -365,8 +373,8 @@ class VoipEngine(
             if (ring != null) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                     ring.audioAttributes = AudioAttributes.Builder()
-                        .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
-                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                         .build()
                 }
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -439,6 +447,8 @@ class VoipEngine(
                     // Get CallerID from SIP INVITE (message = callId)
                     val rawCallerInfo = sipEngine.getCallerInfo(message)
                     val callerId = parseCallerInfo(rawCallerInfo)
+                    // Store CallerID for this call
+                    callerIdMap[message] = callerId
                     val ok = VoipConnectionService.startIncomingCall(ctx, message, callerId)
                     if (!ok) {
                         val now = System.currentTimeMillis()
@@ -530,10 +540,12 @@ class VoipEngine(
             return
         }
         Log.i(TAG, "Emitting call_connected to Flutter callId=$callId")
+        val callerId = callerIdMap.getOrDefault(callId, "")
         emit(
             mapOf(
                 "type" to "call_connected",
                 "callId" to callId,
+                "callerId" to callerId,
             )
         )
     }
@@ -596,6 +608,8 @@ class VoipEngine(
                 Log.w(TAG, "Failed to dispatch ACTION_CALL_ENDED intent", e)
             }
         }
+        // Clean up stored CallerID
+        callerIdMap.remove(callId)
         emit(
             mapOf(
                 "type" to "call_ended",
@@ -666,10 +680,12 @@ class VoipEngine(
         val pendingConnected = pendingConnectedCallId
         if (!pendingConnected.isNullOrBlank()) {
             Log.i(TAG, "Replaying pending call_connected to Flutter callId=$pendingConnected")
+            val callerId = callerIdMap.getOrDefault(pendingConnected, "")
             emit(
                 mapOf(
                     "type" to "call_connected",
                     "callId" to pendingConnected,
+                    "callerId" to callerId,
                 )
             )
             pendingConnectedCallId = null
