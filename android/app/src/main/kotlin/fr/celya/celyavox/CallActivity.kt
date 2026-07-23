@@ -386,7 +386,6 @@ class CallActivity : AppCompatActivity() {
         }
         ringFocusRequest = null
     }
-    }
 
     private fun tryAcceptAndOpenMain(callId: String) {
         Log.i(TAG, "Accept clicked, accepting callId=$callId")
