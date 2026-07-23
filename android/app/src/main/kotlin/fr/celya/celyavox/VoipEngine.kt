@@ -718,3 +718,4 @@ class VoipEngine(
             instance?.stopInAppRinging()
         }
     }
+}

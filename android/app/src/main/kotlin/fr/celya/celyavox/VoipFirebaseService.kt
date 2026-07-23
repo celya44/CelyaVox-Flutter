@@ -46,7 +46,7 @@ class VoipFirebaseService : FirebaseMessagingService() {
             // Mark that app was woken up by FCM push and store callerId
             VoipFirebaseService.setFcmWakeup(true)
             VoipFirebaseService.setFcmCallerId(callerId)
-            Log.i(TAG, ">>> FCM: FCM wakeup flag set to true"))
+            Log.i(TAG, ">>> FCM: FCM wakeup flag set to true")
 
             if (type == "incoming_call") {
                 if (isAppInForeground()) {
