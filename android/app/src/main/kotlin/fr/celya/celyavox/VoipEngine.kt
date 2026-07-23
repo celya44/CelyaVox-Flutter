@@ -436,6 +436,7 @@ class VoipEngine(
                 emit(mapOf("type" to "registration", "message" to message))
             }
             "incoming_call" -> {
+                Log.i(TAG, ">>> INCOMING_CALL: Event received, callId=$message")
                 VoipFirebaseService.cancelInviteWaitFallback()
                 val ctx = appContext
                 if (ctx != null) {
@@ -444,50 +445,63 @@ class VoipEngine(
                 
                 // Check if SIP account is registered before processing incoming call
                 val isRegistered = sipEngine.isRegistered()
+                Log.i(TAG, ">>> INCOMING_CALL: SIP registered=$isRegistered")
                 if (!isRegistered) {
-                    Log.w(TAG, "Incoming call received but SIP account not registered; ignoring")
+                    Log.w(TAG, ">>> INCOMING_CALL: SIP account not registered; ignoring")
                     return
                 }
                 
                 VoipForegroundService.cancelNoInviteTimeout()
                 if (ctx != null) {
+                    Log.i(TAG, ">>> INCOMING_CALL: Calling VoipConnectionService.startIncomingCall()")
                     val ok = VoipConnectionService.startIncomingCall(ctx, message, null)
+                    Log.i(TAG, ">>> INCOMING_CALL: VoipConnectionService.startIncomingCall() returned ok=$ok")
                     if (!ok) {
+                        Log.w(TAG, ">>> INCOMING_CALL: startIncomingCall failed, checking fallback paths")
                         val now = System.currentTimeMillis()
                         val recentLaunch = now - CallActivity.lastLaunchAtMs < 10000L
+                        Log.i(TAG, ">>> INCOMING_CALL: CallActivity.isVisible=${CallActivity.isVisible}, recentLaunch=$recentLaunch")
                         if (CallActivity.isVisible) {
                             if (message.isNotBlank() && CallActivity.visibleCallId != message) {
                                 Log.i(
                                     TAG,
-                                    "CallActivity visible with callId=${CallActivity.visibleCallId}; updating to native callId=$message"
+                                    ">>> INCOMING_CALL: CallActivity visible with callId=${CallActivity.visibleCallId}; updating to native callId=$message"
                                 )
                                 startIncomingCallActivity(ctx, message, null)
                             } else {
                                 Log.i(
                                     TAG,
-                                    "CallActivity already visible for callId=${CallActivity.visibleCallId}; no update needed"
+                                    ">>> INCOMING_CALL: CallActivity already visible for callId=${CallActivity.visibleCallId}; no update needed"
                                 )
                             }
                             return
                         }
                         if (recentLaunch) {
-                            Log.i(TAG, "Recent CallActivity launch detected; updating with native callId=$message")
+                            Log.i(TAG, ">>> INCOMING_CALL: Recent CallActivity launch detected; updating with native callId=$message")
                             startIncomingCallActivity(ctx, message, null)
                             return
                         }
                         if (isAppInForeground(ctx) && !CallActivity.isVisible) {
-                            Log.i(TAG, "App in foreground; routing incoming call to Flutter UI")
+                            Log.i(TAG, ">>> INCOMING_CALL: App in foreground; routing incoming call to Flutter UI")
                             incomingCall(message, null)
                             return
                         }
                         if (CallActivity.isVisible) {
-                            Log.i(TAG, "CallActivity already visible for callId=${CallActivity.visibleCallId}; skip relaunch")
+                            Log.i(TAG, ">>> INCOMING_CALL: CallActivity already visible for callId=${CallActivity.visibleCallId}; skip relaunch")
                             return
                         }
+                        Log.i(TAG, ">>> INCOMING_CALL: Attempting to start CallActivity")
                         val launched = startIncomingCallActivity(ctx, message, null)
                         if (!launched) {
+                            Log.i(TAG, ">>> INCOMING_CALL: CallActivity launch failed, routing to Flutter UI")
                             incomingCall(message, null)
                         }
+                    } else {
+                        Log.i(TAG, ">>> INCOMING_CALL: VoipConnectionService.startIncomingCall() succeeded, Telecom handling the call")
+                    }
+                } else {
+                    Log.w(TAG, ">>> INCOMING_CALL: appContext is null, cannot process incoming call")
+                }
                     }
                 } else {
                     incomingCall(message, null)

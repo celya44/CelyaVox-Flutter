@@ -128,6 +128,7 @@ open class VoipConnection(
     }
 
     fun markRinging() {
+        Log.i("VoipConnection", ">>> VOIP_CONN_RING: markRinging() called, callId=$callId")
         setRinging()
         startRinging()
     }
