@@ -136,16 +136,27 @@ open class VoipConnection(
     }
 
     private fun startRinging() {
-        if (ringtone != null) return
+        Log.i("VoipConnection", ">>> VOIP_CONN_RING: startRinging() called, callId=$callId")
+        if (ringtone != null) {
+            Log.i("VoipConnection", ">>> VOIP_CONN_RING: Ringtone already active, skipping")
+            return
+        }
         val ringerMode = audioManager.ringerMode
-        if (ringerMode == AudioManager.RINGER_MODE_SILENT) return
+        Log.i("VoipConnection", ">>> VOIP_CONN_RING: ringerMode=$ringerMode (0=SILENT, 1=VIBRATE, 2=NORMAL)")
+        if (ringerMode == AudioManager.RINGER_MODE_SILENT) {
+            Log.i("VoipConnection", ">>> VOIP_CONN_RING: Phone is in SILENT mode")
+            return
+        }
 
         val ring: Ringtone? = if (ringerMode == AudioManager.RINGER_MODE_NORMAL) {
+            Log.i("VoipConnection", ">>> VOIP_CONN_RING: Attempting to get ringtone")
             val uri = RingtoneManager.getActualDefaultRingtoneUri(
                 context,
                 RingtoneManager.TYPE_RINGTONE
             )
+            Log.i("VoipConnection", ">>> VOIP_CONN_RING: Ringtone URI=$uri")
             RingtoneManager.getRingtone(context, uri)?.also { r ->
+                Log.i("VoipConnection", ">>> VOIP_CONN_RING: Ringtone object created")
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                     r.audioAttributes = AudioAttributes.Builder()
                         .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
@@ -157,10 +168,12 @@ open class VoipConnection(
                 }
             }
         } else {
+            Log.i("VoipConnection", ">>> VOIP_CONN_RING: Not NORMAL mode, ring=null")
             null
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Log.i("VoipConnection", ">>> VOIP_CONN_RING: Requesting audio focus (NOTIFICATION_RINGTONE)")
             val attrs = AudioAttributes.Builder()
                 .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
@@ -172,7 +185,9 @@ open class VoipConnection(
                 .build()
             ringFocusRequest = request
             audioManager.requestAudioFocus(request)
+            Log.i("VoipConnection", ">>> VOIP_CONN_RING: Audio focus requested")
         } else {
+            Log.i("VoipConnection", ">>> VOIP_CONN_RING: Requesting audio focus (pre-O, STREAM_RING)")
             @Suppress("DEPRECATION")
             audioManager.requestAudioFocus(
                 null,
@@ -182,11 +197,16 @@ open class VoipConnection(
         }
 
         if (ring != null) {
+            Log.i("VoipConnection", ">>> VOIP_CONN_RING: Starting ringtone playback")
             ringtone = ring
             ring.play()
+            Log.i("VoipConnection", ">>> VOIP_CONN_RING: Ringtone playback started")
+        } else {
+            Log.w("VoipConnection", ">>> VOIP_CONN_RING: ring is null, no ringtone to play")
         }
 
         if (ringerMode == AudioManager.RINGER_MODE_VIBRATE) {
+            Log.i("VoipConnection", ">>> VOIP_CONN_RING: Phone in VIBRATE mode, activating vibration")
             val vib = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 val manager = context.getSystemService(VibratorManager::class.java)
                 manager?.defaultVibrator
@@ -196,6 +216,7 @@ open class VoipConnection(
             }
             vibrator = vib
             if (vib != null && vib.hasVibrator()) {
+                Log.i("VoipConnection", ">>> VOIP_CONN_RING: Starting vibration pattern")
                 val pattern = longArrayOf(0, 500, 500)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     vib.vibrate(VibrationEffect.createWaveform(pattern, 0))
@@ -203,6 +224,9 @@ open class VoipConnection(
                     @Suppress("DEPRECATION")
                     vib.vibrate(pattern, 0)
                 }
+                Log.i("VoipConnection", ">>> VOIP_CONN_RING: Vibration started")
+            } else {
+                Log.w("VoipConnection", ">>> VOIP_CONN_RING: Vibrator not available or device has no vibrator")
             }
         }
     }
