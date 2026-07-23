@@ -277,16 +277,28 @@ class CallActivity : AppCompatActivity() {
     }
 
     private fun startRinging() {
+        Log.i(TAG, ">>> CALLACTIVITY_RING: startRinging() called")
         val audioManager = getSystemService(AudioManager::class.java)
         val ringerMode = audioManager.ringerMode
-        if (ringerMode == AudioManager.RINGER_MODE_SILENT) return
+        Log.i(TAG, ">>> CALLACTIVITY_RING: ringerMode=$ringerMode (0=SILENT, 1=VIBRATE, 2=NORMAL)")
+        if (ringerMode == AudioManager.RINGER_MODE_SILENT) {
+            Log.i(TAG, ">>> CALLACTIVITY_RING: Phone in SILENT mode, returning")
+            return
+        }
 
         if (ringerMode == AudioManager.RINGER_MODE_NORMAL) {
+            Log.i(TAG, ">>> CALLACTIVITY_RING: Attempting to play ringtone")
             val uri = RingtoneManager.getActualDefaultRingtoneUri(
                 this,
                 RingtoneManager.TYPE_RINGTONE
             )
-            val ring = RingtoneManager.getRingtone(this, uri) ?: return
+            Log.i(TAG, ">>> CALLACTIVITY_RING: Ringtone URI=$uri")
+            val ring = RingtoneManager.getRingtone(this, uri)
+            if (ring == null) {
+                Log.w(TAG, ">>> CALLACTIVITY_RING: RingtoneManager.getRingtone() returned null, returning")
+                return
+            }
+            Log.i(TAG, ">>> CALLACTIVITY_RING: Ringtone created successfully")
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 ring.audioAttributes = AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
@@ -297,10 +309,13 @@ class CallActivity : AppCompatActivity() {
                 ring.isLooping = true
             }
             ringtone = ring
+            Log.i(TAG, ">>> CALLACTIVITY_RING: Starting ringtone playback")
             ring.play()
+            Log.i(TAG, ">>> CALLACTIVITY_RING: Ringtone playback started")
         }
 
         if (ringerMode == AudioManager.RINGER_MODE_VIBRATE) {
+            Log.i(TAG, ">>> CALLACTIVITY_RING: Phone in VIBRATE mode, activating vibration")
             val vib = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 val manager = getSystemService(VibratorManager::class.java)
                 manager?.defaultVibrator
@@ -310,6 +325,7 @@ class CallActivity : AppCompatActivity() {
             }
             vibrator = vib
             if (vib != null && vib.hasVibrator()) {
+                Log.i(TAG, ">>> CALLACTIVITY_RING: Starting vibration pattern")
                 val pattern = longArrayOf(0, 500, 500)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     vib.vibrate(VibrationEffect.createWaveform(pattern, 0))
@@ -317,6 +333,9 @@ class CallActivity : AppCompatActivity() {
                     @Suppress("DEPRECATION")
                     vib.vibrate(pattern, 0)
                 }
+                Log.i(TAG, ">>> CALLACTIVITY_RING: Vibration started")
+            } else {
+                Log.w(TAG, ">>> CALLACTIVITY_RING: Vibrator not available or device doesn't have vibrator")
             }
         }
     }

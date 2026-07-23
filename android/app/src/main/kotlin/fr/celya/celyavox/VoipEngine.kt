@@ -684,6 +684,7 @@ class VoipEngine(
     }
 
     private fun startIncomingCallActivity(context: Context, callId: String, callerId: String?): Boolean {
+        Log.i(TAG, ">>> CALL_ACTIVITY: startIncomingCallActivity() callId=$callId callerId=$callerId")
         val intent = Intent(context, CallActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or
                 Intent.FLAG_ACTIVITY_CLEAR_TOP or
@@ -693,10 +694,10 @@ class VoipEngine(
         }
         return try {
             context.startActivity(intent)
-            Log.i(TAG, "CallActivity launched from VoipEngine incoming event")
+            Log.i(TAG, ">>> CALL_ACTIVITY: CallActivity launched successfully")
             true
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to launch CallActivity from VoipEngine", e)
+            Log.w(TAG, ">>> CALL_ACTIVITY: Failed to launch CallActivity", e)
             false
         }
     }

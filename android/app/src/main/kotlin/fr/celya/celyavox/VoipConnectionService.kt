@@ -125,14 +125,16 @@ class VoipConnectionService : ConnectionService() {
         private val connections = ConcurrentHashMap<String, VoipConnection>()
 
         fun registerSelfManaged(context: Context): Boolean {
+            Log.i(TAG, ">>> TELECOM_REGISTER: registerSelfManaged() called")
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
-                Log.w(TAG, "Self-managed ConnectionService requires Android 10+")
+                Log.w(TAG, ">>> TELECOM_REGISTER: Self-managed requires Android 10+, returning false")
                 return false
             }
             if (!isSelfManagedRoleGranted(context)) {
-                Log.w(TAG, "ROLE_SELF_MANAGED_CALLS not granted")
+                Log.w(TAG, ">>> TELECOM_REGISTER: ROLE_SELF_MANAGED_CALLS not granted, returning false")
                 return false
             }
+            Log.i(TAG, ">>> TELECOM_REGISTER: Role granted, registering PhoneAccount")
             val telecomManager = context.getSystemService(Context.TELECOM_SERVICE) as TelecomManager
             val handle = PhoneAccountHandle(
                 ComponentName(context, VoipConnectionService::class.java),
@@ -144,11 +146,11 @@ class VoipConnectionService : ConnectionService() {
                 .build()
             try {
                 telecomManager.registerPhoneAccount(account)
-                Log.i(TAG, "Registered self-managed PhoneAccount: ${account.accountHandle.id}")
+                Log.i(TAG, ">>> TELECOM_REGISTER: Successfully registered PhoneAccount: ${account.accountHandle.id}")
                 return true
             } catch (sec: SecurityException) {
                 // Devices will throw if MANAGE_OWN_CALLS/role not granted; avoid crashing app.
-                Log.e(TAG, "Failed to register self-managed PhoneAccount (missing permission/role)", sec)
+                Log.e(TAG, ">>> TELECOM_REGISTER: Failed to register PhoneAccount (missing permission/role)", sec)
                 return false
             }
         }
@@ -210,12 +212,18 @@ class VoipConnectionService : ConnectionService() {
         }
 
         private fun isSelfManagedRoleGranted(context: Context): Boolean {
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return false
+            Log.i(TAG, ">>> TELECOM: isSelfManagedRoleGranted() called")
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
+                Log.w(TAG, ">>> TELECOM: SDK version < Q, role not available")
+                return false
+            }
             return try {
                 val roleManager = context.getSystemService(RoleManager::class.java)
-                roleManager.isRoleHeld("android.app.role.SELF_MANAGED_CALLS")
+                val isHeld = roleManager.isRoleHeld("android.app.role.SELF_MANAGED_CALLS")
+                Log.i(TAG, ">>> TELECOM: isSelfManagedRoleGranted result=$isHeld")
+                isHeld
             } catch (e: Exception) {
-                Log.w(TAG, "RoleManager check failed", e)
+                Log.w(TAG, ">>> TELECOM: RoleManager check failed", e)
                 false
             }
         }
