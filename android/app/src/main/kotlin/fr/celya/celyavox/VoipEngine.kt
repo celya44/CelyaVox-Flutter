@@ -144,10 +144,11 @@ class VoipEngine(
         audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
         audioManager.isMicrophoneMute = false
         
-        // Set VOICE_CALL stream volume to maximum to prevent AGC from reducing microphone level
-        // This is a key mitigation for Android's aggressive AGC that reduces gain after a few seconds
+        // Set VOICE_CALL stream volume to 75% to prevent AGC while keeping volume reasonable
+        // This mitigates Android's aggressive AGC without creating excessive volume
         val maxVoiceCallVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_VOICE_CALL)
-        audioManager.setStreamVolume(AudioManager.STREAM_VOICE_CALL, maxVoiceCallVolume, 0)
+        val targetVolume = (maxVoiceCallVolume * 3) / 4  // 75% of maximum
+        audioManager.setStreamVolume(AudioManager.STREAM_VOICE_CALL, targetVolume, 0)
         
         // Request audio focus for voice call
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
