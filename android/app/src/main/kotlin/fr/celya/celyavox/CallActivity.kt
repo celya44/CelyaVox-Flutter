@@ -31,6 +31,7 @@ import androidx.appcompat.app.AppCompatActivity
 class CallActivity : AppCompatActivity() {
 
     private var ringtone: Ringtone? = null
+    private var ringFocusRequest: AudioFocusRequest? = null
     private var vibrator: Vibrator? = null
     private var titleView: TextView? = null
     private var subtitleView: TextView? = null
@@ -308,6 +309,32 @@ class CallActivity : AppCompatActivity() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 ring.isLooping = true
             }
+            
+            // Request audio focus before playing
+            Log.i(TAG, ">>> CALLACTIVITY_RING: Requesting audio focus on STREAM_RING")
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val attrs = AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build()
+                val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+                    .setAudioAttributes(attrs)
+                    .setAcceptsDelayedFocusGain(false)
+                    .setOnAudioFocusChangeListener { }
+                    .build()
+                ringFocusRequest = request
+                audioManager.requestAudioFocus(request)
+                Log.i(TAG, ">>> CALLACTIVITY_RING: Audio focus requested (O+)")
+            } else {
+                @Suppress("DEPRECATION")
+                audioManager.requestAudioFocus(
+                    null,
+                    AudioManager.STREAM_RING,
+                    AudioManager.AUDIOFOCUS_GAIN_TRANSIENT
+                )
+                Log.i(TAG, ">>> CALLACTIVITY_RING: Audio focus requested (pre-O)")
+            }
+            
             ringtone = ring
             Log.i(TAG, ">>> CALLACTIVITY_RING: Starting ringtone playback")
             ring.play()
@@ -345,6 +372,16 @@ class CallActivity : AppCompatActivity() {
         ringtone = null
         vibrator?.cancel()
         vibrator = null
+        
+        // Abandon audio focus
+        val audioManager = getSystemService(AudioManager::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            ringFocusRequest?.let { audioManager.abandonAudioFocusRequest(it) }
+        } else {
+            @Suppress("DEPRECATION")
+            audioManager.abandonAudioFocus(null)
+        }
+        ringFocusRequest = null
     }
 
     private fun tryAcceptAndOpenMain(callId: String) {
