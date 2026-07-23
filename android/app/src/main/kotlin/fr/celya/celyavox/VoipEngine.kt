@@ -338,19 +338,34 @@ class VoipEngine(
     }
 
     fun startInAppRinging() {
-        val ctx = appContext ?: return
-        if (incomingRingtone != null || incomingVibrator != null) return
+        Log.i(TAG, ">>> RINGING: startInAppRinging() called")
+        val ctx = appContext
+        if (ctx == null) {
+            Log.w(TAG, ">>> RINGING: appContext is null, cannot start ringing")
+            return
+        }
+        if (incomingRingtone != null || incomingVibrator != null) {
+            Log.i(TAG, ">>> RINGING: Ringing already active, skipping")
+            return
+        }
         val audioManager = ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager
         val ringerMode = audioManager.ringerMode
-        if (ringerMode == AudioManager.RINGER_MODE_SILENT) return
+        Log.i(TAG, ">>> RINGING: ringerMode=$ringerMode (0=SILENT, 1=VIBRATE, 2=NORMAL)")
+        if (ringerMode == AudioManager.RINGER_MODE_SILENT) {
+            Log.i(TAG, ">>> RINGING: Phone is in SILENT mode, not ringing")
+            return
+        }
 
         if (ringerMode == AudioManager.RINGER_MODE_NORMAL) {
+            Log.i(TAG, ">>> RINGING: Attempting to play ringtone")
             val uri = RingtoneManager.getActualDefaultRingtoneUri(
                 ctx,
                 RingtoneManager.TYPE_RINGTONE
             )
+            Log.i(TAG, ">>> RINGING: Ringtone URI=$uri")
             val ring = RingtoneManager.getRingtone(ctx, uri)
             if (ring != null) {
+                Log.i(TAG, ">>> RINGING: Ringtone object created successfully")
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                     ring.audioAttributes = AudioAttributes.Builder()
                         .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
@@ -361,11 +376,16 @@ class VoipEngine(
                     ring.isLooping = true
                 }
                 incomingRingtone = ring
+                Log.i(TAG, ">>> RINGING: Starting ringtone playback")
                 ring.play()
+                Log.i(TAG, ">>> RINGING: Ringtone playback started")
+            } else {
+                Log.w(TAG, ">>> RINGING: Failed to create ringtone object")
             }
         }
 
         if (ringerMode == AudioManager.RINGER_MODE_VIBRATE) {
+            Log.i(TAG, ">>> RINGING: Phone in VIBRATE mode, activating vibration")
             val vib = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 val manager = ctx.getSystemService(VibratorManager::class.java)
                 manager?.defaultVibrator
@@ -375,6 +395,7 @@ class VoipEngine(
             }
             incomingVibrator = vib
             if (vib != null && vib.hasVibrator()) {
+                Log.i(TAG, ">>> RINGING: Starting vibration pattern")
                 val pattern = longArrayOf(0, 500, 500)
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                     vib.vibrate(VibrationEffect.createWaveform(pattern, 0))
@@ -382,15 +403,20 @@ class VoipEngine(
                     @Suppress("DEPRECATION")
                     vib.vibrate(pattern, 0)
                 }
+                Log.i(TAG, ">>> RINGING: Vibration pattern started")
+            } else {
+                Log.w(TAG, ">>> RINGING: Vibrator not available or device doesn't have vibrator")
             }
         }
     }
 
     fun stopInAppRinging() {
+        Log.i(TAG, ">>> RINGING: stopInAppRinging() called")
         incomingRingtone?.stop()
         incomingRingtone = null
         incomingVibrator?.cancel()
         incomingVibrator = null
+        Log.i(TAG, ">>> RINGING: Ringing stopped")
     }
 
     private fun emit(event: Map<String, Any?>) {
@@ -710,11 +736,13 @@ class VoipEngine(
 
         @JvmStatic
         fun startRinging() {
+            Log.i(TAG, ">>> RINGING_STATIC: startRinging() called, instance=$instance")
             instance?.startInAppRinging()
         }
 
         @JvmStatic
         fun stopRinging() {
+            Log.i(TAG, ">>> RINGING_STATIC: stopRinging() called")
             instance?.stopInAppRinging()
         }
     }
