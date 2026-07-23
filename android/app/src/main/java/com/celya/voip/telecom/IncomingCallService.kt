@@ -13,8 +13,10 @@ import android.os.IBinder
 import android.os.PowerManager
 import android.telecom.TelecomManager
 import android.net.wifi.WifiManager
+import android.util.Log
 import fr.celya.celyavox.MainActivity
 import fr.celya.celyavox.VoipFirebaseService
+import fr.celya.celyavox.VoipEngine
 
 class IncomingCallService : Service() {
     private var wakeLock: PowerManager.WakeLock? = null
@@ -26,6 +28,10 @@ class IncomingCallService : Service() {
         VoipFirebaseService.cancelSimpleIncomingNotification(this)
         acquireLocks()
         startForeground(NOTIFICATION_ID, buildNotification())
+        
+        // Start ringing according to phone settings
+        Log.i(TAG, "Starting in-app ringing")
+        VoipEngine.startRinging()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -34,6 +40,8 @@ class IncomingCallService : Service() {
     }
 
     override fun onDestroy() {
+        Log.i(TAG, "onDestroy - stopping ringing")
+        VoipEngine.stopRinging()
         super.onDestroy()
         releaseLocks()
     }
@@ -107,6 +115,7 @@ class IncomingCallService : Service() {
     }
 
     companion object {
+        private const val TAG = "IncomingCallService"
         private const val NOTIFICATION_ID = 1001
         private const val TELECOM_URI = "celyavoip://incoming"
     }

@@ -27,6 +27,11 @@ class VoipForegroundService : Service() {
         
         startForeground(NOTIFICATION_ID, buildNotification(callId, callerId))
         scheduleNoInviteTimeout()
+        
+        // Start ringing according to phone settings
+        Log.i(TAG, "Starting in-app ringing")
+        VoipEngine.startRinging()
+        
         return START_NOT_STICKY
     }
 
@@ -104,6 +109,8 @@ class VoipForegroundService : Service() {
     }
 
     override fun onDestroy() {
+        Log.i(TAG, "onDestroy - stopping ringing")
+        VoipEngine.stopRinging()
         cancelNoInviteTimeout()
         stopForeground(STOP_FOREGROUND_REMOVE)
         super.onDestroy()

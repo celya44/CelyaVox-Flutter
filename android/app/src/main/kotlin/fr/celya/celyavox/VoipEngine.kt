@@ -48,6 +48,7 @@ class VoipEngine(
     init {
         messenger?.let { bindEventChannel(it) }
         sipEngine.setCallback(this)
+        setInstance(this)
     }
 
     fun bindEventChannel(messenger: BinaryMessenger) {
@@ -557,18 +558,25 @@ class VoipEngine(
                 val wasWokenByFcm = VoipFirebaseService.consumeFcmWakeup()
                 Log.i(TAG, ">>> CALL_ENDED: Detected 487 termination, wasWokenByFcm=$wasWokenByFcm")
                 if (wasWokenByFcm) {
-                    Log.i(TAG, ">>> CALL_ENDED: Treating as cancel notification since app was woken by FCM")
-                    VoipFirebaseService.showCancelledCallNotification(ctx, reason ?: "Appel annulé")
-                    // Send minimize app broadcast
-                    try {
-                        val intent = Intent(ACTION_MINIMIZE_APP).apply {
-                            setPackage(ctx.packageName)
-                        }
-                        Log.i(TAG, ">>> CALL_ENDED: Sending ACTION_MINIMIZE_APP broadcast")
-                        ctx.sendBroadcast(intent)
-                    } catch (e: Exception) {
-                        Log.w(TAG, ">>> CALL_ENDED: Failed to send minimize broadcast", e)
-                    }
+                    val callerId = VoipFirebaseService.getFcmCallerId()
+                    Log.i(TAG, ">>> CALL_ENDED: Treating as cancel notification since app was woken by FCM, callerId=$callerId")
+                    VoipFirebaseService.showCancelledCallNotification(ctx, reason ?: "Appel annulé", callerId)
+                    
+                    // Send minimize app broadcast after a delay to allow CallActivity to close first
+                    mainHandler.postDelayed(
+                        {
+                            try {
+                                val intent = Intent(ACTION_MINIMIZE_APP).apply {
+                                    setPackage(ctx.packageName)
+                                }
+                                Log.i(TAG, ">>> CALL_ENDED: Sending ACTION_MINIMIZE_APP broadcast (after delay)")
+                                ctx.sendBroadcast(intent)
+                            } catch (e: Exception) {
+                                Log.w(TAG, ">>> CALL_ENDED: Failed to send minimize broadcast", e)
+                            }
+                        },
+                        500L // Wait 500ms for CallActivity to close
+                    )
                 }
             } else {
                 // Reset FCM wakeup flag for normal call termination
@@ -693,5 +701,20 @@ class VoipEngine(
         const val ACTION_MINIMIZE_APP = "fr.celya.celyavox.MINIMIZE_APP"
         const val ACTION_CALL_ENDED = "fr.celya.celyavox.ACTION_CALL_ENDED"
         const val ACTION_CALL_TERMINATE_REQUESTED = "fr.celya.celyavox.ACTION_CALL_TERMINATE_REQUESTED"
+        private var instance: VoipEngine? = null
+
+        @JvmStatic
+        fun setInstance(voipEngine: VoipEngine) {
+            instance = voipEngine
+        }
+
+        @JvmStatic
+        fun startRinging() {
+            instance?.startInAppRinging()
+        }
+
+        @JvmStatic
+        fun stopRinging() {
+            instance?.stopInAppRinging()
+        }
     }
-}
