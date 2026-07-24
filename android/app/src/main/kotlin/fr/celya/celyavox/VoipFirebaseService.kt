@@ -275,10 +275,10 @@ class VoipFirebaseService : FirebaseMessagingService() {
                 PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0)
             )
 
-            val title = if (callerId.isNotEmpty()) "Appel reçu de $callerId" else "Appel annulé"
+            val title = "Appel reçu en absence"
             val notification = NotificationCompat.Builder(context, INCOMING_CALL_CHANNEL_ID)
                 .setContentTitle(title)
-                .setContentText("L'appel a été annulé")
+                .setContentText(callerId.ifEmpty { "L'appel a été annulé" })
                 .setSmallIcon(android.R.drawable.sym_call_missed)
                 .setContentIntent(contentIntent)
                 .setAutoCancel(true)
